@@ -29,13 +29,10 @@ appStyle.innerHTML = `
     }
     .app-header span { font-weight: bold; color: #ffdd66; }
     .app-content { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
-    .app-grid {
-        display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
-    }
+    .app-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
     .app-icon {
         background-color: #111; border: 1px solid #330000; border-radius: 12px;
-        padding: 20px 10px; text-align: center; cursor: pointer;
-        transition: all 0.2s ease;
+        padding: 20px 10px; text-align: center; cursor: pointer; transition: all 0.2s ease;
     }
     .app-icon:hover { background-color: #2a0000; border-color: #ff3333; }
     .app-icon-emoji { font-size: 2em; margin-bottom: 10px; }
@@ -44,9 +41,7 @@ appStyle.innerHTML = `
         height: 50px; border-top: 1px solid #333; display: flex;
         justify-content: center; align-items: center; background-color: #050505;
     }
-    .app-home-btn {
-        width: 60px; height: 6px; background-color: #555; border-radius: 3px; cursor: pointer;
-    }
+    .app-home-btn { width: 60px; height: 6px; background-color: #555; border-radius: 3px; cursor: pointer; }
     .app-home-btn:hover { background-color: #aaa; }
     
     /* サブ画面用スタイル */
@@ -61,6 +56,19 @@ appStyle.innerHTML = `
     .card-item { border: 1px solid #555; padding: 5px; cursor: pointer; background: #000; text-align: center; }
     .card-item:hover { border-color: #ff3333; }
     .card-item img { max-width: 60px; display: block; margin-bottom: 5px; }
+
+    /* デバッグUI用 */
+    .debug-modal {
+        position: absolute; top: 10%; left: 10%; width: 80%; height: 80%;
+        background: rgba(0, 20, 0, 0.95); border: 2px solid #00ff00;
+        z-index: 4000; color: #00ff00; padding: 20px; font-family: monospace;
+        display: flex; flex-direction: column; gap: 15px; border-radius: 8px;
+    }
+    .debug-btn {
+        background: #003300; color: #00ff00; border: 1px solid #00ff00;
+        padding: 10px; cursor: pointer; font-size: 1.1em; text-align: left;
+    }
+    .debug-btn:hover { background: #006600; }
 `;
 document.head.appendChild(appStyle);
 
@@ -71,7 +79,7 @@ const ctx = canvas.getContext("2d");
 const gameState = {
     hasExorcistInherited: false, 
     hasKey2F: false,             
-    hasModelGun: false,          // モデルガン所持フラグ
+    hasModelGun: false,          
     hasMetGrandma: false,        
     cards: [],                   
     equippedCards: [],           
@@ -220,13 +228,12 @@ function draw() {
     drawCompass();
     drawActionHint();
     
-    // UIのナビゲーション追加表示
     ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect(10, canvas.height - 30, 160, 25);
+    ctx.fillRect(10, canvas.height - 30, 260, 25);
     ctx.fillStyle = "#fff";
     ctx.font = `12px ${HORROR_FONT}`;
     ctx.textAlign = "left";
-    ctx.fillText("[ ESC ] アプリを開く", 20, canvas.height - 13);
+    ctx.fillText("[ ESC ] アプリ  |  [ F2 ] デバッグ", 20, canvas.height - 13);
 }
 
 function drawActionHint() {
@@ -279,6 +286,32 @@ function drawMiniMap() {
     const px = margin + 3 + player.x * size + size / 2; const py = margin + 3 + player.y * size + size / 2;
     ctx.fillStyle = "#ff3333"; ctx.beginPath(); ctx.arc(px, py, size / 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = "#ff3333"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + dx[player.dir] * (size + 2), py + dy[player.dir] * (size + 2)); ctx.stroke();
+}
+
+// --- ★ クロマキー（緑自動透過）処理ユーティリティ ---
+function applyChromaKey(imgElement) {
+    if (!imgElement || !imgElement.complete || imgElement.naturalWidth === 0) return;
+    
+    const canvas = document.createElement("canvas");
+    canvas.width = imgElement.naturalWidth;
+    canvas.height = imgElement.naturalHeight;
+    const cctx = canvas.getContext("2d");
+    cctx.drawImage(imgElement, 0, 0);
+    
+    const imgData = cctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // グリーンバック判定（緑強度のしきい値）
+        if (g > 80 && g > r * 1.25 && g > b * 1.25) {
+            data[i + 3] = 0; // 透明化
+        }
+    }
+    cctx.putImageData(imgData, 0, 0);
+    imgElement.src = canvas.toDataURL();
 }
 
 // --- ★スマホUI（悪魔辞典アプリ）の管理 ---
@@ -406,9 +439,8 @@ window.renderLoadout = function() {
             <div style="width: 50px;"></div>
         </div>
         
-        <!-- ★モデルガンの画像を配置 -->
         <div style="text-align: center; margin-bottom: 15px;">
-            <img src="assets/images/modelgun.jpg" style="max-width: 90%; border: 2px solid #330000; border-radius: 8px; opacity: 0.9;" onerror="this.style.display='none'">
+            <img id="modelgun-img" src="assets/images/modelgun.jpg" style="max-width: 90%; border-radius: 8px;" onload="applyChromaKey(this)" onerror="this.style.display='none'">
         </div>
 
         <div style="margin-bottom: 20px;">
@@ -457,13 +489,12 @@ function interact() {
         } else if (action.type === "shop") {
             openShopUI();
         } else if (action.type === "studentEvent") {
-            // ★追加：生徒救出イベント
             startStudentEvent();
         }
     }
 }
 
-// --- ★ 生徒救出 ＆ モデルガン獲得イベント ---
+// --- 生徒救出 ＆ モデルガン獲得イベント ---
 function startStudentEvent() {
     const text1 = "【生徒】\n「先生……っ！ よかった、来てくれたんだ……！」\n\n「お父さんが、上の階の様子を見てくるって言ったまま戻ってこないんだ……。外からは変な声が聞こえるし、怖くて……」\n\n「先生、お願い……これを使ってお父さんを助けて……！」";
     
@@ -471,15 +502,14 @@ function startStudentEvent() {
         const text2 = "【主人公】\n（これは……モデルガン？ なぜこんなものを……いや、今はこれでも心強い。）\n\n「わかった、お父さんは俺が探す。お前は1階のコンビニへ逃げろ。あそこなら安全なはずだ。後で必ず合流しよう」";
         
         showMessageDialog(text2, () => {
-            // モデルガン獲得モーダルを表示
             showItemAcquiredModal("assets/images/modelgun.jpg", "物理モデルガン", "生徒から託された精巧なモデルガン。\n『悪魔辞典アプリ』と連動し、退魔の札『ラミナ』を装填できる！\n（生徒は1階のコンビニへ向かった）", () => {
-                gameState.hasModelGun = true; // モデルガンフラグON
+                gameState.hasModelGun = true;
             });
         });
     });
 }
 
-// --- ★ おばあさん遭遇イベント（セリフ修正版） ---
+// --- おばあさん遭遇イベント ---
 function startGrandmaEvent() {
     playVideo("assets/videos/CVS.mp4", () => {
         const text = "【謎のおばあさん】\n「おや……こんな場所に迷い込むとは、運の悪い子だねえ。」\n\n「ワタシはね、なぜかこの店の中にだけは居られるんだよ。不思議なもんだねえ……。もし外で何か連絡したいことができたら、1階のポストに手紙を放り込んでおくれ。ワタシが受け取ってやるからね……」\n\n（おばあさんはそれきり目を閉じ、暗がりと同化した。不気味な無人レジだけが青白く光っている……）";
@@ -491,7 +521,7 @@ function startGrandmaEvent() {
     });
 }
 
-// --- ★ 立ち絵付きの会話ダイアログ表示関数 ---
+// --- 立ち絵付きの会話ダイアログ表示関数 ---
 function showConversationDialog(imageSrc, text, onClosed) {
     isEventPlaying = true;
 
@@ -508,10 +538,8 @@ function showConversationDialog(imageSrc, text, onClosed) {
     imgDiv.src = imageSrc;
     imgDiv.style.maxHeight = "320px";
     imgDiv.style.marginRight = "20px";
-    imgDiv.style.border = "3px solid #330000";
     imgDiv.style.borderRadius = "8px";
-    imgDiv.style.backgroundColor = "#000";
-    imgDiv.style.boxShadow = "0 0 15px rgba(0,0,0,0.8)";
+    imgDiv.onload = () => applyChromaKey(imgDiv); // ★クロマキー自動適用
     imgDiv.onerror = () => { imgDiv.style.display = 'none'; };
 
     const msgDiv = document.createElement("div");
@@ -552,7 +580,7 @@ function showConversationDialog(imageSrc, text, onClosed) {
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// --- ★ 汎用アイテム獲得モーダル（引数でパス指定可能） ---
+// --- 汎用アイテム獲得モーダル ---
 function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     isEventPlaying = true;
     const modal = document.createElement("div");
@@ -560,7 +588,7 @@ function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     modal.style.backgroundColor = "rgba(0, 0, 0, 0.88)"; modal.style.zIndex = "2500"; modal.style.display = "flex"; modal.style.flexDirection = "column"; modal.style.alignItems = "center"; modal.style.justifyContent = "center"; modal.style.fontFamily = HORROR_FONT;
     modal.innerHTML = `
         <div style="color: #ff3333; font-size: 1.8em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 3px;">― アイテム獲得 ―</div>
-        <img src="${imagePath}" style="max-height: 240px; border: 3px solid #770000; box-shadow: 0 0 25px rgba(255,0,0,0.5); margin-bottom: 15px; border-radius: 6px;" onerror="this.style.display='none'">
+        <img id="modal-acquired-img" src="${imagePath}" style="max-height: 240px; border-radius: 6px; margin-bottom: 15px;" onload="applyChromaKey(this)" onerror="this.style.display='none'">
         <div style="color: #ffdd66; font-size: 1.5em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
         <div style="color: #cccccc; font-size: 1.1em; margin-bottom: 25px; text-align: center; white-space: pre-wrap;">${detailText}</div>
         <div style="color: #888; font-size: 0.9em;">[ SPACE ] キー または クリックで閉じる</div>
@@ -575,7 +603,6 @@ function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// 既存のカード継承モーダル（旧）は一旦残しますが、アイテム獲得用に分けた形です。
 function startExorcistSequence() {
     const introMsg = "【血の池】\nマンションの中庭に血の池が湧いて、池の底から無数の人ならざる者がこの世に出ようともがいているのが見える……";
     showMessageDialog(introMsg, () => {
@@ -583,7 +610,6 @@ function startExorcistSequence() {
             playVideo("assets/videos/exorcist.mp4", () => {
                 const msg = "【瀕死のエクソシスト】\n「……気づいて……くださったのですね……。ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……そして使い魔と2階非常階段の鍵を……あなたに託します……」\n\n「9枚のラミナで悪魔を見極め……使い魔はLv.15であなたの助けに……」";
                 showMessageDialog(msg, () => {
-                    // ★継承イベントも汎用関数に統合しました
                     showItemAcquiredModal("assets/images/cards/1Card.png", "退魔の札『ラミナ』", "『悪魔辞典アプリ』『使い魔（Lv.15から）』『2F非常階段の鍵』を受け継いだ！", () => {
                         const deathMsg = "【衝撃の光景】\n話し終えた直後、血の池がどす黒く泡立ち始めた！\n\n無数の黒い腕が池から這い出し、エクソシストの体にまとわりつく……！\n\n絶叫とともに、エクソシストは血の池の底へと引きずり込まれ、完全に姿を消した。";
                         showMessageDialog(deathMsg, () => {
@@ -666,6 +692,58 @@ function openShopUI() {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); isEventPlaying = false; };
 }
 
+// --- ★ デバッグメニュー表示関数 (F2キー) ---
+function openDebugMenu() {
+    if (document.getElementById("debug-modal")) {
+        document.getElementById("debug-modal").remove();
+        return;
+    }
+
+    const debugDiv = document.createElement("div");
+    debugDiv.id = "debug-modal";
+    debugDiv.className = "debug-modal";
+    debugDiv.innerHTML = `
+        <h3 style="margin:0; border-bottom:1px solid #00ff00; padding-bottom:5px;">[DEBUG MENU] テスト用コマンド</h3>
+        <button class="debug-btn" id="dbg-all-clear">① 一括イベントクリア（全開放＆アイテム取得）</button>
+        <button class="debug-btn" id="dbg-warp-2f">② 2階（2F）へ直接ワープ</button>
+        <button class="debug-btn" id="dbg-warp-1f">③ 1階（1F）へ直接ワープ</button>
+        <button class="debug-btn" id="dbg-lv15">④ レベル15にする（使い魔解禁テスト用）</button>
+        <button class="debug-btn" id="dbg-close" style="background:#550000; color:#fff; border-color:#ff0000;">閉じる [F2]</button>
+    `;
+    document.body.appendChild(debugDiv);
+
+    document.getElementById("dbg-all-clear").onclick = () => {
+        gameState.hasExorcistInherited = true;
+        gameState.hasKey2F = true;
+        gameState.hasModelGun = true;
+        gameState.hasMetGrandma = true;
+        if (!gameState.cards.includes("1Card.png")) gameState.cards.push("1Card.png");
+        alert("【デバッグ】アプリ、2F鍵、モデルガン、カード1を入手状態にしました！");
+        debugDiv.remove();
+        draw();
+    };
+
+    document.getElementById("dbg-warp-2f").onclick = () => {
+        gameState.hasKey2F = true;
+        changeFloor(2);
+        debugDiv.remove();
+    };
+
+    document.getElementById("dbg-warp-1f").onclick = () => {
+        changeFloor(1);
+        debugDiv.remove();
+    };
+
+    document.getElementById("dbg-lv15").onclick = () => {
+        gameState.level = 15;
+        gameState.familiarSync = 100;
+        alert("【デバッグ】レベルを15、使い魔同期率を100%に設定しました！");
+        debugDiv.remove();
+    };
+
+    document.getElementById("dbg-close").onclick = () => debugDiv.remove();
+}
+
 // --- 移動処理 ---
 function moveForward() {
     const nx = player.x + dx[player.dir]; const ny = player.y + dy[player.dir];
@@ -680,6 +758,11 @@ function turnRight() { player.dir = (player.dir + 1) % 4; draw(); }
 
 // --- キー操作イベント ---
 window.addEventListener("keydown", (e) => {
+    // 【F2キーでデバッグメニュー開閉】
+    if (e.key === "F2") {
+        openDebugMenu();
+        return;
+    }
     if (e.key === "Escape") { toggleMenu(); return; }
     if (isEventPlaying || isMenuOpen) return; 
 
