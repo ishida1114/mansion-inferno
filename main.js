@@ -50,7 +50,11 @@ appStyle.innerHTML = `
     .app-home-btn:hover { background-color: #aaa; }
     
     /* サブ画面用スタイル */
-    .sub-screen-title { font-size: 1.4em; color: #ff3333; margin-bottom: 20px; text-align: center; text-shadow: 0 0 5px red; border-bottom: 1px solid #550000; padding-bottom: 10px; }
+    .sub-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #550000; padding-bottom: 10px; margin-bottom: 20px; }
+    .back-btn { cursor: pointer; color: #888; font-size: 0.9em; transition: color 0.2s; padding: 5px; }
+    .back-btn:hover { color: #fff; }
+    .sub-title { font-size: 1.3em; color: #ff3333; text-shadow: 0 0 5px red; margin: 0; text-align: center; flex: 1; font-weight: bold; }
+    
     .loadout-slot { background: #111; border: 2px dashed #440000; padding: 15px; text-align: center; margin-bottom: 10px; color: #666; }
     .equipped-slot { border: 2px solid #ffdd66; color: #ffdd66; background: #221a00; }
     .card-list { display: flex; gap: 10px; overflow-x: auto; padding-top: 10px; }
@@ -89,7 +93,7 @@ let isMenuOpen = false;
 // --- 画像の読み込み処理 ---
 const images = {};
 const imageSources = {
-    logo: "assets/images/akumanologo.png",
+    logo: "assets/images/DictionariumDaemonum.webp", // ★ロゴを新しいものに差し替え
     door: "assets/images/door.png",
     wall: "assets/images/wall.png",
     stairDoor: "assets/images/stair_door.png",
@@ -135,7 +139,7 @@ const dy = [-1, 0, 1, 0];
 const dirNames = ["北 (N)", "東 (E)", "南 (S)", "西 (W)"];
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// 描画関連の座標データ（省略せずに記載）
+// 描画関連の座標データ
 const leftClips = { 1: [{x:0, y:0}, {x:150, y:75}, {x:150, y:325}, {x:0, y:400}], 2: [{x:150, y:75}, {x:220, y:135}, {x:220, y:265}, {x:150, y:325}], 3: [{x:220, y:135}, {x:255, y:165}, {x:255, y:235}, {x:220, y:265}], 4: [{x:255, y:165}, {x:275, y:180}, {x:275, y:220}, {x:255, y:235}] };
 const rightClips = { 1: [{x:450, y:75}, {x:600, y:0}, {x:600, y:400}, {x:450, y:325}], 2: [{x:380, y:135}, {x:450, y:75}, {x:450, y:325}, {x:380, y:265}], 3: [{x:345, y:165}, {x:380, y:135}, {x:380, y:265}, {x:345, y:235}], 4: [{x:325, y:180}, {x:345, y:165}, {x:345, y:235}, {x:325, y:220}] };
 const frontBounds = { 4: { x: 275, y: 180, w: 50, h: 40 }, 3: { x: 255, y: 165, w: 90, h: 70 }, 2: { x: 220, y: 135, w: 160, h: 130 }, 1: { x: 150, y: 75, w: 300, h: 250 } };
@@ -224,7 +228,6 @@ function draw() {
     ctx.fillText("[ ESC ] アプリを開く", 20, canvas.height - 13);
 }
 
-// （drawActionHint, drawEnvironment, applyDepthShadow, drawCompass, drawMiniMapは変更なしのため省略せず記述）
 function drawActionHint() {
     const frontX = player.x + dx[player.dir];
     const frontY = player.y + dy[player.dir];
@@ -257,6 +260,9 @@ function drawCompass() {
     ctx.fillStyle = "#ffdd66"; ctx.font = `bold 14px ${HORROR_FONT}`; ctx.textAlign = "center"; ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 function drawMiniMap() {
+    // ★ エクソシスト継承イベントが終わるまではミニマップを非表示にする
+    if (!gameState.hasExorcistInherited) return; 
+
     const size = 8; const margin = 10;
     const mapW = currentMap[0].length * size; const mapH = currentMap.length * size;
     ctx.fillStyle = "rgba(0, 0, 0, 0.65)"; ctx.fillRect(margin, margin, mapW + 6, mapH + 6);
@@ -277,17 +283,14 @@ function drawMiniMap() {
 
 // --- ★スマホUI（悪魔辞典アプリ）の管理 ---
 function toggleMenu() {
-    if (isEventPlaying) return; // イベント中は開けない
+    if (isEventPlaying) return; 
     
     if (isMenuOpen) {
-        // メニューを閉じる
         const overlay = document.getElementById("app-overlay");
         if (overlay) overlay.remove();
         isMenuOpen = false;
     } else {
-        // メニューを開く
         if (!gameState.hasExorcistInherited) {
-            // アプリ未入手の場合
             showMessageDialog("【システム】\nまだ『悪魔辞典アプリ』を所持していません。\n1階を探索して手がかりを見つけてください。");
             return;
         }
@@ -297,7 +300,6 @@ function toggleMenu() {
         overlay.id = "app-overlay";
         overlay.className = "app-overlay";
         
-        // スマホ本体のコンテナ
         overlay.innerHTML = `
             <div class="smartphone">
                 <div class="app-header">
@@ -307,16 +309,15 @@ function toggleMenu() {
                     <div>SYNC: <span>${gameState.familiarSync}%</span></div>
                 </div>
                 <div id="app-content" class="app-content">
-                    <!-- コンテンツがここに描画される -->
                 </div>
                 <div class="app-footer">
-                    <div class="app-home-btn" onclick="renderAppHome()"></div>
+                    <div class="app-home-btn" onclick="renderAppHome()" title="ホームに戻る"></div>
                 </div>
             </div>
             <div style="position: absolute; bottom: 20px; color: #888; font-family: ${HORROR_FONT};">▼ [ESC] キーで閉じる</div>
         `;
         document.body.appendChild(overlay);
-        renderAppHome(); // 初期画面（ホーム）を描画
+        renderAppHome(); 
     }
 }
 
@@ -327,7 +328,7 @@ window.renderAppHome = function() {
     
     content.innerHTML = `
         <div style="text-align: center; margin-bottom: 25px;">
-            <img src="assets/images/akumanologo.png" style="max-width: 80%; opacity: 0.8;" onerror="this.style.display='none'">
+            <img src="assets/images/DictionariumDaemonum.webp" style="max-width: 80%; opacity: 0.8;" onerror="this.style.display='none'">
             <div style="color: #666; font-size: 0.8em; margin-top: 10px;">Ver 4.0.0 (禁忌版)</div>
         </div>
         <div class="app-grid">
@@ -364,7 +365,6 @@ window.renderLoadout = function() {
     const content = document.getElementById("app-content");
     if (!content) return;
     
-    // スロット数の計算（Lv1で1枠, Lv5で2枠...という想定）
     const slotCount = Math.floor((gameState.level - 1) / 5) + 1;
     let slotsHTML = "";
     
@@ -374,7 +374,6 @@ window.renderLoadout = function() {
         slotsHTML += `<div class="${cssClass}">SLOT ${i+1} : ${equippedCard}</div>`;
     }
     
-    // 所持カードのHTML生成
     let cardsHTML = "";
     if (gameState.cards.length === 0) {
         cardsHTML = "<div style='color: #555; text-align: center; margin-top: 20px;'>所持しているラミナがありません。</div>";
@@ -390,7 +389,11 @@ window.renderLoadout = function() {
     }
 
     content.innerHTML = `
-        <div class="sub-screen-title">ラミナ装填 (Loadout)</div>
+        <div class="sub-header">
+            <div class="back-btn" onclick="renderAppHome()">◀ 戻る</div>
+            <div class="sub-title">ラミナ装填</div>
+            <div style="width: 50px;"></div> <!-- レイアウト調整用ダミー -->
+        </div>
         <div style="margin-bottom: 20px;">
             ${slotsHTML}
         </div>
@@ -401,15 +404,14 @@ window.renderLoadout = function() {
             </div>
         </div>
         <div style="margin-top: 30px; text-align: center;">
-            <div style="font-size: 0.8em; color: #555;">※レベルが上がると装填枠（スロット）が増加します。</div>
+            <div style="font-size: 0.8em; color: #555;">※レベルが上がると装填枠が増加します。</div>
         </div>
     `;
 };
 
-// カード装備処理（現状はスロット1に上書きするだけの簡易版）
 window.equipCard = function(cardName) {
     gameState.equippedCards[0] = cardName;
-    renderLoadout(); // 画面を再描画して反映
+    renderLoadout(); 
 };
 
 // --- 調べる（interact）処理 ---
@@ -437,7 +439,6 @@ function interact() {
     }
 }
 
-// （startExorcistSequence, showCardAcquiredModal, showMessageDialog, changeFloor, playVideo, openShopUI は変更なしのため省略せず記述）
 function startExorcistSequence() {
     const introMsg = "【血の池】\nマンションの中庭に血の池が湧いて、池の底から無数の人ならざる者がこの世に出ようともがいているのが見える……";
     showMessageDialog(introMsg, () => {
@@ -450,7 +451,7 @@ function startExorcistSequence() {
                         showMessageDialog(deathMsg, () => {
                             gameState.hasExorcistInherited = true;
                             gameState.hasKey2F = true;
-                            gameState.cards.push("1Card.png"); // アプリ内で読み込めるように拡張子まで入れる
+                            gameState.cards.push("1Card.png"); 
                         });
                     });
                 });
@@ -458,6 +459,7 @@ function startExorcistSequence() {
         });
     });
 }
+
 function showCardAcquiredModal(imageName, cardTitle, detailText, onClosed) {
     isEventPlaying = true;
     const modal = document.createElement("div");
@@ -479,6 +481,7 @@ function showCardAcquiredModal(imageName, cardTitle, detailText, onClosed) {
     };
     setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
+
 function showMessageDialog(text, onClosed) {
     isEventPlaying = true;
     const msgDiv = document.createElement("div");
@@ -495,6 +498,7 @@ function showMessageDialog(text, onClosed) {
     };
     setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
+
 function changeFloor(targetFloor) {
     isEventPlaying = true;
     const fadeDiv = document.createElement("div");
@@ -512,6 +516,7 @@ function changeFloor(targetFloor) {
         setTimeout(() => { fadeDiv.style.opacity = "0"; setTimeout(() => { fadeDiv.remove(); isEventPlaying = false; }, 500); }, 800);
     }, 600);
 }
+
 function playVideo(src, onEnded) {
     isEventPlaying = true; 
     const overlay = document.createElement("div");
@@ -523,6 +528,7 @@ function playVideo(src, onEnded) {
     video.onended = () => { overlay.remove(); if (onEnded) onEnded(); };
     overlay.onclick = () => { video.pause(); video.onended(); };
 }
+
 function openShopUI() {
     isEventPlaying = true;
     const shopDiv = document.createElement("div");
@@ -558,13 +564,8 @@ function turnRight() { player.dir = (player.dir + 1) % 4; draw(); }
 
 // --- キー操作イベント ---
 window.addEventListener("keydown", (e) => {
-    // 【ESCキーでメニュー開閉】
-    if (e.key === "Escape") {
-        toggleMenu();
-        return;
-    }
-
-    if (isEventPlaying || isMenuOpen) return; // イベント中・メニュー中は移動や調べる操作を無効化
+    if (e.key === "Escape") { toggleMenu(); return; }
+    if (isEventPlaying || isMenuOpen) return; 
 
     if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") moveForward();
     if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") moveBackward();
