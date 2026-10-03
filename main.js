@@ -403,7 +403,7 @@ function showCardAcquiredModal(imageName, cardTitle, detailText, onClosed) {
 
     modal.innerHTML = `
         <div style="color: #ff3333; font-size: 1.8em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 3px;">― 遺志の継承 ―</div>
-        <img src="assets/images/${imageName}" style="max-height: 240px; border: 3px solid #770000; box-shadow: 0 0 25px rgba(255,0,0,0.5); margin-bottom: 15px; border-radius: 6px;">
+        <img src="assets/images/cards/${imageName}" style="max-height: 240px; border: 3px solid #770000; box-shadow: 0 0 25px rgba(255,0,0,0.5); margin-bottom: 15px; border-radius: 6px;">
         <div style="color: #ffdd66; font-size: 1.5em; font-weight: bold; margin-bottom: 8px;">${cardTitle}</div>
         <div style="color: #cccccc; font-size: 1.1em; margin-bottom: 25px; text-align: center; white-space: pre-wrap;">${detailText}</div>
         <div style="color: #888; font-size: 0.9em;">[ SPACE ] キー または クリックで閉じる</div>
