@@ -44,8 +44,7 @@ let player = {
 const dx = [0, 1, 0, -1];
 const dy = [-1, 0, 1, 0];
 
-// --- 1マスごとの正確な遠近感座標データ ---
-// 左壁の台形切り抜き座標（1マス先〜4マス先）
+// --- 隙間なく噛み合う幾何学座標データ ---
 const leftClips = {
     1: [{x:0, y:0}, {x:150, y:75}, {x:150, y:325}, {x:0, y:400}],
     2: [{x:150, y:75}, {x:220, y:135}, {x:220, y:265}, {x:150, y:325}],
@@ -53,7 +52,6 @@ const leftClips = {
     4: [{x:255, y:165}, {x:275, y:180}, {x:275, y:220}, {x:255, y:235}]
 };
 
-// 右壁の台形切り抜き座標（1マス先〜4マス先）
 const rightClips = {
     1: [{x:450, y:75}, {x:600, y:0}, {x:600, y:400}, {x:450, y:325}],
     2: [{x:380, y:135}, {x:450, y:75}, {x:450, y:325}, {x:380, y:265}],
@@ -61,7 +59,6 @@ const rightClips = {
     4: [{x:325, y:180}, {x:345, y:165}, {x:345, y:235}, {x:325, y:220}]
 };
 
-// 正面壁・ドアの表示位置とサイズ（x, y, 幅, 高さ）
 const frontBounds = {
     4: { x: 275, y: 180, w: 50,  h: 40 },
     3: { x: 255, y: 165, w: 90,  h: 70 },
@@ -82,16 +79,20 @@ function draw() {
     const leftDir = (player.dir + 3) % 4;
     const rightDir = (player.dir + 1) % 4;
 
-    // 2. 奥（depth 4）から手前（depth 1）へ順に不透明描画
+    // 2. 奥（depth 4）から手前（depth 1）へ順に描画
     for (let depth = 4; depth >= 1; depth--) {
+        // 正面壁のマップチェック座標（depthマス先）
         const fX = player.x + dx[player.dir] * depth;
         const fY = player.y + dy[player.dir] * depth;
 
-        const lX = fX + dx[leftDir];
-        const lY = fY + dy[leftDir];
+        // 【修正ポイント】左右壁のチェック座標（手前からの正確なオフセット）
+        const forwardOffset = depth - 1; // depth=1のときは 0（自分の真横）
 
-        const rX = fX + dx[rightDir];
-        const rY = fY + dy[rightDir];
+        const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir];
+        const lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
+
+        const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir];
+        const rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
         // --- 左壁の描画 ---
         if (map1F[lY] && map1F[lY][lX] !== 0) {
