@@ -72,6 +72,7 @@ const gameState = {
     hasExorcistInherited: false, // エクソシストからの継承フラグ
     hasKey2F: false,             // 2F非常階段の鍵フラグ
     hasModelGun: false,          // モデルガン所持フラグ（2F用）
+    hasMetGrandma: false,        // ★おばあさんに会ったかどうかのフラグ
     cards: [],                   // 所持カードIDリスト
     equippedCards: [],           // 装填中のカードリスト
     level: 1,                    // 主人公のレベル
@@ -93,7 +94,7 @@ let isMenuOpen = false;
 // --- 画像の読み込み処理 ---
 const images = {};
 const imageSources = {
-    logo: "assets/images/DictionariumDaemonum.webp", // ★ロゴを新しいものに差し替え
+    logo: "assets/images/DictionariumDaemonum.webp",
     door: "assets/images/door.png",
     wall: "assets/images/wall.png",
     stairDoor: "assets/images/stair_door.png",
@@ -260,7 +261,6 @@ function drawCompass() {
     ctx.fillStyle = "#ffdd66"; ctx.font = `bold 14px ${HORROR_FONT}`; ctx.textAlign = "center"; ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 function drawMiniMap() {
-    // ★ エクソシスト継承イベントが終わるまではミニマップを非表示にする
     if (!gameState.hasExorcistInherited) return; 
 
     const size = 8; const margin = 10;
@@ -392,7 +392,7 @@ window.renderLoadout = function() {
         <div class="sub-header">
             <div class="back-btn" onclick="renderAppHome()">◀ 戻る</div>
             <div class="sub-title">ラミナ装填</div>
-            <div style="width: 50px;"></div> <!-- レイアウト調整用ダミー -->
+            <div style="width: 50px;"></div>
         </div>
         <div style="margin-bottom: 20px;">
             ${slotsHTML}
@@ -435,10 +435,99 @@ function interact() {
             changeFloor(action.targetFloor);
         } else if (action.type === "exorcistSequence") {
             startExorcistSequence();
+        } else if (action.type === "grandmaEvent") {
+            // ★追加：おばあさん初回遭遇イベント
+            startGrandmaEvent();
+        } else if (action.type === "shop") {
+            // ★追加：2回目以降のショップ直接遷移
+            openShopUI();
         }
     }
 }
 
+// --- ★ おばあさん遭遇イベント ---
+function startGrandmaEvent() {
+    // コンビニの入店動画を再生してから会話へ
+    playVideo("assets/videos/CVS.mp4", () => {
+        const text = "【謎のおばあさん】\n「いらっしゃい……こんな場所へよく来たねえ。」\n\n「ワタシはなぜか、この店の中にだけは居られるでの……。もし外で何か連絡したいことができたら、1階のポストに手紙を放り込んでおくれ。受け取ってやるからね……」\n\n「さあ、買い物があるなら見ていきな……」";
+        
+        // 立ち絵付きダイアログを表示
+        showConversationDialog("assets/images/grandma.jpg", text, () => {
+            gameState.hasMetGrandma = true; // 出会ったフラグを立てる
+            openShopUI(); // そのままショップ画面へ
+        });
+    });
+}
+
+// --- ★ 立ち絵付きの会話ダイアログ表示関数 ---
+function showConversationDialog(imageSrc, text, onClosed) {
+    isEventPlaying = true;
+
+    const overlay = document.createElement("div");
+    overlay.style.position = "absolute";
+    overlay.style.bottom = "5%";
+    overlay.style.left = "5%";
+    overlay.style.width = "90%";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "flex-end";
+    overlay.style.zIndex = "2000";
+    
+    // キャラクターの立ち絵画像
+    const imgDiv = document.createElement("img");
+    imgDiv.src = imageSrc;
+    imgDiv.style.maxHeight = "320px";
+    imgDiv.style.marginRight = "20px";
+    imgDiv.style.border = "3px solid #330000";
+    imgDiv.style.borderRadius = "8px";
+    imgDiv.style.backgroundColor = "#000";
+    imgDiv.style.boxShadow = "0 0 15px rgba(0,0,0,0.8)";
+    // 画像がない場合は非表示にする
+    imgDiv.onerror = () => { imgDiv.style.display = 'none'; };
+
+    // テキスト領域
+    const msgDiv = document.createElement("div");
+    msgDiv.style.flex = "1";
+    msgDiv.style.padding = "20px 25px";
+    msgDiv.style.backgroundColor = "rgba(10, 0, 0, 0.92)";
+    msgDiv.style.color = "#dddddd";
+    msgDiv.style.border = "2px solid #550000";
+    msgDiv.style.borderRadius = "4px";
+    msgDiv.style.fontFamily = HORROR_FONT;
+    msgDiv.style.fontSize = "1.2em";
+    msgDiv.style.lineHeight = "1.8";
+    msgDiv.style.whiteSpace = "pre-wrap";
+    msgDiv.style.boxShadow = "0 0 20px rgba(0,0,0,0.8)";
+    msgDiv.innerText = text;
+
+    const closeHint = document.createElement("div");
+    closeHint.style.marginTop = "10px";
+    closeHint.style.textAlign = "right";
+    closeHint.style.color = "#888888";
+    closeHint.style.fontSize = "0.85em";
+    closeHint.innerText = "▼ クリックまたは [ SPACE ] で閉じる";
+    
+    msgDiv.appendChild(closeHint);
+    overlay.appendChild(imgDiv);
+    overlay.appendChild(msgDiv);
+    document.body.appendChild(overlay);
+
+    const closeHandler = (e) => {
+        if (e.type === "click" || e.key === " " || e.key === "Enter") {
+            window.removeEventListener("keydown", closeHandler);
+            overlay.onclick = null;
+            overlay.remove();
+            isEventPlaying = false;
+            if (onClosed) onClosed();
+        }
+    };
+
+    setTimeout(() => {
+        overlay.onclick = closeHandler;
+        window.addEventListener("keydown", closeHandler);
+    }, 150);
+}
+
+// （以下、既存の関数群）
 function startExorcistSequence() {
     const introMsg = "【血の池】\nマンションの中庭に血の池が湧いて、池の底から無数の人ならざる者がこの世に出ようともがいているのが見える……";
     showMessageDialog(introMsg, () => {
