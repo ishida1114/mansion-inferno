@@ -30,10 +30,10 @@ const imageSources = {
     right4: "assets/images/rightwall4.png"
 };
 
-// ★ 画像内部のトリミング率（壁枠は動かさず、元画像の上下余白・太すぎる巾木だけをカット）
+// ★ 左右の壁とピタッと揃える最適カット値（上18% / 下12%カット）
 const doorCrops = {
-    door:      { top: 0.08, bottom: 0.08 }, // 上下8%カットして壁枠へフィット
-    stairDoor: { top: 0.06, bottom: 0.06 }  // 非常階段用
+    door:      { top: 0.18, bottom: 0.12 },
+    stairDoor: { top: 0.18, bottom: 0.12 }
 };
 
 let loadedCount = 0;
@@ -182,7 +182,7 @@ function draw() {
             }
         }
 
-        // --- 正面壁・扉の描画（★ 壁枠は動かさず画像側をカット） ---
+        // --- 正面壁・扉の描画 ---
         if (map1F[fY] && map1F[fY][fX] !== 0) {
             const cellType = map1F[fY][fX];
             const b = frontBounds[depth];
@@ -202,16 +202,13 @@ function draw() {
                 if (cropKey && doorCrops[cropKey]) {
                     const crop = doorCrops[cropKey];
 
-                    // 1. ソース画像の必要部分だけを切り抜く
                     const sx = 0;
                     const sy = targetImg.naturalHeight * crop.top;
                     const sw = targetImg.naturalWidth;
                     const sh = targetImg.naturalHeight * (1 - crop.top - crop.bottom);
 
-                    // 2. 画面上の描画枠（b.x, b.y, b.w, b.h）は完璧に維持してスキマを防ぐ！
                     ctx.drawImage(targetImg, sx, sy, sw, sh, b.x, b.y, b.w, b.h);
                 } else {
-                    // 通常壁 (wall.png) は全域描画
                     ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
                 }
 
