@@ -1,245 +1,42 @@
-// 1. 1階のマップ・初期位置・イベント処理をインポート
-import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
+// 1階マップデータ
+// 0: 通路, 1: 壁, 3: コンビニ, 4: 非常階段, 5: ポスト, 6: 血の池, 7: エレベーター
+export const map1F = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 3, 0, 5, 0, 0, 4, 0, 1], // 北側通路（3:コンビニ, 5:ポスト, 4:非常階段）
+    [1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 1, 6, 6, 6, 6, 1, 0, 1],
+    [1, 0, 1, 6, 6, 6, 6, 7, 0, 1], // 7:エレベーターは壁側に配置、x=8通路は開通
+    [1, 0, 1, 6, 6, 6, 6, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1], // スタート位置 (x:4, y:8)
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+];
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-// --- 画像の読み込み処理 ---
-const images = {};
-const imageSources = {
-    logo: "assets/images/akumanologo.png",
-    door: "assets/images/door.png",
-    wall: "assets/images/wall.png",
-    stairDoor: "assets/images/stair_door.png", // 非常階段専用ドア
-    left1: "assets/images/leftwall1.png",
-    left2: "assets/images/leftwall2.png",
-    left3: "assets/images/leftwall3.png",
-    left4: "assets/images/leftwall4.png",
-    right1: "assets/images/rightwall1.png",
-    right2: "assets/images/rightwall2.png",
-    right3: "assets/images/rightwall3.png",
-    right4: "assets/images/rightwall4.png"
+export const playerStart1F = {
+    x: 4,
+    y: 8,
+    dir: 0 // 北向き
 };
 
-let loadedCount = 0;
-const totalImages = Object.keys(imageSources).length;
-
-for (let key in imageSources) {
-    images[key] = new Image();
-    images[key].src = imageSources[key];
-    images[key].onload = () => {
-        loadedCount++;
-        if (loadedCount === totalImages) {
-            draw();
-        }
-    };
-}
-
-// --- プレイヤー設定（1Fの初期位置） ---
-let player = {
-    x: playerStart1F.x,
-    y: playerStart1F.y,
-    dir: playerStart1F.dir
-};
-
-const dx = [0, 1, 0, -1];
-const dy = [-1, 0, 1, 0];
-
-// --- 隙間なく噛み合う幾何学座標データ ---
-const leftClips = {
-    1: [{x:0, y:0}, {x:150, y:75}, {x:150, y:325}, {x:0, y:400}],
-    2: [{x:150, y:75}, {x:220, y:135}, {x:220, y:265}, {x:150, y:325}],
-    3: [{x:220, y:135}, {x:255, y:165}, {x:255, y:235}, {x:220, y:265}],
-    4: [{x:255, y:165}, {x:275, y:180}, {x:275, y:220}, {x:255, y:235}]
-};
-
-const rightClips = {
-    1: [{x:450, y:75}, {x:600, y:0}, {x:600, y:400}, {x:450, y:325}],
-    2: [{x:380, y:135}, {x:450, y:75}, {x:450, y:325}, {x:380, y:265}],
-    3: [{x:345, y:165}, {x:380, y:135}, {x:380, y:265}, {x:345, y:235}],
-    4: [{x:325, y:180}, {x:345, y:165}, {x:345, y:235}, {x:325, y:220}]
-};
-
-const frontBounds = {
-    4: { x: 275, y: 180, w: 50,  h: 40 },
-    3: { x: 255, y: 165, w: 90,  h: 70 },
-    2: { x: 220, y: 135, w: 160, h: 130 },
-    1: { x: 150, y: 75,  w: 300, h: 250 }
-};
-
-// --- 描画メイン関数 ---
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 1. 天井と床
-    ctx.fillStyle = "#0d0d0d";
-    ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
-    ctx.fillStyle = "#1c120c";
-    ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
-
-    const leftDir = (player.dir + 3) % 4;
-    const rightDir = (player.dir + 1) % 4;
-
-    // 2. 奥（depth 4）から手前（depth 1）へ順に描画
-    for (let depth = 4; depth >= 1; depth--) {
-        const fX = player.x + dx[player.dir] * depth;
-        const fY = player.y + dy[player.dir] * depth;
-
-        const forwardOffset = depth - 1;
-
-        const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir];
-        const lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
-
-        const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir];
-        const rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
-
-        // --- 左壁の描画 ---
-        if (map1F[lY] && map1F[lY][lX] !== 0) {
-            const imgKey = "left" + depth;
-            if (images[imgKey] && images[imgKey].complete) {
-                const clip = leftClips[depth];
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(clip[0].x, clip[0].y);
-                ctx.lineTo(clip[1].x, clip[1].y);
-                ctx.lineTo(clip[2].x, clip[2].y);
-                ctx.lineTo(clip[3].x, clip[3].y);
-                ctx.closePath();
-                ctx.clip();
-                ctx.drawImage(images[imgKey], 0, 0, canvas.width, canvas.height);
-                ctx.restore();
-            }
-        }
-
-        // --- 右壁の描画 ---
-        if (map1F[rY] && map1F[rY][rX] !== 0) {
-            const imgKey = "right" + depth;
-            if (images[imgKey] && images[imgKey].complete) {
-                const clip = rightClips[depth];
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(clip[0].x, clip[0].y);
-                ctx.lineTo(clip[1].x, clip[1].y);
-                ctx.lineTo(clip[2].x, clip[2].y);
-                ctx.lineTo(clip[3].x, clip[3].y);
-                ctx.closePath();
-                ctx.clip();
-                ctx.drawImage(images[imgKey], 0, 0, canvas.width, canvas.height);
-                ctx.restore();
-            }
-        }
-
-        // --- 正面壁・扉の描画 ---
-        if (map1F[fY] && map1F[fY][fX] !== 0) {
-            const cellType = map1F[fY][fX];
-            const b = frontBounds[depth];
-
-            if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
-                // 非常階段 (マス 4) 専用ドア
-                ctx.drawImage(images.stairDoor, b.x, b.y, b.w, b.h);
-            } else if ((cellType === 2 || cellType === 3 || cellType === 7) && images.door && images.door.complete) {
-                // 通常ドア (2)、コンビニ (3)、エレベーター (7)
-                ctx.drawImage(images.door, b.x, b.y, b.w, b.h);
-            } else if (images.wall && images.wall.complete) {
-                // 通常壁やポスト (5)、血の池 (6)
-                ctx.drawImage(images.wall, b.x, b.y, b.w, b.h);
-            }
-        }
-    }
-
-    // 3. ミニマップの描画（画面左上）
-    drawMiniMap();
-}
-
-// --- ミニマップ描画関数 ---
-function drawMiniMap() {
-    const size = 10; // 1マスのサイズ(px)
-    const margin = 10;
-    const mapW = map1F[0].length * size;
-    const mapH = map1F.length * size;
-
-    // 半透明背景
-    ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-    ctx.fillRect(margin, margin, mapW + 6, mapH + 6);
-    ctx.strokeStyle = "#444";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(margin, margin, mapW + 6, mapH + 6);
-
-    // マップセル描画
-    for (let y = 0; y < map1F.length; y++) {
-        for (let x = 0; x < map1F[y].length; x++) {
-            const cell = map1F[y][x];
-            if (cell !== 0) {
-                // 壁はグレー、イベント系（3,4,5,6,7）は紫
-                ctx.fillStyle = cell === 1 ? "#555" : "#8a2be2";
-                ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
-            }
-        }
-    }
-
-    // プレイヤー位置（赤丸）
-    const px = margin + 3 + player.x * size + size / 2;
-    const py = margin + 3 + player.y * size + size / 2;
-
-    ctx.fillStyle = "#ff3333";
-    ctx.beginPath();
-    ctx.arc(px, py, size / 2.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 向きを示す赤線
-    ctx.strokeStyle = "#ff3333";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(px, py);
-    ctx.lineTo(px + dx[player.dir] * (size + 2), py + dy[player.dir] * (size + 2));
-    ctx.stroke();
-}
-
-// --- 調べる（interact）処理 ---
-function interact() {
-    const frontX = player.x + dx[player.dir];
-    const frontY = player.y + dy[player.dir];
-    const target = map1F[frontY] ? map1F[frontY][frontX] : 1;
-
-    handleEvent1F(target);
-}
-
-// --- 移動処理 ---
-function moveForward() {
-    const nx = player.x + dx[player.dir];
-    const ny = player.y + dy[player.dir];
-    if (map1F[ny] && map1F[ny][nx] === 0) {
-        player.x = nx;
-        player.y = ny;
-        draw();
+export function handleEvent1F(targetCode) {
+    switch(targetCode) {
+        case 3:
+            alert("【無人コンビニ】セルフレジの画面が青く点滅している...（CVS.mp4再生予定）");
+            break;
+        case 4:
+            alert("【非常階段】重い非常扉がある。ここから2階へ登れそうだ。");
+            break;
+        case 5:
+            alert("【集合ポスト】『202号室の住人は毎夜、鏡に向かって呪文を呟いている』と書かれた紙切れが入っている…");
+            break;
+        case 6:
+            alert("【吹き抜けの手すり】どす黒い血の池から無数の黒い手が蠢き、うめき声が響いている…");
+            break;
+        case 7:
+            alert("【エレベーター】ボタンを押しても反応がない。『電源が落ちています』と赤字で表示されている。");
+            break;
+        default:
+            break;
     }
 }
-
-function moveBackward() {
-    const nx = player.x - dx[player.dir];
-    const ny = player.y - dy[player.dir];
-    if (map1F[ny] && map1F[ny][nx] === 0) {
-        player.x = nx;
-        player.y = ny;
-        draw();
-    }
-}
-
-function turnLeft() {
-    player.dir = (player.dir + 3) % 4;
-    draw();
-}
-
-function turnRight() {
-    player.dir = (player.dir + 1) % 4;
-    draw();
-}
-
-// キー操作
-window.addEventListener("keydown", (e) => {
-    if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") moveForward();
-    if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") moveBackward();
-    if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") turnLeft();
-    if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") turnRight();
-    if (e.key === " " || e.key === "Enter") interact();
-});
