@@ -133,14 +133,58 @@ function draw() {
             const b = frontBounds[depth];
 
             if ((cellType === 2 || cellType === 3 || cellType === 4 || cellType === 7) && images.door && images.door.complete) {
-                // 部屋ドア(2)、コンビニ(3)、階段(4)、エレベーター(7)はドア画像を使用
                 ctx.drawImage(images.door, b.x, b.y, b.w, b.h);
             } else if (images.wall && images.wall.complete) {
-                // 通常壁やポスト(5)、血の池(6)などは壁画像を使用
                 ctx.drawImage(images.wall, b.x, b.y, b.w, b.h);
             }
         }
     }
+
+    // 3. ミニマップの描画（画面左上）
+    drawMiniMap();
+}
+
+// --- ミニマップ描画関数 ---
+function drawMiniMap() {
+    const size = 8; // 1マスのサイズ(px)
+    const margin = 10;
+    const mapW = map1F[0].length * size;
+    const mapH = map1F.length * size;
+
+    // 半透明背景
+    ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+    ctx.fillRect(margin, margin, mapW + 6, mapH + 6);
+    ctx.strokeStyle = "#444";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(margin, margin, mapW + 6, mapH + 6);
+
+    // マップセル描画
+    for (let y = 0; y < map1F.length; y++) {
+        for (let x = 0; x < map1F[y].length; x++) {
+            const cell = map1F[y][x];
+            if (cell !== 0) {
+                ctx.fillStyle = cell === 1 ? "#555" : "#8a2be2"; // 壁:グレー, イベント:紫
+                ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
+            }
+        }
+    }
+
+    // プレイヤー位置（赤丸）と向き（線）
+    const px = margin + 3 + player.x * size + size / 2;
+    const py = margin + 3 + player.y * size + size / 2;
+
+    ctx.fillStyle = "#ff3333";
+    ctx.beginPath();
+    ctx.arc(px, py, size / 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 向きを示す赤線
+    ctx.strokeStyle = "#ff3333";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + dx[player.dir] * (size + 2), py + dy[player.dir] * (size + 2));
+    ctx.stroke();
 }
 
 // --- 調べる（interact）処理 ---
@@ -183,7 +227,7 @@ function turnRight() {
     draw();
 }
 
-// キー操作（W/A/S/Dで移動、Space/Enterで「調べる」）
+// キー操作
 window.addEventListener("keydown", (e) => {
     if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") moveForward();
     if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") moveBackward();
