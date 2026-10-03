@@ -30,10 +30,10 @@ const imageSources = {
     right4: "assets/images/rightwall4.png"
 };
 
-// ★ ドア壁の上下はみ出しを実際に削る補正設定（数値の分だけ画面上の壁が小さくなります）
+// ★ 画像内部のトリミング率（壁枠は動かさず、元画像の上下余白・太すぎる巾木だけをカット）
 const doorCrops = {
-    door:      { top: 0.14, bottom: 0.08 }, // 上を14%、下を8%カットして位置調整
-    stairDoor: { top: 0.12, bottom: 0.07 }  // 非常階段ドア用
+    door:      { top: 0.08, bottom: 0.08 }, // 上下8%カットして壁枠へフィット
+    stairDoor: { top: 0.06, bottom: 0.06 }  // 非常階段用
 };
 
 let loadedCount = 0;
@@ -182,7 +182,7 @@ function draw() {
             }
         }
 
-        // --- 正面壁・扉の描画（★ 画面上の描画位置を削るようロジック修正） ---
+        // --- 正面壁・扉の描画（★ 壁枠は動かさず画像側をカット） ---
         if (map1F[fY] && map1F[fY][fX] !== 0) {
             const cellType = map1F[fY][fX];
             const b = frontBounds[depth];
@@ -202,17 +202,14 @@ function draw() {
                 if (cropKey && doorCrops[cropKey]) {
                     const crop = doorCrops[cropKey];
 
-                    // 1. ソース画像のカット範囲
+                    // 1. ソース画像の必要部分だけを切り抜く
                     const sx = 0;
                     const sy = targetImg.naturalHeight * crop.top;
                     const sw = targetImg.naturalWidth;
                     const sh = targetImg.naturalHeight * (1 - crop.top - crop.bottom);
 
-                    // 2. ★ 画面上での描画領域（Y座標と高さ）を実際に縮める！
-                    const drawY = b.y + (b.h * crop.top);
-                    const drawH = b.h * (1 - crop.top - crop.bottom);
-
-                    ctx.drawImage(targetImg, sx, sy, sw, sh, b.x, drawY, b.w, drawH);
+                    // 2. 画面上の描画枠（b.x, b.y, b.w, b.h）は完璧に維持してスキマを防ぐ！
+                    ctx.drawImage(targetImg, sx, sy, sw, sh, b.x, b.y, b.w, b.h);
                 } else {
                     // 通常壁 (wall.png) は全域描画
                     ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
