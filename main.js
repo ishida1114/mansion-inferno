@@ -33,8 +33,8 @@ const imageSources = {
 // ★ ドア画像の拡大・位置ズレをコードで吸収するトリミング補正設定
 // top: 上のカット率, bottom: 下（巾木側）のカット率
 const doorCrops = {
-    door:      { top: 0.06, bottom: 0.08 }, // 通常ドア用 (上下を6%〜8%カット)
-    stairDoor: { top: 0.05, bottom: 0.07 }  // 非常階段ドア用
+door:      { top: 0.12, bottom: 0.10 }, // 上を約12%、下を約10%カット
+    stairDoor: { top: 0.11, bottom: 0.09 }  // 非常階段ドア用
 };
 
 let loadedCount = 0;
