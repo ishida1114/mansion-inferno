@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>怠惰な僕の悪魔辞典 〜マンション・インフェルノ〜</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- テキストタイトルをロゴ画像に変更 -->
+        <div id="logo-wrapper">
+            <img id="game-logo" src="assets/images/akumanologo.png" alt="怠惰な僕の悪魔辞典 〜マンション・インフェルノ〜">
+        </div>
+        
+        <!-- 3D表示用キャンバス -->
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        
+        <!-- 操作ボタン -->
+        <div id="controls">
+            <button onclick="turnLeft()">左を向く (A)</button>
+            <button onclick="moveForward()">前進 (W)</button>
+            <button onclick="turnRight()">右を向く (D)</button>
+            <button onclick="moveBackward()">後退 (S)</button>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
+<!-- index.html の末尾 -->
+<script type="module" src="main.js"></script>
