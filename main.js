@@ -20,7 +20,6 @@ const imageSources = {
     door: "assets/images/door.png",
     wall: "assets/images/wall.png",
     stairDoor: "assets/images/stair_door.png",
-    cvs: "assets/images/cvs.png", // ★ コンビニ専用画像（無い場合は通常のドア画像に自動フォールバック）
     left1: "assets/images/leftwall1.png",
     left2: "assets/images/leftwall2.png",
     left3: "assets/images/leftwall3.png",
@@ -45,7 +44,7 @@ for (let key in imageSources) {
     images[key] = new Image();
     images[key].onload = checkAllLoaded;
     images[key].onerror = () => {
-        // cvs.png がない場合は読み込みエラーを出さずにスキップ
+        alert(`【画像読み込みエラー】\n「${imageSources[key]}」が見つかりません！`);
         checkAllLoaded();
     };
     images[key].src = imageSources[key];
@@ -177,47 +176,23 @@ function draw() {
             }
         }
 
-        // --- 正面壁・扉・オブジェクトの重層描画 ---
+        // --- 正面壁・扉の描画 ---
         if (map1F[fY] && map1F[fY][fX] !== 0) {
             const cellType = map1F[fY][fX];
             const b = frontBounds[depth];
 
-            if (cellType === 3) {
-                // コンビニ(3)の場合：まず土台として背景に「通常壁」を隙間なく全域描画
-                if (images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
-                    ctx.drawImage(images.wall, b.x, b.y, b.w, b.h);
-                }
+            let targetImg = images.wall;
+            // 4:非常階段, 2:通常扉, 3:コンビニ扉, 7:エレベーター
+            if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
+                targetImg = images.stairDoor;
+            } else if ((cellType === 2 || cellType === 3 || cellType === 7) && images.door && images.door.complete) {
+                targetImg = images.door;
+            }
 
-                // その上に「コンビニ用画像（無ければドア画像）」を中央下部に重ねて描画
-                const objImg = (images.cvs && images.cvs.complete && images.cvs.naturalWidth > 0) ? images.cvs : images.door;
-                if (objImg && objImg.complete && objImg.naturalWidth > 0) {
-                    const scale = 0.55; // 55%のオブジェクトサイズに縮小
-                    const drawW = b.w * scale;
-                    const drawH = b.h * scale;
-                    const drawX = b.x + (b.w - drawW) / 2;
-                    const drawY = b.y + (b.h - drawH);
-
-                    ctx.drawImage(objImg, drawX, drawY, drawW, drawH);
-                }
-
-                // 影の付与
+            if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
+                ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
                 ctx.fillRect(b.x, b.y, b.w, b.h);
-
-            } else {
-                // 通常の壁・非常階段・扉の描画
-                let targetImg = images.wall;
-                if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
-                    targetImg = images.stairDoor;
-                } else if ((cellType === 2 || cellType === 7) && images.door && images.door.complete) {
-                    targetImg = images.door;
-                }
-
-                if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
-                    ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
-                    ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
-                    ctx.fillRect(b.x, b.y, b.w, b.h);
-                }
             }
         }
     }
@@ -354,31 +329,47 @@ function interact() {
     }
 }
 
-// --- 動画再生関数 ---
+// --- ★動画再生関数の修正（サイズを小さくして枠を付ける） ---
 function playVideo(src, onEnded) {
     isEventPlaying = true; 
 
+    // 背景を暗くするオーバーレイレイヤー
+    const overlay = document.createElement("div");
+    overlay.style.position = "absolute";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+    overlay.style.zIndex = "999";
+    overlay.style.display = "flex";
+    overlay.style.justifyContent = "center";
+    overlay.style.alignItems = "center";
+    document.body.appendChild(overlay);
+
     const video = document.createElement("video");
     video.src = src;
-    video.style.position = "absolute";
-    video.style.top = "0";
-    video.style.left = "0";
-    video.style.width = "100vw";
-    video.style.height = "100vh";
-    video.style.objectFit = "cover";
+    
+    // ★ 動画を枠で囲って適度なサイズに
+    video.style.width = "60%"; // 画面幅の60%
+    video.style.maxWidth = "600px"; // 最大でも600px
+    video.style.border = "4px solid #550000"; // 赤黒い枠
+    video.style.boxShadow = "0 0 30px rgba(255, 0, 0, 0.4)"; // ぼんやり光るエフェクト
     video.style.backgroundColor = "black";
-    video.style.zIndex = "1000";
+    
     video.controls = false;
     video.autoplay = true;
 
-    document.body.appendChild(video);
+    overlay.appendChild(video);
 
+    // 終了処理
     video.onended = () => {
-        video.remove();
+        overlay.remove();
         if (onEnded) onEnded();
     };
 
-    video.onclick = () => {
+    // クリックでスキップ
+    overlay.onclick = () => {
         video.pause();
         video.onended();
     };
