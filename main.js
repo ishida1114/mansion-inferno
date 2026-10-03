@@ -1,7 +1,7 @@
 // 1. 1階のマップ・初期位置・イベント処理をインポート
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 
-// --- ★ホラー風の本格的な明朝体フォントを自動で読み込む ---
+// --- ホラー風フォントの読み込み ---
 const fontLink = document.createElement("link");
 fontLink.href = "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;800&display=swap";
 fontLink.rel = "stylesheet";
@@ -20,6 +20,7 @@ const imageSources = {
     door: "assets/images/door.png",
     wall: "assets/images/wall.png",
     stairDoor: "assets/images/stair_door.png",
+    cvs: "assets/images/cvs.png", // ★ コンビニ専用画像（無い場合は通常のドア画像に自動フォールバック）
     left1: "assets/images/leftwall1.png",
     left2: "assets/images/leftwall2.png",
     left3: "assets/images/leftwall3.png",
@@ -36,7 +37,6 @@ const totalImages = Object.keys(imageSources).length;
 function checkAllLoaded() {
     loadedCount++;
     if (loadedCount === totalImages) {
-        // 少し遅らせてフォントの読み込み完了を待ってから描画
         setTimeout(draw, 200); 
     }
 }
@@ -45,7 +45,7 @@ for (let key in imageSources) {
     images[key] = new Image();
     images[key].onload = checkAllLoaded;
     images[key].onerror = () => {
-        alert(`【画像読み込みエラー】\n「${imageSources[key]}」が見つかりません！`);
+        // cvs.png がない場合は読み込みエラーを出さずにスキップ
         checkAllLoaded();
     };
     images[key].src = imageSources[key];
@@ -63,7 +63,7 @@ const dy = [-1, 0, 1, 0];
 const dirNames = ["北 (N)", "東 (E)", "南 (S)", "西 (W)"];
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// --- 3D描画用 台形マスク座標 ---
+// 台形マスク座標
 const leftClips = {
     1: [{x:0, y:0}, {x:150, y:75}, {x:150, y:325}, {x:0, y:400}],
     2: [{x:150, y:75}, {x:220, y:135}, {x:220, y:265}, {x:150, y:325}],
@@ -78,7 +78,6 @@ const rightClips = {
     4: [{x:325, y:180}, {x:345, y:165}, {x:345, y:235}, {x:325, y:220}]
 };
 
-// 正面壁の表示範囲
 const frontBounds = {
     4: { x: 275, y: 180, w: 50,  h: 40 },
     3: { x: 255, y: 165, w: 90,  h: 70 },
@@ -178,68 +177,78 @@ function draw() {
             }
         }
 
-        // --- 正面壁・扉の描画 ---
+        // --- 正面壁・扉・オブジェクトの重層描画 ---
         if (map1F[fY] && map1F[fY][fX] !== 0) {
             const cellType = map1F[fY][fX];
             const b = frontBounds[depth];
 
-            let targetImg = images.wall;
-            if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
-                targetImg = images.stairDoor;
-            } else if ((cellType === 2 || cellType === 3 || cellType === 7) && images.door && images.door.complete) {
-                targetImg = images.door;
-            }
-
-            if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
-                // ★ コンビニ(3)の場合は絵を小さくして中央下部に配置する
-                let drawX = b.x;
-                let drawY = b.y;
-                let drawW = b.w;
-                let drawH = b.h;
-
-                if (cellType === 3) {
-                    const scale = 0.65; // 本来の65%のサイズに縮小
-                    drawW = b.w * scale;
-                    drawH = b.h * scale;
-                    drawX = b.x + (b.w - drawW) / 2; // 左右中央に寄せる
-                    drawY = b.y + (b.h - drawH);     // 下（床）に寄せる
+            if (cellType === 3) {
+                // コンビニ(3)の場合：まず土台として背景に「通常壁」を隙間なく全域描画
+                if (images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
+                    ctx.drawImage(images.wall, b.x, b.y, b.w, b.h);
                 }
 
-                ctx.drawImage(targetImg, drawX, drawY, drawW, drawH);
+                // その上に「コンビニ用画像（無ければドア画像）」を中央下部に重ねて描画
+                const objImg = (images.cvs && images.cvs.complete && images.cvs.naturalWidth > 0) ? images.cvs : images.door;
+                if (objImg && objImg.complete && objImg.naturalWidth > 0) {
+                    const scale = 0.55; // 55%のオブジェクトサイズに縮小
+                    const drawW = b.w * scale;
+                    const drawH = b.h * scale;
+                    const drawX = b.x + (b.w - drawW) / 2;
+                    const drawY = b.y + (b.h - drawH);
+
+                    ctx.drawImage(objImg, drawX, drawY, drawW, drawH);
+                }
+
+                // 影の付与
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
-                ctx.fillRect(drawX, drawY, drawW, drawH);
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+
+            } else {
+                // 通常の壁・非常階段・扉の描画
+                let targetImg = images.wall;
+                if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
+                    targetImg = images.stairDoor;
+                } else if ((cellType === 2 || cellType === 7) && images.door && images.door.complete) {
+                    targetImg = images.door;
+                }
+
+                if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
+                    ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
+                    ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
+                    ctx.fillRect(b.x, b.y, b.w, b.h);
+                }
             }
         }
     }
 
     drawMiniMap();
     drawCompass();
-    drawActionHint(); // ★ 新機能：目の前に調べられるモノがあるかチェック
+    drawActionHint();
 }
 
-// --- ★ 新機能：調べられるモノが目の前にある時のガイド表示 ---
+// --- 調べられる時のアクションヒント表示 ---
 function drawActionHint() {
     const frontX = player.x + dx[player.dir];
     const frontY = player.y + dy[player.dir];
     const target = map1F[frontY] ? map1F[frontY][frontX] : 1;
 
-    // イベントマス (3:コンビニ, 4:非常階段, 5:ポスト, 6:血の池, 7:エレベーター) の場合
     if ([3, 4, 5, 6, 7].includes(target)) {
         ctx.fillStyle = "rgba(15, 0, 0, 0.75)";
-        ctx.fillRect(canvas.width / 2 - 80, canvas.height - 50, 160, 32);
+        ctx.fillRect(canvas.width / 2 - 90, canvas.height - 50, 180, 32);
         
         ctx.strokeStyle = "#550000";
         ctx.lineWidth = 1;
-        ctx.strokeRect(canvas.width / 2 - 80, canvas.height - 50, 160, 32);
+        ctx.strokeRect(canvas.width / 2 - 90, canvas.height - 50, 180, 32);
 
-        ctx.fillStyle = "#ffdd66"; // 古びた金文字風の色
+        ctx.fillStyle = "#ffdd66";
         ctx.font = `bold 16px ${HORROR_FONT}`;
         ctx.textAlign = "center";
         ctx.fillText("[ SPACE ] 調べる", canvas.width / 2, canvas.height - 28);
     }
 }
 
-// --- 背景・天井・床の描画 ---
+// --- 背景・天井・床 ---
 function drawEnvironment() {
     ctx.fillStyle = "#0a0a0c";
     ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
@@ -285,7 +294,7 @@ function drawCompass() {
     ctx.strokeRect(canvas.width - 90, 10, 80, 26);
 
     ctx.fillStyle = "#ffdd66";
-    ctx.font = `bold 14px ${HORROR_FONT}`; // ★ コンパスも明朝体に
+    ctx.font = `bold 14px ${HORROR_FONT}`;
     ctx.textAlign = "center";
     ctx.fillText(dirNames[player.dir], canvas.width - 50, 28);
 }
@@ -375,7 +384,7 @@ function playVideo(src, onEnded) {
     };
 }
 
-// --- ★ ショップUI表示関数（フォントを強化） ---
+// --- ショップUI表示関数 ---
 function openShopUI() {
     isEventPlaying = true;
 
@@ -393,7 +402,6 @@ function openShopUI() {
     shopDiv.style.flexDirection = "column";
     shopDiv.style.alignItems = "center";
     shopDiv.style.justifyContent = "center";
-    // ★ ここでホラー明朝体を適用
     shopDiv.style.fontFamily = HORROR_FONT; 
 
     shopDiv.innerHTML = `
@@ -410,7 +418,6 @@ function openShopUI() {
 
     document.body.appendChild(shopDiv);
 
-    // ボタンのホバーエフェクト（簡易）
     const btns = [document.getElementById("buyBtn"), document.getElementById("sinBtn")];
     btns.forEach(btn => {
         btn.onmouseover = () => btn.style.backgroundColor = "#330000";
