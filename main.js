@@ -50,7 +50,7 @@ appStyle.innerHTML = `
     .app-home-btn:hover { background-color: #aaa; }
     
     /* サブ画面用スタイル */
-    .sub-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #550000; padding-bottom: 10px; margin-bottom: 20px; }
+    .sub-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #550000; padding-bottom: 10px; margin-bottom: 15px; }
     .back-btn { cursor: pointer; color: #888; font-size: 0.9em; transition: color 0.2s; padding: 5px; }
     .back-btn:hover { color: #fff; }
     .sub-title { font-size: 1.3em; color: #ff3333; text-shadow: 0 0 5px red; margin: 0; text-align: center; flex: 1; font-weight: bold; }
@@ -69,21 +69,21 @@ const ctx = canvas.getContext("2d");
 
 // --- ゲームグローバル状態管理 ---
 const gameState = {
-    hasExorcistInherited: false, // エクソシストからの継承フラグ
-    hasKey2F: false,             // 2F非常階段の鍵フラグ
-    hasModelGun: false,          // モデルガン所持フラグ（2F用）
-    hasMetGrandma: false,        // ★おばあさんに会ったかどうかのフラグ
-    cards: [],                   // 所持カードIDリスト
-    equippedCards: [],           // 装填中のカードリスト
-    level: 1,                    // 主人公のレベル
-    hp: 100,                     // 現在HP
-    maxHp: 100,                  // 最大HP
-    sin: 0,                      // 罪（ペナルティ）ポイント
-    familiarSync: 7              // 使い魔同期率(%)
+    hasExorcistInherited: false, 
+    hasKey2F: false,             
+    hasModelGun: false,          // モデルガン所持フラグ
+    hasMetGrandma: false,        
+    cards: [],                   
+    equippedCards: [],           
+    level: 1,                    
+    hp: 100,                     
+    maxHp: 100,                  
+    sin: 0,                      
+    familiarSync: 7              
 };
 
 // --- 階層データ管理 ---
-let currentFloor = 1; // 1: 1階, 2: 2階
+let currentFloor = 1; 
 let currentMap = map1F;
 let currentHandleEvent = handleEvent1F;
 
@@ -122,7 +122,7 @@ for (let key in imageSources) {
     images[key] = new Image();
     images[key].onload = checkAllLoaded;
     images[key].onerror = () => {
-        console.warn(`【画像読み込み警告】「${imageSources[key]}」が見つかりません（プレースホルダーを使用します）。`);
+        console.warn(`【画像読み込み警告】「${imageSources[key]}」が見つかりません。`);
         checkAllLoaded();
     };
     images[key].src = imageSources[key];
@@ -163,7 +163,7 @@ function draw() {
         const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir];
         const rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
-        // --- 左側の描画 ---
+        // 左描画
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
             const imgKey = "left" + depth;
             if (images[imgKey] && images[imgKey].complete && images[imgKey].naturalWidth > 0) {
@@ -182,7 +182,7 @@ function draw() {
             }
         }
 
-        // --- 右側の描画 ---
+        // 右描画
         if (currentMap[rY] && currentMap[rY][rX] !== 0) {
             const imgKey = "right" + depth;
             if (images[imgKey] && images[imgKey].complete && images[imgKey].naturalWidth > 0) {
@@ -201,13 +201,13 @@ function draw() {
             }
         }
 
-        // --- 正面壁・扉の描画 ---
+        // 正面描画
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX];
             const b = frontBounds[depth];
             let targetImg = images.wall;
             if (cellType === 4 && images.stairDoor && images.stairDoor.complete) targetImg = images.stairDoor;
-            else if ((cellType === 2 || cellType === 3 || cellType === 7) && images.door && images.door.complete) targetImg = images.door;
+            else if ((cellType === 2 || cellType === 3 || cellType === 7 || cellType === 8 || cellType === 9) && images.door && images.door.complete) targetImg = images.door;
 
             if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
                 ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
@@ -233,7 +233,7 @@ function drawActionHint() {
     const frontX = player.x + dx[player.dir];
     const frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
-    if ([2, 3, 4, 5, 6, 7].includes(target)) {
+    if ([2, 3, 4, 5, 6, 7, 8, 9].includes(target)) {
         ctx.fillStyle = "rgba(15, 0, 0, 0.75)"; ctx.fillRect(canvas.width / 2 - 90, canvas.height - 50, 180, 32);
         ctx.strokeStyle = "#550000"; ctx.lineWidth = 1; ctx.strokeRect(canvas.width / 2 - 90, canvas.height - 50, 180, 32);
         ctx.fillStyle = "#ffdd66"; ctx.font = `bold 16px ${HORROR_FONT}`; ctx.textAlign = "center"; ctx.fillText("[ SPACE ] 調べる", canvas.width / 2, canvas.height - 28);
@@ -271,7 +271,7 @@ function drawMiniMap() {
         for (let x = 0; x < currentMap[y].length; x++) {
             const cell = currentMap[y][x];
             if (cell !== 0) {
-                ctx.fillStyle = cell === 1 ? "#555" : "#8a2be2";
+                ctx.fillStyle = cell === 1 ? "#555" : (cell === 8 || cell === 9 ? "#cc0000" : "#8a2be2");
                 ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
             }
         }
@@ -308,8 +308,7 @@ function toggleMenu() {
                     <div>SIN: <span>${gameState.sin}</span></div>
                     <div>SYNC: <span>${gameState.familiarSync}%</span></div>
                 </div>
-                <div id="app-content" class="app-content">
-                </div>
+                <div id="app-content" class="app-content"></div>
                 <div class="app-footer">
                     <div class="app-home-btn" onclick="renderAppHome()" title="ホームに戻る"></div>
                 </div>
@@ -321,7 +320,6 @@ function toggleMenu() {
     }
 }
 
-// アプリホーム画面の描画
 window.renderAppHome = function() {
     const content = document.getElementById("app-content");
     if (!content) return;
@@ -360,11 +358,24 @@ window.renderAppHome = function() {
     `;
 };
 
-// ラミナ装填画面の描画
 window.renderLoadout = function() {
     const content = document.getElementById("app-content");
     if (!content) return;
     
+    if (!gameState.hasModelGun) {
+        content.innerHTML = `
+            <div class="sub-header">
+                <div class="back-btn" onclick="renderAppHome()">◀ 戻る</div>
+                <div class="sub-title">ラミナ装填</div>
+                <div style="width: 50px;"></div>
+            </div>
+            <div style="text-align: center; color: #888; margin-top: 50px;">
+                まだモデルガンを所持していません。<br>装填できる武器を探してください。
+            </div>
+        `;
+        return;
+    }
+
     const slotCount = Math.floor((gameState.level - 1) / 5) + 1;
     let slotsHTML = "";
     
@@ -394,6 +405,12 @@ window.renderLoadout = function() {
             <div class="sub-title">ラミナ装填</div>
             <div style="width: 50px;"></div>
         </div>
+        
+        <!-- ★モデルガンの画像を配置 -->
+        <div style="text-align: center; margin-bottom: 15px;">
+            <img src="assets/images/modelgun.jpg" style="max-width: 90%; border: 2px solid #330000; border-radius: 8px; opacity: 0.9;" onerror="this.style.display='none'">
+        </div>
+
         <div style="margin-bottom: 20px;">
             ${slotsHTML}
         </div>
@@ -436,25 +453,40 @@ function interact() {
         } else if (action.type === "exorcistSequence") {
             startExorcistSequence();
         } else if (action.type === "grandmaEvent") {
-            // ★追加：おばあさん初回遭遇イベント
             startGrandmaEvent();
         } else if (action.type === "shop") {
-            // ★追加：2回目以降のショップ直接遷移
             openShopUI();
+        } else if (action.type === "studentEvent") {
+            // ★追加：生徒救出イベント
+            startStudentEvent();
         }
     }
 }
 
-// --- ★ おばあさん遭遇イベント ---
-function startGrandmaEvent() {
-    // コンビニの入店動画を再生してから会話へ
-    playVideo("assets/videos/CVS.mp4", () => {
-        const text = "【謎のおばあさん】\n「いらっしゃい……こんな場所へよく来たねえ。」\n\n「ワタシはなぜか、この店の中にだけは居られるでの……。もし外で何か連絡したいことができたら、1階のポストに手紙を放り込んでおくれ。受け取ってやるからね……」\n\n「さあ、買い物があるなら見ていきな……」";
+// --- ★ 生徒救出 ＆ モデルガン獲得イベント ---
+function startStudentEvent() {
+    const text1 = "【生徒】\n「先生……っ！ よかった、来てくれたんだ……！」\n\n「お父さんが、上の階の様子を見てくるって言ったまま戻ってこないんだ……。外からは変な声が聞こえるし、怖くて……」\n\n「先生、お願い……これを使ってお父さんを助けて……！」";
+    
+    showConversationDialog("assets/images/human1.png", text1, () => {
+        const text2 = "【主人公】\n（これは……モデルガン？ なぜこんなものを……いや、今はこれでも心強い。）\n\n「わかった、お父さんは俺が探す。お前は1階のコンビニへ逃げろ。あそこなら安全なはずだ。後で必ず合流しよう」";
         
-        // 立ち絵付きダイアログを表示
+        showMessageDialog(text2, () => {
+            // モデルガン獲得モーダルを表示
+            showItemAcquiredModal("assets/images/modelgun.jpg", "物理モデルガン", "生徒から託された精巧なモデルガン。\n『悪魔辞典アプリ』と連動し、退魔の札『ラミナ』を装填できる！\n（生徒は1階のコンビニへ向かった）", () => {
+                gameState.hasModelGun = true; // モデルガンフラグON
+            });
+        });
+    });
+}
+
+// --- ★ おばあさん遭遇イベント（セリフ修正版） ---
+function startGrandmaEvent() {
+    playVideo("assets/videos/CVS.mp4", () => {
+        const text = "【謎のおばあさん】\n「おや……こんな場所に迷い込むとは、運の悪い子だねえ。」\n\n「ワタシはね、なぜかこの店の中にだけは居られるんだよ。不思議なもんだねえ……。もし外で何か連絡したいことができたら、1階のポストに手紙を放り込んでおくれ。ワタシが受け取ってやるからね……」\n\n（おばあさんはそれきり目を閉じ、暗がりと同化した。不気味な無人レジだけが青白く光っている……）";
+        
         showConversationDialog("assets/images/grandma.jpg", text, () => {
-            gameState.hasMetGrandma = true; // 出会ったフラグを立てる
-            openShopUI(); // そのままショップ画面へ
+            gameState.hasMetGrandma = true; 
+            openShopUI(); 
         });
     });
 }
@@ -472,7 +504,6 @@ function showConversationDialog(imageSrc, text, onClosed) {
     overlay.style.alignItems = "flex-end";
     overlay.style.zIndex = "2000";
     
-    // キャラクターの立ち絵画像
     const imgDiv = document.createElement("img");
     imgDiv.src = imageSrc;
     imgDiv.style.maxHeight = "320px";
@@ -481,10 +512,8 @@ function showConversationDialog(imageSrc, text, onClosed) {
     imgDiv.style.borderRadius = "8px";
     imgDiv.style.backgroundColor = "#000";
     imgDiv.style.boxShadow = "0 0 15px rgba(0,0,0,0.8)";
-    // 画像がない場合は非表示にする
     imgDiv.onerror = () => { imgDiv.style.display = 'none'; };
 
-    // テキスト領域
     const msgDiv = document.createElement("div");
     msgDiv.style.flex = "1";
     msgDiv.style.padding = "20px 25px";
@@ -520,44 +549,19 @@ function showConversationDialog(imageSrc, text, onClosed) {
             if (onClosed) onClosed();
         }
     };
-
-    setTimeout(() => {
-        overlay.onclick = closeHandler;
-        window.addEventListener("keydown", closeHandler);
-    }, 150);
+    setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// （以下、既存の関数群）
-function startExorcistSequence() {
-    const introMsg = "【血の池】\nマンションの中庭に血の池が湧いて、池の底から無数の人ならざる者がこの世に出ようともがいているのが見える……";
-    showMessageDialog(introMsg, () => {
-        playVideo("assets/videos/BloodPond.mp4", () => {
-            playVideo("assets/videos/exorcist.mp4", () => {
-                const msg = "【瀕死のエクソシスト】\n「……気づいて……くださったのですね……。ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……そして使い魔と2階非常階段の鍵を……あなたに託します……」\n\n「9枚のラミナで悪魔を見極め……使い魔はLv.15であなたの助けに……」";
-                showMessageDialog(msg, () => {
-                    showCardAcquiredModal("1Card.png", "退魔の札『ラミナ』", "『悪魔辞典アプリ』『使い魔（Lv.15から）』『2F非常階段の鍵』を受け継いだ！", () => {
-                        const deathMsg = "【衝撃の光景】\n話し終えた直後、血の池がどす黒く泡立ち始めた！\n\n無数の黒い腕が池から這い出し、エクソシストの体にまとわりつく……！\n\n絶叫とともに、エクソシストは血の池の底へと引きずり込まれ、完全に姿を消した。";
-                        showMessageDialog(deathMsg, () => {
-                            gameState.hasExorcistInherited = true;
-                            gameState.hasKey2F = true;
-                            gameState.cards.push("1Card.png"); 
-                        });
-                    });
-                });
-            });
-        });
-    });
-}
-
-function showCardAcquiredModal(imageName, cardTitle, detailText, onClosed) {
+// --- ★ 汎用アイテム獲得モーダル（引数でパス指定可能） ---
+function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     isEventPlaying = true;
     const modal = document.createElement("div");
     modal.style.position = "absolute"; modal.style.top = "0"; modal.style.left = "0"; modal.style.width = "100%"; modal.style.height = "100%";
     modal.style.backgroundColor = "rgba(0, 0, 0, 0.88)"; modal.style.zIndex = "2500"; modal.style.display = "flex"; modal.style.flexDirection = "column"; modal.style.alignItems = "center"; modal.style.justifyContent = "center"; modal.style.fontFamily = HORROR_FONT;
     modal.innerHTML = `
-        <div style="color: #ff3333; font-size: 1.8em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 3px;">― 遺志の継承 ―</div>
-        <img src="assets/images/cards/${imageName}" style="max-height: 240px; border: 3px solid #770000; box-shadow: 0 0 25px rgba(255,0,0,0.5); margin-bottom: 15px; border-radius: 6px;">
-        <div style="color: #ffdd66; font-size: 1.5em; font-weight: bold; margin-bottom: 8px;">${cardTitle}</div>
+        <div style="color: #ff3333; font-size: 1.8em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 3px;">― アイテム獲得 ―</div>
+        <img src="${imagePath}" style="max-height: 240px; border: 3px solid #770000; box-shadow: 0 0 25px rgba(255,0,0,0.5); margin-bottom: 15px; border-radius: 6px;" onerror="this.style.display='none'">
+        <div style="color: #ffdd66; font-size: 1.5em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
         <div style="color: #cccccc; font-size: 1.1em; margin-bottom: 25px; text-align: center; white-space: pre-wrap;">${detailText}</div>
         <div style="color: #888; font-size: 0.9em;">[ SPACE ] キー または クリックで閉じる</div>
     `;
@@ -569,6 +573,29 @@ function showCardAcquiredModal(imageName, cardTitle, detailText, onClosed) {
         }
     };
     setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
+}
+
+// 既存のカード継承モーダル（旧）は一旦残しますが、アイテム獲得用に分けた形です。
+function startExorcistSequence() {
+    const introMsg = "【血の池】\nマンションの中庭に血の池が湧いて、池の底から無数の人ならざる者がこの世に出ようともがいているのが見える……";
+    showMessageDialog(introMsg, () => {
+        playVideo("assets/videos/BloodPond.mp4", () => {
+            playVideo("assets/videos/exorcist.mp4", () => {
+                const msg = "【瀕死のエクソシスト】\n「……気づいて……くださったのですね……。ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……そして使い魔と2階非常階段の鍵を……あなたに託します……」\n\n「9枚のラミナで悪魔を見極め……使い魔はLv.15であなたの助けに……」";
+                showMessageDialog(msg, () => {
+                    // ★継承イベントも汎用関数に統合しました
+                    showItemAcquiredModal("assets/images/cards/1Card.png", "退魔の札『ラミナ』", "『悪魔辞典アプリ』『使い魔（Lv.15から）』『2F非常階段の鍵』を受け継いだ！", () => {
+                        const deathMsg = "【衝撃の光景】\n話し終えた直後、血の池がどす黒く泡立ち始めた！\n\n無数の黒い腕が池から這い出し、エクソシストの体にまとわりつく……！\n\n絶叫とともに、エクソシストは血の池の底へと引きずり込まれ、完全に姿を消した。";
+                        showMessageDialog(deathMsg, () => {
+                            gameState.hasExorcistInherited = true;
+                            gameState.hasKey2F = true;
+                            gameState.cards.push("1Card.png"); 
+                        });
+                    });
+                });
+            });
+        });
+    });
 }
 
 function showMessageDialog(text, onClosed) {
