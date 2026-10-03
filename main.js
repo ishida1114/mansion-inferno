@@ -10,6 +10,7 @@ const imageSources = {
     logo: "assets/images/akumanologo.png",
     door: "assets/images/door.png",
     wall: "assets/images/wall.png",
+    stairDoor: "assets/images/stair_door.png", // 非常階段専用ドア画像を追加
     left1: "assets/images/leftwall1.png",
     left2: "assets/images/leftwall2.png",
     left3: "assets/images/leftwall3.png",
@@ -81,12 +82,10 @@ function draw() {
 
     // 2. 奥（depth 4）から手前（depth 1）へ順に描画
     for (let depth = 4; depth >= 1; depth--) {
-        // 正面壁のマップチェック座標（depthマス先）
         const fX = player.x + dx[player.dir] * depth;
         const fY = player.y + dy[player.dir] * depth;
 
-        // 【修正ポイント】左右壁のチェック座標（手前からの正確なオフセット）
-        const forwardOffset = depth - 1; // depth=1のときは 0（自分の真横）
+        const forwardOffset = depth - 1;
 
         const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir];
         const lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
@@ -135,9 +134,14 @@ function draw() {
             const cellType = map1F[fY][fX];
             const b = frontBounds[depth];
 
-            if ((cellType === 2 || cellType === 3 || cellType === 4 || cellType === 7) && images.door && images.door.complete) {
+            if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
+                // 非常階段 (マス 4) 専用ドア画像を表示
+                ctx.drawImage(images.stairDoor, b.x, b.y, b.w, b.h);
+            } else if ((cellType === 2 || cellType === 3 || cellType === 7) && images.door && images.door.complete) {
+                // 通常ドア (2)、コンビニ (3)、エレベーター (7)
                 ctx.drawImage(images.door, b.x, b.y, b.w, b.h);
             } else if (images.wall && images.wall.complete) {
+                // 通常壁やポスト (5)、血の池 (6)
                 ctx.drawImage(images.wall, b.x, b.y, b.w, b.h);
             }
         }
