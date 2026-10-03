@@ -30,12 +30,6 @@ const imageSources = {
     right4: "assets/images/rightwall4.png"
 };
 
-// ★ 左右の壁とピタッと揃える最適カット値（上18% / 下12%カット）
-const doorCrops = {
-    door:      { top: 0.18, bottom: 0.12 },
-    stairDoor: { top: 0.18, bottom: 0.12 }
-};
-
 let loadedCount = 0;
 const totalImages = Object.keys(imageSources).length;
 
@@ -182,36 +176,20 @@ function draw() {
             }
         }
 
-        // --- 正面壁・扉の描画 ---
+        // --- 正面壁・扉の描画（シンプル・安定描画） ---
         if (map1F[fY] && map1F[fY][fX] !== 0) {
             const cellType = map1F[fY][fX];
             const b = frontBounds[depth];
 
             let targetImg = images.wall;
-            let cropKey = null;
-
             if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
                 targetImg = images.stairDoor;
-                cropKey = "stairDoor";
             } else if ((cellType === 2 || cellType === 3 || cellType === 7) && images.door && images.door.complete) {
                 targetImg = images.door;
-                cropKey = "door";
             }
 
             if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
-                if (cropKey && doorCrops[cropKey]) {
-                    const crop = doorCrops[cropKey];
-
-                    const sx = 0;
-                    const sy = targetImg.naturalHeight * crop.top;
-                    const sw = targetImg.naturalWidth;
-                    const sh = targetImg.naturalHeight * (1 - crop.top - crop.bottom);
-
-                    ctx.drawImage(targetImg, sx, sy, sw, sh, b.x, b.y, b.w, b.h);
-                } else {
-                    ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
-                }
-
+                ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
                 ctx.fillRect(b.x, b.y, b.w, b.h);
             }
@@ -350,7 +328,7 @@ function interact() {
     }
 }
 
-// --- 動画再生関数 ---
+// --- 動画再生関数（適度なサイズ・赤黒い枠付き） ---
 function playVideo(src, onEnded) {
     isEventPlaying = true; 
 
