@@ -1,5 +1,6 @@
-// 1. 1階のマップ・初期位置・イベント処理をインポート
+// 1. 1階・2階のマップ・初期位置・イベント処理をインポート
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
+import { map2F, playerStart2F, handleEvent2F } from './maps/map2F.js';
 
 // --- ホラー風フォントの読み込み ---
 const fontLink = document.createElement("link");
@@ -9,6 +10,11 @@ document.head.appendChild(fontLink);
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+
+// --- 階層データ管理 ---
+let currentFloor = 1; // 1: 1階, 2: 2階
+let currentMap = map1F;
+let currentHandleEvent = handleEvent1F;
 
 // --- イベント状態管理 ---
 let isEventPlaying = false; 
@@ -121,7 +127,7 @@ function draw() {
         const rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
         // --- 左側の描画 ---
-        if (map1F[lY] && map1F[lY][lX] !== 0) {
+        if (currentMap[lY] && currentMap[lY][lX] !== 0) {
             const imgKey = "left" + depth;
             if (images[imgKey] && images[imgKey].complete && images[imgKey].naturalWidth > 0) {
                 const clip = leftClips[depth];
@@ -140,7 +146,7 @@ function draw() {
         } else {
             const lX_next = player.x + dx[player.dir] * depth + dx[leftDir];
             const lY_next = player.y + dy[player.dir] * depth + dy[leftDir];
-            if (map1F[lY_next] && map1F[lY_next][lX_next] !== 0 && images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
+            if (currentMap[lY_next] && currentMap[lY_next][lX_next] !== 0 && images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
                 const slot = sideCornerSlots.left[depth];
                 ctx.drawImage(images.wall, slot.x, slot.y, slot.w, slot.h);
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
@@ -149,7 +155,7 @@ function draw() {
         }
 
         // --- 右側の描画 ---
-        if (map1F[rY] && map1F[rY][rX] !== 0) {
+        if (currentMap[rY] && currentMap[rY][rX] !== 0) {
             const imgKey = "right" + depth;
             if (images[imgKey] && images[imgKey].complete && images[imgKey].naturalWidth > 0) {
                 const clip = rightClips[depth];
@@ -168,7 +174,7 @@ function draw() {
         } else {
             const rX_next = player.x + dx[player.dir] * depth + dx[rightDir];
             const rY_next = player.y + dy[player.dir] * depth + dy[rightDir];
-            if (map1F[rY_next] && map1F[rY_next][rX_next] !== 0 && images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
+            if (currentMap[rY_next] && currentMap[rY_next][rX_next] !== 0 && images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
                 const slot = sideCornerSlots.right[depth];
                 ctx.drawImage(images.wall, slot.x, slot.y, slot.w, slot.h);
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
@@ -176,9 +182,9 @@ function draw() {
             }
         }
 
-        // --- 正面壁・扉の描画（シンプル・安定描画） ---
-        if (map1F[fY] && map1F[fY][fX] !== 0) {
-            const cellType = map1F[fY][fX];
+        // --- 正面壁・扉の描画 ---
+        if (currentMap[fY] && currentMap[fY][fX] !== 0) {
+            const cellType = currentMap[fY][fX];
             const b = frontBounds[depth];
 
             let targetImg = images.wall;
@@ -205,9 +211,9 @@ function draw() {
 function drawActionHint() {
     const frontX = player.x + dx[player.dir];
     const frontY = player.y + dy[player.dir];
-    const target = map1F[frontY] ? map1F[frontY][frontX] : 1;
+    const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
 
-    if ([3, 4, 5, 6, 7].includes(target)) {
+    if ([2, 3, 4, 5, 6, 7].includes(target)) {
         ctx.fillStyle = "rgba(15, 0, 0, 0.75)";
         ctx.fillRect(canvas.width / 2 - 90, canvas.height - 50, 180, 32);
         
@@ -270,14 +276,14 @@ function drawCompass() {
     ctx.fillStyle = "#ffdd66";
     ctx.font = `bold 14px ${HORROR_FONT}`;
     ctx.textAlign = "center";
-    ctx.fillText(dirNames[player.dir], canvas.width - 50, 28);
+    ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 
 function drawMiniMap() {
     const size = 8;
     const margin = 10;
-    const mapW = map1F[0].length * size;
-    const mapH = map1F.length * size;
+    const mapW = currentMap[0].length * size;
+    const mapH = currentMap.length * size;
 
     ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
     ctx.fillRect(margin, margin, mapW + 6, mapH + 6);
@@ -285,9 +291,9 @@ function drawMiniMap() {
     ctx.lineWidth = 1;
     ctx.strokeRect(margin, margin, mapW + 6, mapH + 6);
 
-    for (let y = 0; y < map1F.length; y++) {
-        for (let x = 0; x < map1F[y].length; x++) {
-            const cell = map1F[y][x];
+    for (let y = 0; y < currentMap.length; y++) {
+        for (let x = 0; x < currentMap[y].length; x++) {
+            const cell = currentMap[y][x];
             if (cell !== 0) {
                 ctx.fillStyle = cell === 1 ? "#555" : "#8a2be2";
                 ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
@@ -317,18 +323,84 @@ function interact() {
 
     const frontX = player.x + dx[player.dir];
     const frontY = player.y + dy[player.dir];
-    const target = map1F[frontY] ? map1F[frontY][frontX] : 1;
+    const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
 
-    const action = handleEvent1F(target);
+    const action = currentHandleEvent(target);
 
-    if (action && action.type === "video") {
-        playVideo(action.src, () => {
-            if (action.next === "shop") openShopUI();
-        });
+    if (action) {
+        if (action.type === "video") {
+            playVideo(action.src, () => {
+                if (action.next === "shop") openShopUI();
+            });
+        } else if (action.type === "changeFloor") {
+            changeFloor(action.targetFloor);
+        }
     }
 }
 
-// --- 動画再生関数（適度なサイズ・赤黒い枠付き） ---
+// --- ★ 階層移動関数（暗転演出つき） ---
+function changeFloor(targetFloor) {
+    isEventPlaying = true;
+
+    // 暗転用オーバーレイ
+    const fadeDiv = document.createElement("div");
+    fadeDiv.style.position = "absolute";
+    fadeDiv.style.top = "0";
+    fadeDiv.style.left = "0";
+    fadeDiv.style.width = "100%";
+    fadeDiv.style.height = "100%";
+    fadeDiv.style.backgroundColor = "black";
+    fadeDiv.style.zIndex = "2000";
+    fadeDiv.style.transition = "opacity 0.5s ease";
+    fadeDiv.style.opacity = "0";
+    fadeDiv.style.display = "flex";
+    fadeDiv.style.justifyContent = "center";
+    fadeDiv.style.alignItems = "center";
+    fadeDiv.style.color = "#ff3333";
+    fadeDiv.style.fontFamily = HORROR_FONT;
+    fadeDiv.style.fontSize = "1.8em";
+
+    document.body.appendChild(fadeDiv);
+
+    // フェードアウト
+    setTimeout(() => {
+        fadeDiv.style.opacity = "1";
+        fadeDiv.innerText = targetFloor === 2 ? "2階へ登っている..." : "1階へ下りている...";
+    }, 10);
+
+    // 階層データの切替
+    setTimeout(() => {
+        currentFloor = targetFloor;
+        if (currentFloor === 2) {
+            currentMap = map2F;
+            currentHandleEvent = handleEvent2F;
+            player.x = playerStart2F.x;
+            player.y = playerStart2F.y;
+            player.dir = playerStart2F.dir;
+        } else {
+            currentMap = map1F;
+            currentHandleEvent = handleEvent1F;
+            // 1階へ戻った時は非常階段の目の前（x:7, y:1）で南向きに立つ
+            player.x = 7;
+            player.y = 1;
+            player.dir = 2; // 南向き
+        }
+
+        draw();
+
+        // フェードイン
+        setTimeout(() => {
+            fadeDiv.style.opacity = "0";
+            setTimeout(() => {
+                fadeDiv.remove();
+                isEventPlaying = false;
+            }, 500);
+        }, 800);
+
+    }, 600);
+}
+
+// --- 動画再生関数 ---
 function playVideo(src, onEnded) {
     isEventPlaying = true; 
 
@@ -422,7 +494,7 @@ function openShopUI() {
 function moveForward() {
     const nx = player.x + dx[player.dir];
     const ny = player.y + dy[player.dir];
-    if (map1F[ny] && map1F[ny][nx] === 0) {
+    if (currentMap[ny] && currentMap[ny][nx] === 0) {
         player.x = nx;
         player.y = ny;
         draw();
@@ -432,7 +504,7 @@ function moveForward() {
 function moveBackward() {
     const nx = player.x - dx[player.dir];
     const ny = player.y - dy[player.dir];
-    if (map1F[ny] && map1F[ny][nx] === 0) {
+    if (currentMap[ny] && currentMap[ny][nx] === 0) {
         player.x = nx;
         player.y = ny;
         draw();
