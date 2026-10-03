@@ -1,13 +1,19 @@
 // 1. 1階のマップ・初期位置・イベント処理をインポート
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 
+// --- ★ホラー風の本格的な明朝体フォントを自動で読み込む ---
+const fontLink = document.createElement("link");
+fontLink.href = "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;800&display=swap";
+fontLink.rel = "stylesheet";
+document.head.appendChild(fontLink);
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 // --- イベント状態管理 ---
-let isEventPlaying = false; // 動画再生中やショップ表示中は操作をロックする
+let isEventPlaying = false; 
 
-// --- 画像の読み込み処理（エラー検知・フリーズ防止機能付き） ---
+// --- 画像の読み込み処理 ---
 const images = {};
 const imageSources = {
     logo: "assets/images/akumanologo.png",
@@ -30,21 +36,18 @@ const totalImages = Object.keys(imageSources).length;
 function checkAllLoaded() {
     loadedCount++;
     if (loadedCount === totalImages) {
-        draw();
+        // 少し遅らせてフォントの読み込み完了を待ってから描画
+        setTimeout(draw, 200); 
     }
 }
 
 for (let key in imageSources) {
     images[key] = new Image();
-    
     images[key].onload = checkAllLoaded;
-    
-    // 画像が見つからなくても真っ黒フリーズしない安全対策
     images[key].onerror = () => {
-        alert(`【画像読み込みエラー】\n「${imageSources[key]}」が見つかりません！\nファイル名や拡張子(.png)を確認してください。`);
+        alert(`【画像読み込みエラー】\n「${imageSources[key]}」が見つかりません！`);
         checkAllLoaded();
     };
-    
     images[key].src = imageSources[key];
 }
 
@@ -58,6 +61,7 @@ let player = {
 const dx = [0, 1, 0, -1];
 const dy = [-1, 0, 1, 0];
 const dirNames = ["北 (N)", "東 (E)", "南 (S)", "西 (W)"];
+const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
 // --- 3D描画用 台形マスク座標 ---
 const leftClips = {
@@ -82,7 +86,6 @@ const frontBounds = {
     1: { x: 150, y: 75,  w: 300, h: 250 }
 };
 
-// 横道が開いているときの奥の正面壁スロット
 const sideCornerSlots = {
     left: {
         1: { x: 0, y: 75, w: 150, h: 250 },
@@ -137,7 +140,6 @@ function draw() {
                 ctx.restore();
             }
         } else {
-            // 横が開いている場合、その奥の壁を描画して空洞化を防ぐ
             const lX_next = player.x + dx[player.dir] * depth + dx[leftDir];
             const lY_next = player.y + dy[player.dir] * depth + dy[leftDir];
             if (map1F[lY_next] && map1F[lY_next][lX_next] !== 0 && images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
@@ -166,7 +168,6 @@ function draw() {
                 ctx.restore();
             }
         } else {
-            // 横が開いている場合、その奥の壁を描画して空洞化を防ぐ
             const rX_next = player.x + dx[player.dir] * depth + dx[rightDir];
             const rY_next = player.y + dy[player.dir] * depth + dy[rightDir];
             if (map1F[rY_next] && map1F[rY_next][rX_next] !== 0 && images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
@@ -184,21 +185,58 @@ function draw() {
 
             let targetImg = images.wall;
             if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
-                targetImg = images.stairDoor; // 非常階段
+                targetImg = images.stairDoor;
             } else if ((cellType === 2 || cellType === 3 || cellType === 7) && images.door && images.door.complete) {
-                targetImg = images.door; // 通常扉 / コンビニ / エレベーター
+                targetImg = images.door;
             }
 
             if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
-                ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
+                // ★ コンビニ(3)の場合は絵を小さくして中央下部に配置する
+                let drawX = b.x;
+                let drawY = b.y;
+                let drawW = b.w;
+                let drawH = b.h;
+
+                if (cellType === 3) {
+                    const scale = 0.65; // 本来の65%のサイズに縮小
+                    drawW = b.w * scale;
+                    drawH = b.h * scale;
+                    drawX = b.x + (b.w - drawW) / 2; // 左右中央に寄せる
+                    drawY = b.y + (b.h - drawH);     // 下（床）に寄せる
+                }
+
+                ctx.drawImage(targetImg, drawX, drawY, drawW, drawH);
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
-                ctx.fillRect(b.x, b.y, b.w, b.h);
+                ctx.fillRect(drawX, drawY, drawW, drawH);
             }
         }
     }
 
     drawMiniMap();
     drawCompass();
+    drawActionHint(); // ★ 新機能：目の前に調べられるモノがあるかチェック
+}
+
+// --- ★ 新機能：調べられるモノが目の前にある時のガイド表示 ---
+function drawActionHint() {
+    const frontX = player.x + dx[player.dir];
+    const frontY = player.y + dy[player.dir];
+    const target = map1F[frontY] ? map1F[frontY][frontX] : 1;
+
+    // イベントマス (3:コンビニ, 4:非常階段, 5:ポスト, 6:血の池, 7:エレベーター) の場合
+    if ([3, 4, 5, 6, 7].includes(target)) {
+        ctx.fillStyle = "rgba(15, 0, 0, 0.75)";
+        ctx.fillRect(canvas.width / 2 - 80, canvas.height - 50, 160, 32);
+        
+        ctx.strokeStyle = "#550000";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(canvas.width / 2 - 80, canvas.height - 50, 160, 32);
+
+        ctx.fillStyle = "#ffdd66"; // 古びた金文字風の色
+        ctx.font = `bold 16px ${HORROR_FONT}`;
+        ctx.textAlign = "center";
+        ctx.fillText("[ SPACE ] 調べる", canvas.width / 2, canvas.height - 28);
+    }
 }
 
 // --- 背景・天井・床の描画 ---
@@ -226,7 +264,6 @@ function drawEnvironment() {
     });
 }
 
-// --- 奥行き影（フォグ）描画 ---
 function applyDepthShadow(clip, depth) {
     const shadowAlpha = (depth - 1) * 0.22;
     if (shadowAlpha <= 0) return;
@@ -241,7 +278,6 @@ function applyDepthShadow(clip, depth) {
     ctx.fill();
 }
 
-// --- コンパス描画 ---
 function drawCompass() {
     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
     ctx.fillRect(canvas.width - 90, 10, 80, 26);
@@ -249,12 +285,11 @@ function drawCompass() {
     ctx.strokeRect(canvas.width - 90, 10, 80, 26);
 
     ctx.fillStyle = "#ffdd66";
-    ctx.font = "bold 13px sans-serif";
+    ctx.font = `bold 14px ${HORROR_FONT}`; // ★ コンパスも明朝体に
     ctx.textAlign = "center";
-    ctx.fillText(dirNames[player.dir], canvas.width - 50, 27);
+    ctx.fillText(dirNames[player.dir], canvas.width - 50, 28);
 }
 
-// --- ミニマップ描画 ---
 function drawMiniMap() {
     const size = 8;
     const margin = 10;
@@ -303,7 +338,6 @@ function interact() {
 
     const action = handleEvent1F(target);
 
-    // 動画再生イベントの場合
     if (action && action.type === "video") {
         playVideo(action.src, () => {
             if (action.next === "shop") openShopUI();
@@ -311,9 +345,9 @@ function interact() {
     }
 }
 
-// --- 全画面動画再生関数 ---
+// --- 動画再生関数 ---
 function playVideo(src, onEnded) {
-    isEventPlaying = true; // 操作をロック
+    isEventPlaying = true; 
 
     const video = document.createElement("video");
     video.src = src;
@@ -335,14 +369,13 @@ function playVideo(src, onEnded) {
         if (onEnded) onEnded();
     };
 
-    // 画面クリックで再生スキップ可能
     video.onclick = () => {
         video.pause();
         video.onended();
     };
 }
 
-// --- ショップUI表示関数 ---
+// --- ★ ショップUI表示関数（フォントを強化） ---
 function openShopUI() {
     isEventPlaying = true;
 
@@ -360,28 +393,36 @@ function openShopUI() {
     shopDiv.style.flexDirection = "column";
     shopDiv.style.alignItems = "center";
     shopDiv.style.justifyContent = "center";
-    shopDiv.style.fontFamily = "sans-serif";
+    // ★ ここでホラー明朝体を適用
+    shopDiv.style.fontFamily = HORROR_FONT; 
 
     shopDiv.innerHTML = `
-        <h2 style="color: #ff3333; margin-bottom: 20px; font-size: 2em; text-shadow: 2px 2px 5px black;">悪魔の無人レジ</h2>
-        <p style="margin-bottom: 40px;">青白い画面に不気味な文字が羅列されている...</p>
+        <h2 style="color: #ff3333; margin-bottom: 20px; font-size: 2.5em; text-shadow: 2px 2px 10px black; letter-spacing: 5px;">悪魔の無人レジ</h2>
+        <p style="margin-bottom: 50px; font-size: 1.2em; color: #aaa;">青白い画面に不気味な文字が羅列されている...</p>
         
-        <div style="display: flex; gap: 20px; margin-bottom: 40px;">
-            <button id="buyBtn" style="background: #222; color: #fff; border: 1px solid #777; padding: 15px 30px; font-size: 1.2em; cursor: pointer;">供物（アイテム）を買う</button>
-            <button id="sinBtn" style="background: #222; color: #ff3333; border: 1px solid #770000; padding: 15px 30px; font-size: 1.2em; cursor: pointer;">罪を清算する</button>
+        <div style="display: flex; gap: 30px; margin-bottom: 50px;">
+            <button id="buyBtn" style="background: #111; color: #ddd; border: 1px solid #555; padding: 15px 40px; font-size: 1.3em; cursor: pointer; font-family: ${HORROR_FONT}; transition: 0.2s;">供物（アイテム）を買う</button>
+            <button id="sinBtn" style="background: #111; color: #ff3333; border: 1px solid #770000; padding: 15px 40px; font-size: 1.3em; cursor: pointer; font-family: ${HORROR_FONT}; transition: 0.2s;">罪を清算する</button>
         </div>
         
-        <button id="closeBtn" style="background: transparent; color: #aaa; border: none; text-decoration: underline; font-size: 1em; cursor: pointer;">立ち去る</button>
+        <button id="closeBtn" style="background: transparent; color: #777; border: none; font-size: 1.1em; cursor: pointer; font-family: ${HORROR_FONT}; text-decoration: underline;">立ち去る</button>
     `;
 
     document.body.appendChild(shopDiv);
+
+    // ボタンのホバーエフェクト（簡易）
+    const btns = [document.getElementById("buyBtn"), document.getElementById("sinBtn")];
+    btns.forEach(btn => {
+        btn.onmouseover = () => btn.style.backgroundColor = "#330000";
+        btn.onmouseout = () => btn.style.backgroundColor = "#111";
+    });
 
     document.getElementById("buyBtn").onclick = () => alert("【アイテム画面】※後日実装予定");
     document.getElementById("sinBtn").onclick = () => alert("【罪の清算】※後日実装予定");
 
     document.getElementById("closeBtn").onclick = () => {
         shopDiv.remove();
-        isEventPlaying = false; // 操作ロック解除
+        isEventPlaying = false; 
     };
 }
 
@@ -418,7 +459,7 @@ function turnRight() {
 
 // --- キー操作イベント ---
 window.addEventListener("keydown", (e) => {
-    if (isEventPlaying) return; // イベント中はキー操作無効
+    if (isEventPlaying) return; 
 
     if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") moveForward();
     if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") moveBackward();
