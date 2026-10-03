@@ -30,6 +30,13 @@ const imageSources = {
     right4: "assets/images/rightwall4.png"
 };
 
+// ★ ドア画像の拡大・位置ズレをコードで吸収するトリミング補正設定
+// top: 上のカット率, bottom: 下（巾木側）のカット率
+const doorCrops = {
+    door:      { top: 0.06, bottom: 0.08 }, // 通常ドア用 (上下を6%〜8%カット)
+    stairDoor: { top: 0.05, bottom: 0.07 }  // 非常階段ドア用
+};
+
 let loadedCount = 0;
 const totalImages = Object.keys(imageSources).length;
 
@@ -176,21 +183,37 @@ function draw() {
             }
         }
 
-        // --- 正面壁・扉の描画 ---
+        // --- 正面壁・扉の描画（★ トリミング補正対応） ---
         if (map1F[fY] && map1F[fY][fX] !== 0) {
             const cellType = map1F[fY][fX];
             const b = frontBounds[depth];
 
             let targetImg = images.wall;
-            // 4:非常階段, 2:通常扉, 3:コンビニ扉, 7:エレベーター
+            let cropKey = null;
+
             if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
                 targetImg = images.stairDoor;
+                cropKey = "stairDoor";
             } else if ((cellType === 2 || cellType === 3 || cellType === 7) && images.door && images.door.complete) {
                 targetImg = images.door;
+                cropKey = "door";
             }
 
             if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
-                ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
+                if (cropKey && doorCrops[cropKey]) {
+                    // ★ 画像の上下端をトリミングして描画サイズ・巾木をピッタリ合わせる
+                    const crop = doorCrops[cropKey];
+                    const sx = 0;
+                    const sy = targetImg.naturalHeight * crop.top;
+                    const sw = targetImg.naturalWidth;
+                    const sh = targetImg.naturalHeight * (1 - crop.top - crop.bottom);
+
+                    ctx.drawImage(targetImg, sx, sy, sw, sh, b.x, b.y, b.w, b.h);
+                } else {
+                    // 通常壁 (wall.png) はトリミングなしで全画面描画
+                    ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
+                }
+
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
                 ctx.fillRect(b.x, b.y, b.w, b.h);
             }
@@ -329,11 +352,10 @@ function interact() {
     }
 }
 
-// --- ★動画再生関数の修正（サイズを小さくして枠を付ける） ---
+// --- 動画再生関数 ---
 function playVideo(src, onEnded) {
     isEventPlaying = true; 
 
-    // 背景を暗くするオーバーレイレイヤー
     const overlay = document.createElement("div");
     overlay.style.position = "absolute";
     overlay.style.top = "0";
@@ -349,12 +371,10 @@ function playVideo(src, onEnded) {
 
     const video = document.createElement("video");
     video.src = src;
-    
-    // ★ 動画を枠で囲って適度なサイズに
-    video.style.width = "60%"; // 画面幅の60%
-    video.style.maxWidth = "600px"; // 最大でも600px
-    video.style.border = "4px solid #550000"; // 赤黒い枠
-    video.style.boxShadow = "0 0 30px rgba(255, 0, 0, 0.4)"; // ぼんやり光るエフェクト
+    video.style.width = "60%";
+    video.style.maxWidth = "600px";
+    video.style.border = "4px solid #550000";
+    video.style.boxShadow = "0 0 30px rgba(255, 0, 0, 0.4)";
     video.style.backgroundColor = "black";
     
     video.controls = false;
@@ -362,13 +382,11 @@ function playVideo(src, onEnded) {
 
     overlay.appendChild(video);
 
-    // 終了処理
     video.onended = () => {
         overlay.remove();
         if (onEnded) onEnded();
     };
 
-    // クリックでスキップ
     overlay.onclick = () => {
         video.pause();
         video.onended();
