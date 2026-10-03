@@ -331,6 +331,7 @@ function interact() {
         if (action.type === "video") {
             playVideo(action.src, () => {
                 if (action.next === "shop") openShopUI();
+                if (action.next === "message") showMessageDialog(action.text);
             });
         } else if (action.type === "changeFloor") {
             changeFloor(action.targetFloor);
@@ -338,11 +339,59 @@ function interact() {
     }
 }
 
-// --- ★ 階層移動関数（暗転演出つき） ---
+// --- ★ テキストメッセージ表示ダイアログ ---
+function showMessageDialog(text) {
+    isEventPlaying = true;
+
+    const msgDiv = document.createElement("div");
+    msgDiv.style.position = "absolute";
+    msgDiv.style.bottom = "12%";
+    msgDiv.style.left = "10%";
+    msgDiv.style.width = "80%";
+    msgDiv.style.padding = "25px 30px";
+    msgDiv.style.backgroundColor = "rgba(10, 0, 0, 0.92)";
+    msgDiv.style.color = "#dddddd";
+    msgDiv.style.border = "2px solid #550000";
+    msgDiv.style.borderRadius = "4px";
+    msgDiv.style.zIndex = "1000";
+    msgDiv.style.fontFamily = HORROR_FONT;
+    msgDiv.style.fontSize = "1.2em";
+    msgDiv.style.lineHeight = "1.8";
+    msgDiv.style.whiteSpace = "pre-wrap";
+    msgDiv.style.boxShadow = "0 0 20px rgba(0,0,0,0.8)";
+
+    msgDiv.innerText = text;
+
+    // クリックまたはSpaceで閉じる案内
+    const closeHint = document.createElement("div");
+    closeHint.style.marginTop = "15px";
+    closeHint.style.textAlign = "right";
+    closeHint.style.color = "#888888";
+    closeHint.style.fontSize = "0.85em";
+    closeHint.innerText = "▼ クリックまたは [ SPACE ] で閉じる";
+    msgDiv.appendChild(closeHint);
+
+    document.body.appendChild(msgDiv);
+
+    const closeHandler = (e) => {
+        if (e.type === "click" || e.key === " " || e.key === "Enter") {
+            window.removeEventListener("keydown", closeHandler);
+            msgDiv.onclick = null;
+            msgDiv.remove();
+            isEventPlaying = false;
+        }
+    };
+
+    setTimeout(() => {
+        msgDiv.onclick = closeHandler;
+        window.addEventListener("keydown", closeHandler);
+    }, 100);
+}
+
+// --- 階層移動関数（暗転演出つき） ---
 function changeFloor(targetFloor) {
     isEventPlaying = true;
 
-    // 暗転用オーバーレイ
     const fadeDiv = document.createElement("div");
     fadeDiv.style.position = "absolute";
     fadeDiv.style.top = "0";
@@ -362,13 +411,11 @@ function changeFloor(targetFloor) {
 
     document.body.appendChild(fadeDiv);
 
-    // フェードアウト
     setTimeout(() => {
         fadeDiv.style.opacity = "1";
         fadeDiv.innerText = targetFloor === 2 ? "2階へ登っている..." : "1階へ下りている...";
     }, 10);
 
-    // 階層データの切替
     setTimeout(() => {
         currentFloor = targetFloor;
         if (currentFloor === 2) {
@@ -380,7 +427,6 @@ function changeFloor(targetFloor) {
         } else {
             currentMap = map1F;
             currentHandleEvent = handleEvent1F;
-            // 1階へ戻った時は非常階段の目の前（x:7, y:1）で南向きに立つ
             player.x = 7;
             player.y = 1;
             player.dir = 2; // 南向き
@@ -388,7 +434,6 @@ function changeFloor(targetFloor) {
 
         draw();
 
-        // フェードイン
         setTimeout(() => {
             fadeDiv.style.opacity = "0";
             setTimeout(() => {
