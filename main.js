@@ -11,6 +11,14 @@ document.head.appendChild(fontLink);
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+// --- ゲームグローバル状態管理 ---
+const gameState = {
+    hasExorcistInherited: false, // エクソシストからの継承フラグ
+    hasKey2F: false,             // 2F非常階段の鍵フラグ
+    cards: [],                   // 所持カードIDリスト
+    level: 1                     // 主人公のレベル
+};
+
 // --- 階層データ管理 ---
 let currentFloor = 1; // 1: 1階, 2: 2階
 let currentMap = map1F;
@@ -325,7 +333,7 @@ function interact() {
     const frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
 
-    const action = currentHandleEvent(target);
+    const action = currentHandleEvent(target, gameState);
 
     if (action) {
         if (action.type === "video") {
@@ -333,14 +341,89 @@ function interact() {
                 if (action.next === "shop") openShopUI();
                 if (action.next === "message") showMessageDialog(action.text);
             });
+        } else if (action.type === "message") {
+            showMessageDialog(action.text);
         } else if (action.type === "changeFloor") {
             changeFloor(action.targetFloor);
+        } else if (action.type === "exorcistSequence") {
+            startExorcistSequence();
         }
     }
 }
 
-// --- ★ テキストメッセージ表示ダイアログ ---
-function showMessageDialog(text) {
+// --- ★ エクソシスト継承イベント・一連のシーケンス ---
+function startExorcistSequence() {
+    // 1. 血の池動画再生
+    playVideo("assets/videos/BloodPond.mp4", () => {
+        // 2. 倒れているエクソシスト動画再生
+        playVideo("assets/videos/exorcist.mp4", () => {
+            // 3. エクソシストの遺言ダイアログ
+            const msg = "【瀕死のエクソシスト】\n「……気づいて……くださったのですね……。ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』の1枚……この【Ⅰ】アクア・ベネディクタ……そして2階非常階段の鍵を……あなたに託します……」\n\n「9枚のラミナで悪魔を見極め……どうか……この館の悪魔を……」";
+            
+            showMessageDialog(msg, () => {
+                // 4. カード獲得ダイアログ（画像モーダル）
+                showCardAcquiredModal("1Aqua.png", "【Ⅰ】アクア・ベネディクタ", "退魔の札『ラミナ』の1枚と、\n『悪魔辞典アプリ』『2F非常階段の鍵』を受け継いだ！", () => {
+                    // 5. 地獄への引きずり込み演出
+                    const deathMsg = "【衝撃の光景】\n話し終えた直後、血の池がどす黒く泡立ち始めた！\n\n無数の黒い腕が池から這い出し、エクソシストの体にまとわりつく……！\n\n絶叫とともに、エクソシストは血の池の底へと引きずり込まれ、完全に姿を消した。";
+                    
+                    showMessageDialog(deathMsg, () => {
+                        // 6. フラグ・アイテムの獲得更新
+                        gameState.hasExorcistInherited = true;
+                        gameState.hasKey2F = true;
+                        gameState.cards.push("1Aqua");
+                    });
+                });
+            });
+        });
+    });
+}
+
+// --- ★ カード獲得時の画像モーダル表示 ---
+function showCardAcquiredModal(imageName, cardTitle, detailText, onClosed) {
+    isEventPlaying = true;
+
+    const modal = document.createElement("div");
+    modal.style.position = "absolute";
+    modal.style.top = "0";
+    modal.style.left = "0";
+    modal.style.width = "100%";
+    modal.style.height = "100%";
+    modal.style.backgroundColor = "rgba(0, 0, 0, 0.88)";
+    modal.style.zIndex = "2500";
+    modal.style.display = "flex";
+    modal.style.flexDirection = "column";
+    modal.style.alignItems = "center";
+    modal.style.justifyContent = "center";
+    modal.style.fontFamily = HORROR_FONT;
+
+    modal.innerHTML = `
+        <div style="color: #ff3333; font-size: 1.8em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 3px;">― 遺志の継承 ―</div>
+        <img src="assets/images/${imageName}" style="max-height: 240px; border: 3px solid #770000; box-shadow: 0 0 25px rgba(255,0,0,0.5); margin-bottom: 15px; border-radius: 6px;">
+        <div style="color: #ffdd66; font-size: 1.5em; font-weight: bold; margin-bottom: 8px;">${cardTitle}</div>
+        <div style="color: #cccccc; font-size: 1.1em; margin-bottom: 25px; text-align: center;">${detailText}</div>
+        <div style="color: #888; font-size: 0.9em;">[ SPACE ] キー または クリックで閉じる</div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeHandler = (e) => {
+        if (e.type === "click" || e.key === " " || e.key === "Enter") {
+            window.removeEventListener("keydown", closeHandler);
+            modal.onclick = null;
+            modal.remove();
+            isEventPlaying = false;
+            if (onClosed) onClosed();
+        }
+    };
+
+    setTimeout(() => {
+        modal.onclick = closeHandler;
+        window.addEventListener("keydown", closeHandler);
+    }, 150);
+}
+
+// --- テキストメッセージ表示ダイアログ ---
+function showMessageDialog(text, onClosed) {
     isEventPlaying = true;
 
     const msgDiv = document.createElement("div");
@@ -353,7 +436,7 @@ function showMessageDialog(text) {
     msgDiv.style.color = "#dddddd";
     msgDiv.style.border = "2px solid #550000";
     msgDiv.style.borderRadius = "4px";
-    msgDiv.style.zIndex = "1000";
+    msgDiv.style.zIndex = "2000";
     msgDiv.style.fontFamily = HORROR_FONT;
     msgDiv.style.fontSize = "1.2em";
     msgDiv.style.lineHeight = "1.8";
@@ -362,7 +445,6 @@ function showMessageDialog(text) {
 
     msgDiv.innerText = text;
 
-    // クリックまたはSpaceで閉じる案内
     const closeHint = document.createElement("div");
     closeHint.style.marginTop = "15px";
     closeHint.style.textAlign = "right";
@@ -379,13 +461,14 @@ function showMessageDialog(text) {
             msgDiv.onclick = null;
             msgDiv.remove();
             isEventPlaying = false;
+            if (onClosed) onClosed();
         }
     };
 
     setTimeout(() => {
         msgDiv.onclick = closeHandler;
         window.addEventListener("keydown", closeHandler);
-    }, 100);
+    }, 150);
 }
 
 // --- 階層移動関数（暗転演出つき） ---
@@ -456,7 +539,7 @@ function playVideo(src, onEnded) {
     overlay.style.width = "100%";
     overlay.style.height = "100%";
     overlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
-    overlay.style.zIndex = "999";
+    overlay.style.zIndex = "1800";
     overlay.style.display = "flex";
     overlay.style.justifyContent = "center";
     overlay.style.alignItems = "center";
