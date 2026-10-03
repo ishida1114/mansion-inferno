@@ -353,24 +353,29 @@ function interact() {
 
 // --- ★ エクソシスト継承イベント・一連のシーケンス ---
 function startExorcistSequence() {
-    // 1. 血の池動画再生
-    playVideo("assets/videos/BloodPond.mp4", () => {
-        // 2. 倒れているエクソシスト動画再生
-        playVideo("assets/videos/exorcist.mp4", () => {
-            // 3. エクソシストの遺言ダイアログ
-            const msg = "【瀕死のエクソシスト】\n「……気づいて……くださったのですね……。ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』の1枚……この【Ⅰ】アクア・ベネディクタ……そして2階非常階段の鍵を……あなたに託します……」\n\n「9枚のラミナで悪魔を見極め……どうか……この館の悪魔を……」";
-            
-            showMessageDialog(msg, () => {
-                // 4. カード獲得ダイアログ（画像モーダル）
-                showCardAcquiredModal("1Aqua.png", "【Ⅰ】アクア・ベネディクタ", "退魔の札『ラミナ』の1枚と、\n『悪魔辞典アプリ』『2F非常階段の鍵』を受け継いだ！", () => {
-                    // 5. 地獄への引きずり込み演出
-                    const deathMsg = "【衝撃の光景】\n話し終えた直後、血の池がどす黒く泡立ち始めた！\n\n無数の黒い腕が池から這い出し、エクソシストの体にまとわりつく……！\n\n絶叫とともに、エクソシストは血の池の底へと引きずり込まれ、完全に姿を消した。";
-                    
-                    showMessageDialog(deathMsg, () => {
-                        // 6. フラグ・アイテムの獲得更新
-                        gameState.hasExorcistInherited = true;
-                        gameState.hasKey2F = true;
-                        gameState.cards.push("1Aqua");
+    // 0. 血の池の描写テキストダイアログ
+    const introMsg = "【血の池】\nマンションの中庭に血の池が湧いて、池の底から無数の人ならざる者がこの世に出ようともがいているのが見える……";
+
+    showMessageDialog(introMsg, () => {
+        // 1. 血の池動画再生
+        playVideo("assets/videos/BloodPond.mp4", () => {
+            // 2. 倒れているエクソシスト動画再生
+            playVideo("assets/videos/exorcist.mp4", () => {
+                // 3. エクソシストの遺言ダイアログ
+                const msg = "【瀕死のエクソシスト】\n「……気づいて……くださったのですね……。ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……そして使い魔と2階非常階段の鍵を……あなたに託します……」\n\n「9枚のラミナで悪魔を見極め……使い魔はLv.15であなたの助けに……」";
+                
+                showMessageDialog(msg, () => {
+                    // 4. カード獲得ダイアログ（画像モーダル）
+                    showCardAcquiredModal("1Card.png", "退魔の札『ラミナ』", "『悪魔辞典アプリ』『使い魔（Lv.15から）』『2F非常階段の鍵』を受け継いだ！", () => {
+                        // 5. 地獄への引きずり込み演出
+                        const deathMsg = "【衝撃の光景】\n話し終えた直後、血の池がどす黒く泡立ち始めた！\n\n無数の黒い腕が池から這い出し、エクソシストの体にまとわりつく……！\n\n絶叫とともに、エクソシストは血の池の底へと引きずり込まれ、完全に姿を消した。";
+                        
+                        showMessageDialog(deathMsg, () => {
+                            // 6. フラグ・アイテムの獲得更新
+                            gameState.hasExorcistInherited = true;
+                            gameState.hasKey2F = true;
+                            gameState.cards.push("1Card");
+                        });
                     });
                 });
             });
@@ -400,7 +405,7 @@ function showCardAcquiredModal(imageName, cardTitle, detailText, onClosed) {
         <div style="color: #ff3333; font-size: 1.8em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 3px;">― 遺志の継承 ―</div>
         <img src="assets/images/${imageName}" style="max-height: 240px; border: 3px solid #770000; box-shadow: 0 0 25px rgba(255,0,0,0.5); margin-bottom: 15px; border-radius: 6px;">
         <div style="color: #ffdd66; font-size: 1.5em; font-weight: bold; margin-bottom: 8px;">${cardTitle}</div>
-        <div style="color: #cccccc; font-size: 1.1em; margin-bottom: 25px; text-align: center;">${detailText}</div>
+        <div style="color: #cccccc; font-size: 1.1em; margin-bottom: 25px; text-align: center; white-space: pre-wrap;">${detailText}</div>
         <div style="color: #888; font-size: 0.9em;">[ SPACE ] キー または クリックで閉じる</div>
     `;
 
