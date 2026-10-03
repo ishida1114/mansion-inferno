@@ -4,7 +4,10 @@ import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// --- 画像の読み込み処理 ---
+// --- イベント状態管理 ---
+let isEventPlaying = false; // 動画再生中やショップ表示中は操作をロックする
+
+// --- 画像の読み込み処理（エラー検知・フリーズ防止機能付き） ---
 const images = {};
 const imageSources = {
     logo: "assets/images/akumanologo.png",
@@ -24,15 +27,25 @@ const imageSources = {
 let loadedCount = 0;
 const totalImages = Object.keys(imageSources).length;
 
+function checkAllLoaded() {
+    loadedCount++;
+    if (loadedCount === totalImages) {
+        draw();
+    }
+}
+
 for (let key in imageSources) {
     images[key] = new Image();
-    images[key].src = imageSources[key];
-    images[key].onload = () => {
-        loadedCount++;
-        if (loadedCount === totalImages) {
-            draw();
-        }
+    
+    images[key].onload = checkAllLoaded;
+    
+    // 画像が見つからなくても真っ黒フリーズしない安全対策
+    images[key].onerror = () => {
+        alert(`【画像読み込みエラー】\n「${imageSources[key]}」が見つかりません！\nファイル名や拡張子(.png)を確認してください。`);
+        checkAllLoaded();
     };
+    
+    images[key].src = imageSources[key];
 }
 
 // --- プレイヤー設定 ---
@@ -46,7 +59,7 @@ const dx = [0, 1, 0, -1];
 const dy = [-1, 0, 1, 0];
 const dirNames = ["北 (N)", "東 (E)", "南 (S)", "西 (W)"];
 
-// 台形マスク座標
+// --- 3D描画用 台形マスク座標 ---
 const leftClips = {
     1: [{x:0, y:0}, {x:150, y:75}, {x:150, y:325}, {x:0, y:400}],
     2: [{x:150, y:75}, {x:220, y:135}, {x:220, y:265}, {x:150, y:325}],
@@ -97,7 +110,6 @@ function draw() {
     for (let depth = 4; depth >= 1; depth--) {
         const forwardOffset = depth - 1;
 
-        // プレイヤー視点からの各座標計算
         const fX = player.x + dx[player.dir] * depth;
         const fY = player.y + dy[player.dir] * depth;
 
@@ -109,9 +121,8 @@ function draw() {
 
         // --- 左側の描画 ---
         if (map1F[lY] && map1F[lY][lX] !== 0) {
-            // 左側が壁の場合
             const imgKey = "left" + depth;
-            if (images[imgKey] && images[imgKey].complete) {
+            if (images[imgKey] && images[imgKey].complete && images[imgKey].naturalWidth > 0) {
                 const clip = leftClips[depth];
                 ctx.save();
                 ctx.beginPath();
@@ -126,10 +137,10 @@ function draw() {
                 ctx.restore();
             }
         } else {
-            // 左側が開いている場合：1マス奥の正面壁を描く
+            // 横が開いている場合、その奥の壁を描画して空洞化を防ぐ
             const lX_next = player.x + dx[player.dir] * depth + dx[leftDir];
             const lY_next = player.y + dy[player.dir] * depth + dy[leftDir];
-            if (map1F[lY_next] && map1F[lY_next][lX_next] !== 0 && images.wall && images.wall.complete) {
+            if (map1F[lY_next] && map1F[lY_next][lX_next] !== 0 && images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
                 const slot = sideCornerSlots.left[depth];
                 ctx.drawImage(images.wall, slot.x, slot.y, slot.w, slot.h);
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
@@ -139,9 +150,8 @@ function draw() {
 
         // --- 右側の描画 ---
         if (map1F[rY] && map1F[rY][rX] !== 0) {
-            // 右側が壁の場合
             const imgKey = "right" + depth;
-            if (images[imgKey] && images[imgKey].complete) {
+            if (images[imgKey] && images[imgKey].complete && images[imgKey].naturalWidth > 0) {
                 const clip = rightClips[depth];
                 ctx.save();
                 ctx.beginPath();
@@ -156,10 +166,10 @@ function draw() {
                 ctx.restore();
             }
         } else {
-            // 右側が開いている場合：1マス奥の正面壁を描く
+            // 横が開いている場合、その奥の壁を描画して空洞化を防ぐ
             const rX_next = player.x + dx[player.dir] * depth + dx[rightDir];
             const rY_next = player.y + dy[player.dir] * depth + dy[rightDir];
-            if (map1F[rY_next] && map1F[rY_next][rX_next] !== 0 && images.wall && images.wall.complete) {
+            if (map1F[rY_next] && map1F[rY_next][rX_next] !== 0 && images.wall && images.wall.complete && images.wall.naturalWidth > 0) {
                 const slot = sideCornerSlots.right[depth];
                 ctx.drawImage(images.wall, slot.x, slot.y, slot.w, slot.h);
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
@@ -174,12 +184,12 @@ function draw() {
 
             let targetImg = images.wall;
             if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
-                targetImg = images.stairDoor;
+                targetImg = images.stairDoor; // 非常階段
             } else if ((cellType === 2 || cellType === 3 || cellType === 7) && images.door && images.door.complete) {
-                targetImg = images.door;
+                targetImg = images.door; // 通常扉 / コンビニ / エレベーター
             }
 
-            if (targetImg && targetImg.complete) {
+            if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
                 ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`;
                 ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -191,6 +201,7 @@ function draw() {
     drawCompass();
 }
 
+// --- 背景・天井・床の描画 ---
 function drawEnvironment() {
     ctx.fillStyle = "#0a0a0c";
     ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
@@ -215,6 +226,7 @@ function drawEnvironment() {
     });
 }
 
+// --- 奥行き影（フォグ）描画 ---
 function applyDepthShadow(clip, depth) {
     const shadowAlpha = (depth - 1) * 0.22;
     if (shadowAlpha <= 0) return;
@@ -229,6 +241,7 @@ function applyDepthShadow(clip, depth) {
     ctx.fill();
 }
 
+// --- コンパス描画 ---
 function drawCompass() {
     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
     ctx.fillRect(canvas.width - 90, 10, 80, 26);
@@ -241,6 +254,7 @@ function drawCompass() {
     ctx.fillText(dirNames[player.dir], canvas.width - 50, 27);
 }
 
+// --- ミニマップ描画 ---
 function drawMiniMap() {
     const size = 8;
     const margin = 10;
@@ -279,14 +293,99 @@ function drawMiniMap() {
     ctx.stroke();
 }
 
+// --- 調べる（interact）処理 ---
 function interact() {
+    if (isEventPlaying) return;
+
     const frontX = player.x + dx[player.dir];
     const frontY = player.y + dy[player.dir];
     const target = map1F[frontY] ? map1F[frontY][frontX] : 1;
 
-    handleEvent1F(target);
+    const action = handleEvent1F(target);
+
+    // 動画再生イベントの場合
+    if (action && action.type === "video") {
+        playVideo(action.src, () => {
+            if (action.next === "shop") openShopUI();
+        });
+    }
 }
 
+// --- 全画面動画再生関数 ---
+function playVideo(src, onEnded) {
+    isEventPlaying = true; // 操作をロック
+
+    const video = document.createElement("video");
+    video.src = src;
+    video.style.position = "absolute";
+    video.style.top = "0";
+    video.style.left = "0";
+    video.style.width = "100vw";
+    video.style.height = "100vh";
+    video.style.objectFit = "cover";
+    video.style.backgroundColor = "black";
+    video.style.zIndex = "1000";
+    video.controls = false;
+    video.autoplay = true;
+
+    document.body.appendChild(video);
+
+    video.onended = () => {
+        video.remove();
+        if (onEnded) onEnded();
+    };
+
+    // 画面クリックで再生スキップ可能
+    video.onclick = () => {
+        video.pause();
+        video.onended();
+    };
+}
+
+// --- ショップUI表示関数 ---
+function openShopUI() {
+    isEventPlaying = true;
+
+    const shopDiv = document.createElement("div");
+    shopDiv.style.position = "absolute";
+    shopDiv.style.top = "10%";
+    shopDiv.style.left = "10%";
+    shopDiv.style.width = "80%";
+    shopDiv.style.height = "80%";
+    shopDiv.style.backgroundColor = "rgba(10, 0, 0, 0.95)";
+    shopDiv.style.color = "#ccc";
+    shopDiv.style.border = "2px solid #550000";
+    shopDiv.style.zIndex = "1000";
+    shopDiv.style.display = "flex";
+    shopDiv.style.flexDirection = "column";
+    shopDiv.style.alignItems = "center";
+    shopDiv.style.justifyContent = "center";
+    shopDiv.style.fontFamily = "sans-serif";
+
+    shopDiv.innerHTML = `
+        <h2 style="color: #ff3333; margin-bottom: 20px; font-size: 2em; text-shadow: 2px 2px 5px black;">悪魔の無人レジ</h2>
+        <p style="margin-bottom: 40px;">青白い画面に不気味な文字が羅列されている...</p>
+        
+        <div style="display: flex; gap: 20px; margin-bottom: 40px;">
+            <button id="buyBtn" style="background: #222; color: #fff; border: 1px solid #777; padding: 15px 30px; font-size: 1.2em; cursor: pointer;">供物（アイテム）を買う</button>
+            <button id="sinBtn" style="background: #222; color: #ff3333; border: 1px solid #770000; padding: 15px 30px; font-size: 1.2em; cursor: pointer;">罪を清算する</button>
+        </div>
+        
+        <button id="closeBtn" style="background: transparent; color: #aaa; border: none; text-decoration: underline; font-size: 1em; cursor: pointer;">立ち去る</button>
+    `;
+
+    document.body.appendChild(shopDiv);
+
+    document.getElementById("buyBtn").onclick = () => alert("【アイテム画面】※後日実装予定");
+    document.getElementById("sinBtn").onclick = () => alert("【罪の清算】※後日実装予定");
+
+    document.getElementById("closeBtn").onclick = () => {
+        shopDiv.remove();
+        isEventPlaying = false; // 操作ロック解除
+    };
+}
+
+// --- 移動処理 ---
 function moveForward() {
     const nx = player.x + dx[player.dir];
     const ny = player.y + dy[player.dir];
@@ -317,7 +416,10 @@ function turnRight() {
     draw();
 }
 
+// --- キー操作イベント ---
 window.addEventListener("keydown", (e) => {
+    if (isEventPlaying) return; // イベント中はキー操作無効
+
     if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") moveForward();
     if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") moveBackward();
     if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") turnLeft();

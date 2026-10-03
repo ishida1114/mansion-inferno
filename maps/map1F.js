@@ -19,11 +19,13 @@ export const playerStart1F = {
     dir: 0 // 北向き
 };
 
+// --- map1F.js の下半分 ---
+
 export function handleEvent1F(targetCode) {
     switch(targetCode) {
         case 3:
-            alert("【無人コンビニ】セルフレジの画面が青く点滅している...（CVS.mp4再生予定）");
-            break;
+            // コンビニの場合は動画再生イベントのアクションを返す
+            return { type: "video", src: "assets/videos/CVS.mp4", next: "shop" };
         case 4:
             alert("【非常階段】重い非常扉がある。ここから2階へ登れそうだ。");
             break;
@@ -39,4 +41,5 @@ export function handleEvent1F(targetCode) {
         default:
             break;
     }
+    return null; // 特にアクションがない場合
 }
