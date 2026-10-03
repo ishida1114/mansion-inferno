@@ -3,11 +3,11 @@
 export const map1F = [
     [1, 1, 3, 1, 5, 1, 1, 4, 1, 1], // y=0: 北側の壁にオブジェクト配置
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1], // y=1: 北側通路
-    [1, 0, 1, 6, 6, 6, 6, 1, 0, 1], // y=2: ★内側の壁（北側）を血の池に変更
+    [1, 0, 1, 6, 6, 6, 6, 1, 0, 1], // y=2: 内側の壁（北側）
     [1, 0, 6, 6, 6, 6, 6, 1, 0, 1], // y=3: 中央ブロック
     [1, 0, 6, 6, 6, 6, 6, 7, 0, 1], // y=4: (7:エレベーター)
     [1, 0, 6, 6, 6, 6, 6, 1, 0, 1], // y=5: 中央ブロック
-    [1, 0, 1, 6, 6, 6, 6, 1, 0, 1], // y=6: ★内側の壁（南側）を血の池に変更
+    [1, 0, 1, 6, 6, 6, 6, 1, 0, 1], // y=6: 内側の壁（南側）
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1], // y=7: 南側通路
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1], // y=8: スタート位置 (x:4, y:8)
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  // y=9
@@ -22,8 +22,12 @@ export const playerStart1F = {
 export function handleEvent1F(targetCode, gameState) {
     switch(targetCode) {
         case 3:
-            // コンビニ
-            return { type: "video", src: "assets/videos/CVS.mp4", next: "shop" };
+            // コンビニ（初回はおばあさんイベント、2回目以降はショップ）
+            if (!gameState.hasMetGrandma) {
+                return { type: "grandmaEvent" };
+            } else {
+                return { type: "shop" };
+            }
         case 4:
             // 非常階段
             if (!gameState.hasKey2F) {
@@ -42,7 +46,7 @@ export function handleEvent1F(targetCode, gameState) {
                 text: "【集合ポスト】\n荒らされたポストの中に、古びた手記が入っている…\n\n『202号室の住人は毎夜、鏡に向かって呪文を呟いている。あの部屋に近づいてはならない…』"
             };
         case 6:
-            // ★血の池（エクソシスト継承イベント）
+            // 血の池（エクソシスト継承イベント）
             if (!gameState.hasExorcistInherited) {
                 return { type: "exorcistSequence" };
             } else {
