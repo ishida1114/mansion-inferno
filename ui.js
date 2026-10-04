@@ -1,12 +1,11 @@
 // ui.js
 import { gameState } from './gameState.js';
+import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ クロマキー（緑背景透過）強化版
 export function applyChromaKey(imgElement) {
     if (!imgElement || imgElement.naturalWidth === 0) return;
-    
     try {
         const canvas = document.createElement("canvas");
         canvas.width = imgElement.naturalWidth; 
@@ -19,9 +18,8 @@ export function applyChromaKey(imgElement) {
         
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i], g = data[i + 1], b = data[i + 2];
-            // 緑成分が赤・青より一定以上強い場合を透過
             if (g > 60 && g > r * 1.15 && g > b * 1.15) {
-                data[i + 3] = 0; // Alphaを0にして透明化
+                data[i + 3] = 0;
             }
         }
         cctx.putImageData(imgData, 0, 0);
@@ -137,26 +135,181 @@ export function playVideo(src, onEnded) {
     overlay.onclick = () => { video.pause(); video.onended(); };
 }
 
+// ★ リッチ演出仕様の悪魔の無人レジ（コンビニUI）
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
-    shopDiv.style.cssText = `position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; background-color: rgba(10, 0, 0, 0.95); color: #ccc; border: 2px solid #550000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT};`; 
+    shopDiv.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center;`; 
+
+    // 背景動画（CVS.mp4）と黒いオーバーレイ
     shopDiv.innerHTML = `
-        <h2 style="color: #ff3333; margin-bottom: 20px; font-size: 2.5em; text-shadow: 2px 2px 10px black; letter-spacing: 5px;">悪魔の無人レジ</h2>
-        <p style="margin-bottom: 50px; font-size: 1.2em; color: #aaa;">青白い画面に不気味な文字が羅列されている...</p>
-        <div style="display: flex; gap: 30px; margin-bottom: 50px;">
-            <button id="buyBtn" style="background: #111; color: #ddd; border: 1px solid #555; padding: 15px 40px; font-size: 1.3em; cursor: pointer; font-family: ${HORROR_FONT};">供物（アイテム）を買う</button>
-            <button id="sinBtn" style="background: #111; color: #ff3333; border: 1px solid #770000; padding: 15px 40px; font-size: 1.3em; cursor: pointer; font-family: ${HORROR_FONT};">罪を清算する</button>
+        <video src="assets/videos/CVS.mp4" autoplay loop muted style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.35; filter: blur(2px);"></video>
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(20,0,0,0.7) 0%, rgba(0,0,0,0.95) 90%);"></div>
+
+        <div style="position: relative; z-index: 10; width: 88%; max-width: 580px; height: 85%; background: rgba(10, 5, 5, 0.9); border: 2px solid #770000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
+            
+            <!-- 上部ヘッダー -->
+            <div style="padding: 15px 20px; border-bottom: 2px solid #550000; background: linear-gradient(180deg, #2a0000, #0a0000); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="color: #ff3333; margin: 0; font-size: 1.8em; text-shadow: 0 0 10px red; letter-spacing: 2px;">悪魔の無人レジ</h2>
+                    <div style="color: #888; font-size: 0.8em; margin-top: 2px;">自動精算端末 4号機</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.85em; color: #aaa;">所持金 / 罪</div>
+                    <div style="font-size: 1.2em; color: #ffdd66; font-weight: bold;">💰 <span id="shop-money">${gameState.money}</span> <span style="color:#ff4444; font-size:0.85em; margin-left:8px;">(SIN: <span id="shop-sin">${gameState.sin}</span>)</span></div>
+                </div>
+            </div>
+
+            <!-- タブ切替ボタン -->
+            <div style="display: flex; border-bottom: 1px solid #440000; background: #050505;">
+                <button id="tab-buy" style="flex: 1; background: #220000; color: #ffdd66; border: none; padding: 12px; font-family: inherit; font-size: 1.05em; cursor: pointer; border-bottom: 2px solid #ffdd66; transition: 0.2s;">供物（アイテム）を買う</button>
+                <button id="tab-sin" style="flex: 1; background: #111; color: #888; border: none; padding: 12px; font-family: inherit; font-size: 1.05em; cursor: pointer; transition: 0.2s;">罪を清算する</button>
+            </div>
+
+            <!-- 商品リストコンテンツ領域 -->
+            <div id="shop-content" style="flex: 1; overflow-y: auto; padding: 15px; box-sizing: border-box;">
+                <!-- JavaScriptで描画 -->
+            </div>
+
+            <!-- 下部フッター（退出ボタン） -->
+            <div style="padding: 12px; text-align: center; border-top: 1px solid #440000; background: #050505;">
+                <button id="closeBtn" style="background: transparent; color: #aaa; border: 1px solid #555; padding: 8px 30px; font-size: 1em; cursor: pointer; font-family: inherit; border-radius: 4px; transition: 0.2s;">立ち去る [ESC]</button>
+            </div>
         </div>
-        <button id="closeBtn" style="background: transparent; color: #777; border: none; font-size: 1.1em; cursor: pointer; font-family: ${HORROR_FONT}; text-decoration: underline;">立ち去る</button>
     `;
     document.body.appendChild(shopDiv);
 
-    document.getElementById("buyBtn").onclick = () => alert("【アイテム画面】※後日実装予定");
-    document.getElementById("sinBtn").onclick = () => alert("【罪の清算】※後日実装予定");
-    document.getElementById("closeBtn").onclick = () => {
+    let activeTab = "buy";
+
+    // 商品リスト描画
+    function renderShopContent() {
+        const contentDiv = document.getElementById("shop-content");
+        if (!contentDiv) return;
+
+        if (activeTab === "buy") {
+            let html = "";
+            Object.values(itemDefinitions).forEach(item => {
+                const count = gameState.inventory[item.id] || 0;
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(20, 10, 10, 0.85); padding: 12px 15px; margin-bottom: 10px; border: 1px solid #441111; border-radius: 6px; transition: all 0.2s ease;">
+                        <div style="flex: 1; padding-right: 15px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.15em; color: #ffdd66; font-weight: bold;">${item.name}</span>
+                                <span style="font-size: 0.8em; background: #330000; color: #ff8888; padding: 2px 6px; border-radius: 3px; border: 1px solid #660000;">所持: ${count}</span>
+                            </div>
+                            <div style="font-size: 0.85em; color: #bbb; margin-top: 4px; line-height: 1.4;">${item.desc}</div>
+                        </div>
+                        <div style="text-align: right; min-width: 90px;">
+                            <div style="color: #ffdd66; font-size: 1.1em; font-weight: bold; margin-bottom: 6px;">💰 ${item.price}</div>
+                            <button class="buy-item-btn" data-id="${item.id}" data-price="${item.price}" style="background: linear-gradient(180deg, #440000, #110000); color: #fff; border: 1px solid #ff3333; padding: 6px 14px; cursor: pointer; border-radius: 4px; font-family: inherit; font-size: 0.9em; transition: 0.2s; box-shadow: 0 0 5px rgba(255,0,0,0.3);">購入</button>
+                        </div>
+                    </div>
+                `;
+            });
+            contentDiv.innerHTML = html;
+
+            // 購入ボタンイベントリスナー
+            document.querySelectorAll(".buy-item-btn").forEach(btn => {
+                btn.onmouseover = () => btn.style.borderColor = "#ff9999";
+                btn.onmouseout = () => btn.style.borderColor = "#ff3333";
+                btn.onclick = () => {
+                    const itemId = btn.getAttribute("data-id");
+                    const price = parseInt(btn.getAttribute("data-price"));
+
+                    if (gameState.money >= price) {
+                        gameState.money -= price;
+                        if (!gameState.inventory[itemId]) gameState.inventory[itemId] = 0;
+                        gameState.inventory[itemId]++;
+
+                        document.getElementById("shop-money").innerText = gameState.money;
+                        
+                        btn.style.background = "#006600";
+                        btn.style.borderColor = "#00ff00";
+                        btn.innerText = "完了！";
+                        
+                        setTimeout(() => {
+                            renderShopContent();
+                        }, 400);
+                    } else {
+                        btn.style.background = "#660000";
+                        btn.innerText = "資金不足";
+                        setTimeout(() => {
+                            btn.style.background = "linear-gradient(180deg, #440000, #110000)";
+                            btn.innerText = "購入";
+                        }, 800);
+                    }
+                };
+            });
+
+        } else {
+            // 罪の清算タブ
+            contentDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px 10px;">
+                    <div style="font-size: 1.3em; color: #ff4444; margin-bottom: 15px; text-shadow: 0 0 8px red;">― 罪の代償と浄化 ―</div>
+                    <p style="color: #ccc; font-size: 0.95em; line-height: 1.8; margin-bottom: 25px;">
+                        誤って人間を撃ち、積み重なった狂気（SIN）をセルフレジの募金箱に供物を納めることで和らげます。<br>
+                        <span style="color: #ffaa88;">※現在の罪（SIN）: <strong>${gameState.sin}</strong></span>
+                    </p>
+                    
+                    <div style="background: rgba(20,0,0,0.8); border: 1px solid #550000; padding: 20px; border-radius: 8px; max-width: 380px; margin: 0 auto;">
+                        <div style="font-size: 1.1em; color: #ffdd66; margin-bottom: 8px;">罪の免除（SIN -5）</div>
+                        <div style="color: #aaa; font-size: 0.85em; margin-bottom: 15px;">必要資金: 💰 200</div>
+                        <button id="clean-sin-btn" style="background: #330000; color: #ff8888; border: 1px solid #ff4444; padding: 10px 25px; font-size: 1em; cursor: pointer; border-radius: 4px; font-family: inherit;">200 💰 を払って贖罪する</button>
+                    </div>
+                </div>
+            `;
+
+            const cleanBtn = document.getElementById("clean-sin-btn");
+            if (cleanBtn) {
+                cleanBtn.onclick = () => {
+                    if (gameState.sin <= 0) {
+                        alert("あなたには現在、清算すべき罪（SIN）はありません。");
+                        return;
+                    }
+                    if (gameState.money >= 200) {
+                        gameState.money -= 200;
+                        gameState.sin = Math.max(0, gameState.sin - 5);
+                        document.getElementById("shop-money").innerText = gameState.money;
+                        document.getElementById("shop-sin").innerText = gameState.sin;
+                        alert("罪が和らいだ気がする……（SINが5減少しました）");
+                        renderShopContent();
+                    } else {
+                        alert("資金が足りません。");
+                    }
+                };
+            }
+        }
+    }
+
+    // タブ切り替え制御
+    const tabBuy = document.getElementById("tab-buy");
+    const tabSin = document.getElementById("tab-sin");
+
+    tabBuy.onclick = () => {
+        activeTab = "buy";
+        tabBuy.style.background = "#220000"; tabBuy.style.color = "#ffdd66"; tabBuy.style.borderBottom = "2px solid #ffdd66";
+        tabSin.style.background = "#111"; tabSin.style.color = "#888"; tabSin.style.borderBottom = "none";
+        renderShopContent();
+    };
+
+    tabSin.onclick = () => {
+        activeTab = "sin";
+        tabSin.style.background = "#220000"; tabSin.style.color = "#ffdd66"; tabSin.style.borderBottom = "2px solid #ffdd66";
+        tabBuy.style.background = "#111"; tabBuy.style.color = "#888"; tabBuy.style.borderBottom = "none";
+        renderShopContent();
+    };
+
+    // 初期表示
+    renderShopContent();
+
+    const closeHandler = () => {
+        window.removeEventListener("keydown", keyHandler);
         shopDiv.remove();
         if (onClosed) onClosed();
     };
+    
+    document.getElementById("closeBtn").onclick = closeHandler;
+    const keyHandler = (e) => { if (e.key === "Escape") closeHandler(); };
+    window.addEventListener("keydown", keyHandler);
 }
 
 export function openDebugMenu(onAction) {
@@ -170,6 +323,7 @@ export function openDebugMenu(onAction) {
         <button class="debug-btn" id="dbg-warp-2f">② 2階（2F）へ直接ワープ</button>
         <button class="debug-btn" id="dbg-warp-1f">③ 1階（1F）へ直接ワープ</button>
         <button class="debug-btn" id="dbg-lv15">④ レベル15にする（使い魔解禁テスト用）</button>
+        <button class="debug-btn" id="dbg-money">⑤ お金を+1000追加</button>
         <button class="debug-btn" id="dbg-close" style="background:#550000; color:#fff; border-color:#ff0000;">閉じる [F2]</button>
     `;
     document.body.appendChild(debugDiv);
@@ -190,6 +344,10 @@ export function openDebugMenu(onAction) {
     document.getElementById("dbg-lv15").onclick = () => {
         gameState.level = 15; gameState.familiarSync = 100;
         alert("【デバッグ】レベルを15に設定しました！"); debugDiv.remove();
+    };
+    document.getElementById("dbg-money").onclick = () => {
+        gameState.money += 1000;
+        alert("【デバッグ】所持金を+1000しました！"); debugDiv.remove();
     };
     document.getElementById("dbg-close").onclick = () => debugDiv.remove();
 }
