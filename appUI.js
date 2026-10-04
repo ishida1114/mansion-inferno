@@ -5,6 +5,36 @@ import { applyChromaKey, showMessageDialog } from './ui.js';
 let isMenuOpen = false;
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
+// ★ アプリ専用スタイルの自動注入
+const appStyle = document.createElement("style");
+appStyle.innerHTML = `
+    .app-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); z-index: 3000; display: flex; justify-content: center; align-items: center; }
+    .smartphone { width: 360px; height: 720px; background-color: #0d0d12; border: 4px solid #1a1a24; border-radius: 24px; box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 15px rgba(100, 0, 0, 0.5); display: flex; flex-direction: column; overflow: hidden; font-family: 'Shippori Mincho', serif; color: #ddd; position: relative; }
+    .app-header { background: linear-gradient(180deg, #220000, #000); padding: 8px 12px; font-size: 0.85em; display: flex; justify-content: space-between; border-bottom: 1px solid #550000; color: #aaa; }
+    .app-header span { font-weight: bold; color: #ffdd66; }
+    .app-content { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+    .app-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .app-icon { background-color: #111; border: 1px solid #330000; border-radius: 12px; padding: 20px 10px; text-align: center; cursor: pointer; transition: all 0.2s ease; }
+    .app-icon:hover { background-color: #2a0000; border-color: #ff3333; }
+    .app-icon-emoji { font-size: 2em; margin-bottom: 10px; }
+    .app-icon-title { font-size: 0.9em; color: #ccc; }
+    .app-footer { height: 50px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; background-color: #050505; }
+    .app-home-btn { width: 60px; height: 6px; background-color: #555; border-radius: 3px; cursor: pointer; }
+    .app-home-btn:hover { background-color: #aaa; }
+    
+    .sub-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #550000; padding-bottom: 10px; margin-bottom: 15px; }
+    .back-btn { cursor: pointer; color: #888; font-size: 0.9em; transition: color 0.2s; padding: 5px; }
+    .back-btn:hover { color: #fff; }
+    .sub-title { font-size: 1.3em; color: #ff3333; text-shadow: 0 0 5px red; margin: 0; text-align: center; flex: 1; font-weight: bold; }
+    .loadout-slot { background: #111; border: 2px dashed #440000; padding: 15px; text-align: center; margin-bottom: 10px; color: #666; }
+    .equipped-slot { border: 2px solid #ffdd66; color: #ffdd66; background: #221a00; }
+    .card-list { display: flex; gap: 10px; overflow-x: auto; padding-top: 10px; }
+    .card-item { border: 1px solid #555; padding: 5px; cursor: pointer; background: #000; text-align: center; }
+    .card-item:hover { border-color: #ff3333; }
+    .card-item img { max-width: 60px; display: block; margin-bottom: 5px; }
+`;
+document.head.appendChild(appStyle);
+
 export function toggleMenu() {
     if (isMenuOpen) {
         const overlay = document.getElementById("app-overlay");
@@ -18,7 +48,8 @@ export function toggleMenu() {
         }
         isMenuOpen = true;
         const overlay = document.createElement("div");
-        overlay.id = "app-overlay"; overlay.className = "app-overlay";
+        overlay.id = "app-overlay"; 
+        overlay.className = "app-overlay";
         overlay.innerHTML = `
             <div class="smartphone">
                 <div class="app-header">
@@ -114,7 +145,10 @@ export function renderLoadout() {
 
     document.getElementById("btn-back").onclick = renderAppHome;
     const img = document.getElementById("modelgun-img");
-    if (img) img.onload = () => applyChromaKey(img);
+    if (img) {
+        if (img.complete) applyChromaKey(img);
+        else img.onload = () => applyChromaKey(img);
+    }
 
     document.querySelectorAll(".card-item").forEach(item => {
         item.onclick = () => {

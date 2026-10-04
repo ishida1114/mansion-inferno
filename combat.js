@@ -4,9 +4,8 @@ import { applyChromaKey } from './ui.js';
 let currentEnemy = null;
 let combatCallback = null;
 let isHumanInspection = false; 
-let isProcessingTurn = false; // ボタン連打防止フラグ
+let isProcessingTurn = false;
 
-// 戦闘開始関数
 export function startCombat(enemyData, gameState, isInspection = false, onFinished) {
     currentEnemy = JSON.parse(JSON.stringify(enemyData)); 
     combatCallback = onFinished;
@@ -23,7 +22,6 @@ export function startCombat(enemyData, gameState, isInspection = false, onFinish
     `;
 
     overlay.innerHTML = `
-        <!-- 上部：敵ステータス ＆ 画像 -->
         <div style="text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
             <div style="color: #ff3333; font-size: 1.4em; text-shadow: 0 0 8px red; margin-bottom: 10px;">
                 <span style="color: #888; font-size: 0.8em; margin-right: 5px;">Lv.${currentEnemy.level}</span>
@@ -32,12 +30,10 @@ export function startCombat(enemyData, gameState, isInspection = false, onFinish
             <img id="combat-enemy-img" src="${currentEnemy.image}" style="max-height: 220px; border-radius: 8px;" onerror="this.style.display='none'">
         </div>
 
-        <!-- 中部：戦闘メッセージログ -->
         <div id="combat-log" style="width: 90%; height: 80px; background: rgba(0,0,0,0.8); border: 2px solid #550000; border-radius: 6px; padding: 12px; color: #ddd; font-size: 1.05em; line-height: 1.5; margin-bottom: 15px; overflow-y: auto; white-space: pre-wrap;">
 ${currentEnemy.name} が立ちはだかった！
         </div>
 
-        <!-- 下部：主人公ステータス ＆ コマンドボタン -->
         <div style="width: 90%; display: flex; gap: 15px; align-items: center;">
             <div style="background: #111; border: 1px solid #444; padding: 10px 15px; border-radius: 6px; color: #aaa; font-size: 0.9em; min-width: 120px;">
                 <div>HP: <span id="combat-hp" style="color:#ffdd66;">${gameState.hp}</span> / ${gameState.maxHp}</div>
@@ -56,7 +52,10 @@ ${currentEnemy.name} が立ちはだかった！
     document.body.appendChild(overlay);
 
     const img = document.getElementById("combat-enemy-img");
-    if (img) img.onload = () => applyChromaKey(img);
+    if (img) {
+        if (img.complete) applyChromaKey(img);
+        else img.onload = () => applyChromaKey(img);
+    }
 
     document.getElementById("cmd-attack").onclick = () => playerTurnAttack(gameState);
     document.getElementById("cmd-item").onclick = () => {
@@ -73,14 +72,13 @@ function appendLog(text) {
     if (logDiv) logDiv.innerText = text;
 }
 
-// 主人公の攻撃ターン
 function playerTurnAttack(gameState) {
     if (isProcessingTurn) return;
     isProcessingTurn = true;
 
     if (!gameState.hasModelGun) {
         appendLog("モデルガンを所持していない！\nVox Sacra（銃撃）の手段がない！");
-        setTimeout(() => enemyTurn(gameState), 1500);
+        setTimeout(() => enemyTurn(gameState), 1200);
         return;
     }
 
@@ -112,13 +110,12 @@ function playerTurnAttack(gameState) {
             gameState.exp += currentEnemy.exp;
             gameState.money += currentEnemy.money;
             
-            // レベルアップ判定
             if (gameState.exp >= gameState.level) {
                 gameState.level += 1;
-                gameState.maxHp += 15;
+                gameState.maxHp += 5; // ★ レベルアップHP増加も控えめ（+5）
                 gameState.hp = gameState.maxHp;
-                gameState.def += 2;
-                gameState.agi += 2;
+                gameState.def += 1;
+                gameState.agi += 1;
             }
             setTimeout(() => finishCombat("victory"), 1500);
         }, 1200);
@@ -127,27 +124,27 @@ function playerTurnAttack(gameState) {
     }
 }
 
-// 逃走判定
+// ★ 逃走率を大幅ダウン ＆ 失敗時は追撃確定
 function playerTurnEscape(gameState) {
     if (isProcessingTurn) return;
     isProcessingTurn = true;
 
-    const escapeRate = (gameState.agi / currentEnemy.agi) * 0.5;
+    // 逃走成功率：約 25% (AGI依存で微増)
+    const escapeRate = Math.min(0.5, (gameState.agi / currentEnemy.agi) * 0.25);
     if (Math.random() < escapeRate) {
         appendLog("無事に逃げ切ることに成功した！");
         setTimeout(() => finishCombat("escaped"), 1200);
     } else {
-        appendLog("逃走に失敗してしまった！回り込まれた！");
+        appendLog("逃走に失敗してしまった！ 背後を突かれる！");
         setTimeout(() => enemyTurn(gameState), 1200);
     }
 }
 
-// 悪魔のターン
 function enemyTurn(gameState) {
     if (currentEnemy.hp <= 0) return;
 
-    // 回避判定：(主人公AGI - 敵AGI) * 2% + 10%
-    const dodgeRate = Math.min(0.75, Math.max(0.05, (gameState.agi - currentEnemy.agi) * 0.02 + 0.1));
+    // 回避判定
+    const dodgeRate = Math.min(0.5, Math.max(0.05, (gameState.agi - currentEnemy.agi) * 0.02 + 0.05));
     if (Math.random() < dodgeRate) {
         appendLog(`${currentEnemy.name} の攻撃！\n間一髪で身をかわした！（回避成功）`);
         isProcessingTurn = false;
@@ -177,7 +174,7 @@ function enemyTurn(gameState) {
             setTimeout(() => finishCombat("died"), 1800);
         }, 1200);
     } else {
-        isProcessingTurn = false; // 次のターンへ
+        isProcessingTurn = false;
     }
 }
 
