@@ -1,5 +1,5 @@
 // combat.js
-import { applyChromaKey } from './main.js';
+import { applyChromaKey } from './ui.js';
 
 let currentEnemy = null;
 let combatCallback = null;
