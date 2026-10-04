@@ -1,187 +1,251 @@
-// combat.js
-import { applyChromaKey } from './ui.js';
+// ui.js
+import { gameState } from './gameState.js';
+import { itemDefinitions } from './items.js';
 
-let currentEnemy = null;
-let combatCallback = null;
-let isHumanInspection = false; 
-let isProcessingTurn = false;
+const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-export function startCombat(enemyData, gameState, isInspection = false, onFinished) {
-    currentEnemy = JSON.parse(JSON.stringify(enemyData)); 
-    combatCallback = onFinished;
-    isHumanInspection = isInspection;
-    isProcessingTurn = false;
+export function applyChromaKey(imgElement) {
+    if (!imgElement || imgElement.naturalWidth === 0) return;
+    try {
+        const canvas = document.createElement("canvas");
+        canvas.width = imgElement.naturalWidth; 
+        canvas.height = imgElement.naturalHeight;
+        const cctx = canvas.getContext("2d"); 
+        cctx.drawImage(imgElement, 0, 0);
+        
+        const imgData = cctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+            if (g > 60 && g > r * 1.15 && g > b * 1.15) {
+                data[i + 3] = 0;
+            }
+        }
+        cctx.putImageData(imgData, 0, 0);
+        imgElement.src = canvas.toDataURL();
+    } catch(e) {
+        console.warn("クロマキー処理スキップ (CORS/DataURL制限):", e);
+    }
+}
 
+export function showMessageDialog(text, onClosed) {
+    const msgDiv = document.createElement("div");
+    msgDiv.style.cssText = `position: absolute; bottom: 12%; left: 10%; width: 80%; padding: 25px 30px; background-color: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 4px; z-index: 2000; font-family: ${HORROR_FONT}; font-size: 1.2em; line-height: 1.8; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8);`;
+    msgDiv.innerText = text;
+    msgDiv.innerHTML += `<div style="margin-top: 15px; text-align: right; color: #888888; font-size: 0.85em;">▼ クリックまたは [ SPACE ] で閉じる</div>`;
+    document.body.appendChild(msgDiv);
+
+    const closeHandler = (e) => {
+        if (e.type === "click" || e.key === " " || e.key === "Enter") {
+            window.removeEventListener("keydown", closeHandler);
+            msgDiv.onclick = null; msgDiv.remove();
+            if (onClosed) onClosed();
+        }
+    };
+    setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
+}
+
+export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
-    overlay.id = "combat-overlay";
-    overlay.style.cssText = `
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(5, 0, 0, 0.95); z-index: 3500;
-        display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-        padding: 20px; box-sizing: border-box; font-family: 'Shippori Mincho', serif;
+    overlay.style.cssText = "position: absolute; bottom: 5%; left: 5%; width: 90%; display: flex; align-items: flex-end; z-index: 2000;";
+    const imgDiv = document.createElement("img");
+    imgDiv.src = imageSrc; 
+    imgDiv.style.cssText = "max-height: 320px; margin-right: 20px; border-radius: 8px;";
+    
+    if (imgDiv.complete) applyChromaKey(imgDiv);
+    else imgDiv.onload = () => applyChromaKey(imgDiv);
+    imgDiv.onerror = () => imgDiv.style.display = 'none';
+
+    const msgDiv = document.createElement("div");
+    msgDiv.style.cssText = `flex: 1; padding: 20px 25px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 4px; font-family: ${HORROR_FONT}; font-size: 1.2em; line-height: 1.8; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8);`;
+    msgDiv.innerText = text;
+    msgDiv.innerHTML += `<div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.85em;">▼ クリックまたは [ SPACE ] で閉じる</div>`;
+
+    overlay.appendChild(imgDiv); overlay.appendChild(msgDiv); document.body.appendChild(overlay);
+
+    const closeHandler = (e) => {
+        if (e.type === "click" || e.key === " " || e.key === "Enter") {
+            window.removeEventListener("keydown", closeHandler);
+            overlay.onclick = null; overlay.remove();
+            if (onClosed) onClosed();
+        }
+    };
+    setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
+}
+
+export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
+    const modal = document.createElement("div");
+    modal.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.88); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT};`;
+    modal.innerHTML = `
+        <div style="color: #ff3333; font-size: 1.8em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 3px;">― アイテム獲得 ―</div>
+        <img id="modal-item-img" src="${imagePath}" style="max-height: 240px; border-radius: 6px; margin-bottom: 15px;" onerror="this.style.display='none'">
+        <div style="color: #ffdd66; font-size: 1.5em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
+        <div style="color: #cccccc; font-size: 1.1em; margin-bottom: 25px; text-align: center; white-space: pre-wrap;">${detailText}</div>
+        <div style="color: #888; font-size: 0.9em;">[ SPACE ] キー または クリックで閉じる</div>
     `;
+    document.body.appendChild(modal);
 
-    overlay.innerHTML = `
-        <div style="text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-            <div style="color: #ff3333; font-size: 1.4em; text-shadow: 0 0 8px red; margin-bottom: 10px;">
-                <span style="color: #888; font-size: 0.8em; margin-right: 5px;">Lv.${currentEnemy.level}</span>
-                ${currentEnemy.name}
-            </div>
-            <img id="combat-enemy-img" src="${currentEnemy.image}" style="max-height: 220px; border-radius: 8px;" onerror="this.style.display='none'">
-        </div>
-
-        <div id="combat-log" style="width: 90%; height: 80px; background: rgba(0,0,0,0.8); border: 2px solid #550000; border-radius: 6px; padding: 12px; color: #ddd; font-size: 1.05em; line-height: 1.5; margin-bottom: 15px; overflow-y: auto; white-space: pre-wrap;">
-${currentEnemy.name} が立ちはだかった！
-        </div>
-
-        <div style="width: 90%; display: flex; gap: 15px; align-items: center;">
-            <div style="background: #111; border: 1px solid #444; padding: 10px 15px; border-radius: 6px; color: #aaa; font-size: 0.9em; min-width: 120px;">
-                <div>HP: <span id="combat-hp" style="color:#ffdd66;">${gameState.hp}</span> / ${gameState.maxHp}</div>
-                <div>AGI: ${gameState.agi}</div>
-                <div>DEF: ${gameState.def}</div>
-            </div>
-
-            <div style="flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                <button id="cmd-attack" style="background: #220000; color: #ffdd66; border: 1px solid #770000; padding: 12px; font-size: 1em; cursor: pointer; border-radius: 4px; font-family: inherit;">Vox Sacra（銃撃）</button>
-                <button id="cmd-item" style="background: #111; color: #ccc; border: 1px solid #444; padding: 12px; font-size: 1em; cursor: pointer; border-radius: 4px; font-family: inherit;">アイテム</button>
-                <button id="cmd-escape" style="background: #111; color: #ccc; border: 1px solid #444; padding: 12px; font-size: 1em; cursor: pointer; border-radius: 4px; font-family: inherit; ${isHumanInspection ? 'display:none;' : ''}">逃げる</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const img = document.getElementById("combat-enemy-img");
+    const img = document.getElementById("modal-item-img");
     if (img) {
         if (img.complete) applyChromaKey(img);
         else img.onload = () => applyChromaKey(img);
     }
 
-    document.getElementById("cmd-attack").onclick = () => playerTurnAttack(gameState);
-    document.getElementById("cmd-item").onclick = () => {
-        if (isProcessingTurn) return;
-        appendLog("アイテム画面は未実装です。");
+    const closeHandler = (e) => {
+        if (e.type === "click" || e.key === " " || e.key === "Enter") {
+            window.removeEventListener("keydown", closeHandler);
+            modal.onclick = null; modal.remove();
+            if (onClosed) onClosed();
+        }
     };
-    if (!isHumanInspection) {
-        document.getElementById("cmd-escape").onclick = () => playerTurnEscape(gameState);
-    }
+    setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-function appendLog(text) {
-    const logDiv = document.getElementById("combat-log");
-    if (logDiv) logDiv.innerText = text;
-}
+export function playFloorTransition(targetFloor, onComplete) {
+    const fadeDiv = document.createElement("div");
+    fadeDiv.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 2000; transition: opacity 0.5s ease; opacity: 0; display: flex; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.8em;`;
+    document.body.appendChild(fadeDiv);
 
-function playerTurnAttack(gameState) {
-    if (isProcessingTurn) return;
-    isProcessingTurn = true;
+    setTimeout(() => {
+        fadeDiv.style.opacity = "1";
+        fadeDiv.innerText = targetFloor === 2 ? "2階へ登っている..." : "1階へ下りている...";
+    }, 10);
 
-    if (!gameState.hasModelGun) {
-        appendLog("モデルガンを所持していない！\nVox Sacra（銃撃）の手段がない！");
-        setTimeout(() => enemyTurn(gameState), 1200);
-        return;
-    }
-
-    // ★ 銃の基礎攻撃力（+10）を導入
-    let basePower = 10; 
-    let isWeaknessHit = false;
-
-    if (gameState.equippedCards.length > 0) {
-        gameState.equippedCards.forEach(cardName => {
-            const numMatch = cardName.match(/\d+/);
-            const cardNum = numMatch ? parseInt(numMatch[0]) : 1;
-            basePower += cardNum;
-            if (cardName === currentEnemy.weakness) isWeaknessHit = true;
-        });
-    }
-
-    if (isWeaknessHit) basePower *= 2; // 弱点時は合計攻撃力2倍
-    const damage = Math.max(1, basePower - currentEnemy.def);
-    currentEnemy.hp -= damage;
-
-    let logText = `【Vox Sacra】聖なる銃声が ${currentEnemy.name} を穿つ！\n${damage} のダメージを与えた！`;
-    if (isWeaknessHit) logText += "（弱点特攻！！）";
-    appendLog(logText);
-
-    if (currentEnemy.hp <= 0) {
+    setTimeout(() => {
+        if (onComplete) onComplete();
         setTimeout(() => {
-            appendLog(`${currentEnemy.name} を退治した！\n経験値 ${currentEnemy.exp} と 💰${currentEnemy.money} を獲得！`);
-            gameState.exp += currentEnemy.exp;
-            gameState.money += currentEnemy.money;
+            fadeDiv.style.opacity = "0";
+            setTimeout(() => fadeDiv.remove(), 500);
+        }, 800);
+    }, 600);
+}
+
+export function playVideo(src, onEnded) {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 1800; display: flex; justify-content: center; align-items: center;";
+    document.body.appendChild(overlay);
+
+    const video = document.createElement("video");
+    video.src = src; video.style.cssText = "width: 60%; max-width: 600px; border: 4px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); background-color: black;";
+    video.controls = false; video.autoplay = true;
+    overlay.appendChild(video);
+
+    video.onended = () => { overlay.remove(); if (onEnded) onEnded(); };
+    overlay.onclick = () => { video.pause(); video.onended(); };
+}
+
+export function openShopUI(onClosed) {
+    const shopDiv = document.createElement("div");
+    shopDiv.style.cssText = `position: absolute; top: 5%; left: 5%; width: 90%; height: 90%; background-color: rgba(10, 0, 0, 0.95); color: #ccc; border: 2px solid #550000; z-index: 1000; display: flex; flex-direction: column; font-family: ${HORROR_FONT};`; 
+    
+    // アイテムリストHTMLの生成
+    let itemsHTML = "";
+    Object.values(itemDefinitions).forEach(item => {
+        itemsHTML += `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #111; padding: 10px; margin-bottom: 8px; border: 1px solid #333; border-radius: 4px;">
+                <div style="flex: 1;">
+                    <div style="font-size: 1.1em; color: #ffdd66;">${item.name}</div>
+                    <div style="font-size: 0.85em; color: #888;">${item.desc}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="color: #ff3333; font-weight: bold;">💰 ${item.price}</div>
+                    <button class="buy-item-btn" data-id="${item.id}" data-price="${item.price}" style="background: #220000; color: #fff; border: 1px solid #ff3333; padding: 5px 15px; cursor: pointer; border-radius: 3px; font-family: ${HORROR_FONT}; margin-top: 5px;">購入</button>
+                </div>
+            </div>
+        `;
+    });
+
+    shopDiv.innerHTML = `
+        <div style="padding: 20px; border-bottom: 1px solid #550000; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="color: #ff3333; margin: 0; font-size: 2em; text-shadow: 0 0 10px red;">悪魔の無人レジ</h2>
+            <div style="font-size: 1.2em; color: #ffdd66;">所持金: 💰<span id="shop-money">${gameState.money}</span></div>
+        </div>
+        
+        <div style="flex: 1; overflow-y: auto; padding: 20px;">
+            <div style="color: #aaa; margin-bottom: 15px;">※商品は自動で異空間から転送されます。</div>
+            ${itemsHTML}
+        </div>
+
+        <div style="padding: 15px; text-align: center; border-top: 1px solid #550000;">
+            <button id="closeBtn" style="background: #111; color: #777; border: 1px solid #444; padding: 10px 30px; font-size: 1.1em; cursor: pointer; font-family: ${HORROR_FONT};">店を出る [ESC]</button>
+        </div>
+    `;
+    document.body.appendChild(shopDiv);
+
+    // 購入ボタン処理
+    document.querySelectorAll(".buy-item-btn").forEach(btn => {
+        btn.onclick = () => {
+            const itemId = btn.getAttribute("data-id");
+            const price = parseInt(btn.getAttribute("data-price"));
             
-            if (gameState.exp >= gameState.level) {
-                gameState.level += 1;
-                gameState.maxHp += 5;
-                gameState.hp = gameState.maxHp;
-                gameState.def += 1;
-                gameState.agi += 1;
+            if (gameState.money >= price) {
+                gameState.money -= price;
+                document.getElementById("shop-money").innerText = gameState.money;
+                
+                if (!gameState.inventory[itemId]) gameState.inventory[itemId] = 0;
+                gameState.inventory[itemId]++;
+                
+                const originalBg = btn.style.background;
+                btn.style.background = "#005500";
+                btn.innerText = "購入済！";
+                setTimeout(() => {
+                    btn.style.background = originalBg;
+                    btn.innerText = "購入";
+                }, 500);
+            } else {
+                alert("お金が足りない……。");
             }
-            setTimeout(() => finishCombat("victory", gameState), 1500);
-        }, 1200);
-    } else {
-        setTimeout(() => enemyTurn(gameState), 1200);
-    }
+        };
+    });
+
+    const closeHandler = () => {
+        window.removeEventListener("keydown", keyHandler);
+        shopDiv.remove();
+        if (onClosed) onClosed();
+    };
+    
+    document.getElementById("closeBtn").onclick = closeHandler;
+    const keyHandler = (e) => { if (e.key === "Escape") closeHandler(); };
+    window.addEventListener("keydown", keyHandler);
 }
 
-function playerTurnEscape(gameState) {
-    if (isProcessingTurn) return;
-    isProcessingTurn = true;
-
-    const escapeRate = Math.min(0.5, (gameState.agi / currentEnemy.agi) * 0.25);
-    if (Math.random() < escapeRate) {
-        appendLog("無事に逃げ切ることに成功した！");
-        setTimeout(() => finishCombat("escaped", gameState), 1200);
-    } else {
-        appendLog("逃走に失敗してしまった！ 背後を突かれる！");
-        setTimeout(() => enemyTurn(gameState), 1200);
+export function openDebugMenu(onAction) {
+    if (document.getElementById("debug-modal")) {
+        document.getElementById("debug-modal").remove(); return;
     }
-}
+    const debugDiv = document.createElement("div"); debugDiv.id = "debug-modal"; debugDiv.className = "debug-modal";
+    debugDiv.innerHTML = `
+        <h3 style="margin:0; border-bottom:1px solid #00ff00; padding-bottom:5px;">[DEBUG MENU] テスト用コマンド</h3>
+        <button class="debug-btn" id="dbg-all-clear">① 一括イベントクリア（全開放＆アイテム取得）</button>
+        <button class="debug-btn" id="dbg-warp-2f">② 2階（2F）へ直接ワープ</button>
+        <button class="debug-btn" id="dbg-warp-1f">③ 1階（1F）へ直接ワープ</button>
+        <button class="debug-btn" id="dbg-lv15">④ レベル15にする（使い魔解禁テスト用）</button>
+        <button class="debug-btn" id="dbg-money">⑤ お金を+1000追加</button>
+        <button class="debug-btn" id="dbg-close" style="background:#550000; color:#fff; border-color:#ff0000;">閉じる [F2]</button>
+    `;
+    document.body.appendChild(debugDiv);
 
-function enemyTurn(gameState) {
-    if (currentEnemy.hp <= 0) return;
-
-    const dodgeRate = Math.min(0.5, Math.max(0.05, (gameState.agi - currentEnemy.agi) * 0.02 + 0.05));
-    if (Math.random() < dodgeRate) {
-        appendLog(`${currentEnemy.name} の攻撃！\n間一髪で身をかわした！（回避成功）`);
-        isProcessingTurn = false;
-        return;
-    }
-
-    const action = currentEnemy.actions[Math.floor(Math.random() * currentEnemy.actions.length)];
-    let damage = 0;
-
-    if (action.type === "physical") {
-        damage = Math.max(1, currentEnemy.atk - gameState.def);
-    } else {
-        damage = Math.max(1, Math.floor(currentEnemy.satk - (gameState.def / 2)));
-    }
-
-    gameState.hp -= damage;
-    if (gameState.hp < 0) gameState.hp = 0;
-
-    const hpElem = document.getElementById("combat-hp");
-    if (hpElem) hpElem.innerText = gameState.hp;
-
-    appendLog(`${currentEnemy.name} の ${action.name}\n主人公は ${damage} のダメージを受けた！`);
-
-    if (gameState.hp <= 0) {
-        setTimeout(() => {
-            appendLog("意識が遠のいていく……主人公は倒れた。");
-            setTimeout(() => finishCombat("died", gameState), 1800);
-        }, 1200);
-    } else {
-        isProcessingTurn = false;
-    }
-}
-
-function finishCombat(result, gameState) {
-    const overlay = document.getElementById("combat-overlay");
-    if (overlay) overlay.remove();
-
-    // ★ 死亡時は確実にHPを全回復させる
-    if (result === "died" && gameState) {
-        gameState.hp = gameState.maxHp;
-    }
-
-    if (combatCallback) combatCallback(result);
+    document.getElementById("dbg-all-clear").onclick = () => {
+        gameState.hasExorcistInherited = true; gameState.hasKey2F = true; gameState.hasModelGun = true; gameState.hasMetGrandma = true;
+        if (!gameState.cards.includes("1Card.png")) gameState.cards.push("1Card.png");
+        alert("【デバッグ】全アイテム取得状態にしました！");
+        debugDiv.remove(); if (onAction) onAction();
+    };
+    document.getElementById("dbg-warp-2f").onclick = () => {
+        gameState.hasKey2F = true; debugDiv.remove();
+        if (onAction) onAction("warp2F");
+    };
+    document.getElementById("dbg-warp-1f").onclick = () => {
+        debugDiv.remove(); if (onAction) onAction("warp1F");
+    };
+    document.getElementById("dbg-lv15").onclick = () => {
+        gameState.level = 15; gameState.familiarSync = 100;
+        alert("【デバッグ】レベルを15に設定しました！"); debugDiv.remove();
+    };
+    document.getElementById("dbg-money").onclick = () => {
+        gameState.money += 1000;
+        alert("【デバッグ】所持金を+1000しました！"); debugDiv.remove();
+    };
+    document.getElementById("dbg-close").onclick = () => debugDiv.remove();
 }

@@ -8,10 +8,12 @@ export const gameState = {
     cards: [],                   
     equippedCards: [],           
     
-    // 主人公ステータス（ホラー死にゲー仕様）
+    // ★ アイテム所持枠を追加（アイテムIDとその個数を記録）
+    inventory: {}, // 例: { coffee: 2, umbrella_blue: 1 }
+    
     level: 1,                    
     exp: 0,                      
-    hp: 20,                      // ★ 初期HPを 20 に設定（雑魚の攻撃で即死圏内）
+    hp: 20,                      
     maxHp: 20,                  
     def: 5,                      
     agi: 5,                      
