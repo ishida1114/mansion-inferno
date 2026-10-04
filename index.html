@@ -2,32 +2,104 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>怠惰な僕の悪魔辞典 〜マンション・インフェルノ〜</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- スマホ画面に合わせて自動スケーリングするビューポート設定 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>怠惰な僕の悪魔辞典</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #050505;
+            color: #eee;
+            font-family: 'Shippori Mincho', serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 10px;
+            overflow-x: hidden; /* 横スクロールを禁止 */
+        }
+
+        /* 全体を包むメインコンテナ（スマホ幅に合わせて自動縮小） */
+        #game-container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        /* ロゴ画像 */
+        .game-logo {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        /* 3Dダンジョン描画キャンバス（画面幅に合わせて伸縮） */
+        #gameCanvas {
+            width: 100% !important;
+            height: auto !important;
+            max-width: 600px;
+            aspect-ratio: 600 / 400;
+            border: 2px solid #550000;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+            display: block;
+            background-color: #000;
+        }
+
+        /* 下部操作ボタンエリア */
+        .controls-container {
+            width: 100%;
+            max-width: 600px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .controls-container button {
+            background: #1a1a1a;
+            color: #ddd;
+            border: 1px solid #444;
+            padding: 12px 4px;
+            font-size: 0.85em;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: inherit;
+            touch-action: manipulation;
+        }
+
+        .controls-container button:active {
+            background: #330000;
+            border-color: #ff3333;
+        }
+    </style>
 </head>
 <body>
 
     <div id="game-container">
-        <!-- テキストタイトルをロゴ画像に変更 -->
-        <div id="logo-wrapper">
-            <img id="game-logo" src="assets/images/akumanologo.png" alt="怠惰な僕の悪魔辞典 〜マンション・インフェルノ〜">
-        </div>
+        <!-- ロゴ -->
+        <img class="game-logo" src="assets/images/DictionariumDaemonum.webp" alt="怠惰な僕の悪魔辞典" onerror="this.style.display='none'">
         
-        <!-- 3D表示用キャンバス -->
+        <!-- ゲーム描画用Canvas -->
         <canvas id="gameCanvas" width="600" height="400"></canvas>
-        
-        <!-- 操作ボタン -->
-        <div id="controls">
-            <button onclick="turnLeft()">左を向く (A)</button>
-            <button onclick="moveForward()">前進 (W)</button>
-            <button onclick="turnRight()">右を向く (D)</button>
-            <button onclick="moveBackward()">後退 (S)</button>
+
+        <!-- スマホ・PC共通操作ボタン -->
+        <div class="controls-container">
+            <button id="btn-left">左を向く (A)</button>
+            <button id="btn-forward">前進 (W)</button>
+            <button id="btn-right">右を向く (D)</button>
+            <button id="btn-backward">後退 (S)</button>
         </div>
     </div>
 
     <script type="module" src="main.js"></script>
 </body>
 </html>
-<!-- index.html の末尾 -->
-<script type="module" src="main.js"></script>

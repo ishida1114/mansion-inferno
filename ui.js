@@ -29,11 +29,18 @@ export function applyChromaKey(imgElement) {
     }
 }
 
+// テキストダイアログ（スマホはみ出し防止版）
 export function showMessageDialog(text, onClosed) {
     const msgDiv = document.createElement("div");
-    msgDiv.style.cssText = `position: absolute; bottom: 12%; left: 10%; width: 80%; padding: 25px 30px; background-color: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 4px; z-index: 2000; font-family: ${HORROR_FONT}; font-size: 1.2em; line-height: 1.8; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8);`;
+    msgDiv.style.cssText = `
+        position: fixed; bottom: 8%; left: 5%; width: 90%; max-width: 560px; margin: 0 auto;
+        padding: 20px; background-color: rgba(10, 0, 0, 0.92); color: #dddddd; 
+        border: 2px solid #550000; border-radius: 6px; z-index: 2000; 
+        font-family: ${HORROR_FONT}; font-size: 1.1em; line-height: 1.7; 
+        white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;
+    `;
     msgDiv.innerText = text;
-    msgDiv.innerHTML += `<div style="margin-top: 15px; text-align: right; color: #888888; font-size: 0.85em;">▼ クリックまたは [ SPACE ] で閉じる</div>`;
+    msgDiv.innerHTML += `<div style="margin-top: 12px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
     document.body.appendChild(msgDiv);
 
     const closeHandler = (e) => {
@@ -46,21 +53,23 @@ export function showMessageDialog(text, onClosed) {
     setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
+// 立ち絵会話ダイアログ（スマホ最適化版）
 export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
-    overlay.style.cssText = "position: absolute; bottom: 5%; left: 5%; width: 90%; display: flex; align-items: flex-end; z-index: 2000;";
+    overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
+    
     const imgDiv = document.createElement("img");
     imgDiv.src = imageSrc; 
-    imgDiv.style.cssText = "max-height: 320px; margin-right: 20px; border-radius: 8px;";
+    imgDiv.style.cssText = "max-height: 220px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
     
     if (imgDiv.complete) applyChromaKey(imgDiv);
     else imgDiv.onload = () => applyChromaKey(imgDiv);
     imgDiv.onerror = () => imgDiv.style.display = 'none';
 
     const msgDiv = document.createElement("div");
-    msgDiv.style.cssText = `flex: 1; padding: 20px 25px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 4px; font-family: ${HORROR_FONT}; font-size: 1.2em; line-height: 1.8; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8);`;
+    msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
     msgDiv.innerText = text;
-    msgDiv.innerHTML += `<div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.85em;">▼ クリックまたは [ SPACE ] で閉じる</div>`;
+    msgDiv.innerHTML += `<div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
 
     overlay.appendChild(imgDiv); overlay.appendChild(msgDiv); document.body.appendChild(overlay);
 
@@ -76,13 +85,13 @@ export function showConversationDialog(imageSrc, text, onClosed) {
 
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
-    modal.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.88); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT};`;
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.88); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
     modal.innerHTML = `
-        <div style="color: #ff3333; font-size: 1.8em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 3px;">― アイテム獲得 ―</div>
-        <img id="modal-item-img" src="${imagePath}" style="max-height: 240px; border-radius: 6px; margin-bottom: 15px;" onerror="this.style.display='none'">
-        <div style="color: #ffdd66; font-size: 1.5em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
-        <div style="color: #cccccc; font-size: 1.1em; margin-bottom: 25px; text-align: center; white-space: pre-wrap;">${detailText}</div>
-        <div style="color: #888; font-size: 0.9em;">[ SPACE ] キー または クリックで閉じる</div>
+        <div style="color: #ff3333; font-size: 1.6em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>
+        <img id="modal-item-img" src="${imagePath}" style="max-height: 200px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;" onerror="this.style.display='none'">
+        <div style="color: #ffdd66; font-size: 1.3em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
+        <div style="color: #cccccc; font-size: 1em; margin-bottom: 25px; text-align: center; white-space: pre-wrap; line-height: 1.5;">${detailText}</div>
+        <div style="color: #888; font-size: 0.85em;">タップ または [ SPACE ] で閉じる</div>
     `;
     document.body.appendChild(modal);
 
@@ -104,7 +113,7 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
 
 export function playFloorTransition(targetFloor, onComplete) {
     const fadeDiv = document.createElement("div");
-    fadeDiv.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 2000; transition: opacity 0.5s ease; opacity: 0; display: flex; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.8em;`;
+    fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 2000; transition: opacity 0.5s ease; opacity: 0; display: flex; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em;`;
     document.body.appendChild(fadeDiv);
 
     setTimeout(() => {
@@ -123,56 +132,47 @@ export function playFloorTransition(targetFloor, onComplete) {
 
 export function playVideo(src, onEnded) {
     const overlay = document.createElement("div");
-    overlay.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 1800; display: flex; justify-content: center; align-items: center;";
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 1800; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
     document.body.appendChild(overlay);
 
     const video = document.createElement("video");
-    video.src = src; video.style.cssText = "width: 60%; max-width: 600px; border: 4px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); background-color: black;";
-    video.controls = false; video.autoplay = true;
+    video.src = src; video.style.cssText = "width: 100%; max-width: 500px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); background-color: black;";
+    video.controls = false; video.autoplay = true; video.playsInline = true;
     overlay.appendChild(video);
 
     video.onended = () => { overlay.remove(); if (onEnded) onEnded(); };
     overlay.onclick = () => { video.pause(); video.onended(); };
 }
 
-// ★ リッチ演出仕様の悪魔の無人レジ（コンビニUI）
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
-    shopDiv.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center;`; 
+    shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
 
-    // 背景動画（CVS.mp4）と黒いオーバーレイ
     shopDiv.innerHTML = `
-        <video src="assets/videos/CVS.mp4" autoplay loop muted style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.35; filter: blur(2px);"></video>
+        <video src="assets/videos/CVS.mp4" autoplay loop muted playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.35; filter: blur(2px);"></video>
         <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(20,0,0,0.7) 0%, rgba(0,0,0,0.95) 90%);"></div>
 
-        <div style="position: relative; z-index: 10; width: 88%; max-width: 580px; height: 85%; background: rgba(10, 5, 5, 0.9); border: 2px solid #770000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
+        <div style="position: relative; z-index: 10; width: 100%; max-width: 540px; height: 90%; background: rgba(10, 5, 5, 0.92); border: 2px solid #770000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
             
-            <!-- 上部ヘッダー -->
-            <div style="padding: 15px 20px; border-bottom: 2px solid #550000; background: linear-gradient(180deg, #2a0000, #0a0000); display: flex; justify-content: space-between; align-items: center;">
+            <div style="padding: 12px 15px; border-bottom: 2px solid #550000; background: linear-gradient(180deg, #2a0000, #0a0000); display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h2 style="color: #ff3333; margin: 0; font-size: 1.8em; text-shadow: 0 0 10px red; letter-spacing: 2px;">悪魔の無人レジ</h2>
-                    <div style="color: #888; font-size: 0.8em; margin-top: 2px;">自動精算端末 4号機</div>
+                    <h2 style="color: #ff3333; margin: 0; font-size: 1.5em; text-shadow: 0 0 10px red;">悪魔の無人レジ</h2>
+                    <div style="color: #888; font-size: 0.75em;">自動精算端末 4号機</div>
                 </div>
                 <div style="text-align: right;">
-                    <div style="font-size: 0.85em; color: #aaa;">所持金 / 罪</div>
-                    <div style="font-size: 1.2em; color: #ffdd66; font-weight: bold;">💰 <span id="shop-money">${gameState.money}</span> <span style="color:#ff4444; font-size:0.85em; margin-left:8px;">(SIN: <span id="shop-sin">${gameState.sin}</span>)</span></div>
+                    <div style="font-size: 1.05em; color: #ffdd66; font-weight: bold;">💰 <span id="shop-money">${gameState.money}</span> <span style="color:#ff4444; font-size:0.8em; margin-left:4px;">(SIN:${gameState.sin})</span></div>
                 </div>
             </div>
 
-            <!-- タブ切替ボタン -->
             <div style="display: flex; border-bottom: 1px solid #440000; background: #050505;">
-                <button id="tab-buy" style="flex: 1; background: #220000; color: #ffdd66; border: none; padding: 12px; font-family: inherit; font-size: 1.05em; cursor: pointer; border-bottom: 2px solid #ffdd66; transition: 0.2s;">供物（アイテム）を買う</button>
-                <button id="tab-sin" style="flex: 1; background: #111; color: #888; border: none; padding: 12px; font-family: inherit; font-size: 1.05em; cursor: pointer; transition: 0.2s;">罪を清算する</button>
+                <button id="tab-buy" style="flex: 1; background: #220000; color: #ffdd66; border: none; padding: 10px; font-family: inherit; font-size: 0.95em; cursor: pointer; border-bottom: 2px solid #ffdd66;">供物を買う</button>
+                <button id="tab-sin" style="flex: 1; background: #111; color: #888; border: none; padding: 10px; font-family: inherit; font-size: 0.95em; cursor: pointer;">罪を清算する</button>
             </div>
 
-            <!-- 商品リストコンテンツ領域 -->
-            <div id="shop-content" style="flex: 1; overflow-y: auto; padding: 15px; box-sizing: border-box;">
-                <!-- JavaScriptで描画 -->
-            </div>
+            <div id="shop-content" style="flex: 1; overflow-y: auto; padding: 12px; box-sizing: border-box;"></div>
 
-            <!-- 下部フッター（退出ボタン） -->
-            <div style="padding: 12px; text-align: center; border-top: 1px solid #440000; background: #050505;">
-                <button id="closeBtn" style="background: transparent; color: #aaa; border: 1px solid #555; padding: 8px 30px; font-size: 1em; cursor: pointer; font-family: inherit; border-radius: 4px; transition: 0.2s;">立ち去る [ESC]</button>
+            <div style="padding: 10px; text-align: center; border-top: 1px solid #440000; background: #050505;">
+                <button id="closeBtn" style="background: transparent; color: #aaa; border: 1px solid #555; padding: 8px 25px; font-size: 0.95em; cursor: pointer; font-family: inherit; border-radius: 4px;">立ち去る</button>
             </div>
         </div>
     `;
@@ -180,7 +180,6 @@ export function openShopUI(onClosed) {
 
     let activeTab = "buy";
 
-    // 商品リスト描画
     function renderShopContent() {
         const contentDiv = document.getElementById("shop-content");
         if (!contentDiv) return;
@@ -190,27 +189,24 @@ export function openShopUI(onClosed) {
             Object.values(itemDefinitions).forEach(item => {
                 const count = gameState.inventory[item.id] || 0;
                 html += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(20, 10, 10, 0.85); padding: 12px 15px; margin-bottom: 10px; border: 1px solid #441111; border-radius: 6px; transition: all 0.2s ease;">
-                        <div style="flex: 1; padding-right: 15px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 1.15em; color: #ffdd66; font-weight: bold;">${item.name}</span>
-                                <span style="font-size: 0.8em; background: #330000; color: #ff8888; padding: 2px 6px; border-radius: 3px; border: 1px solid #660000;">所持: ${count}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(20, 10, 10, 0.85); padding: 10px 12px; margin-bottom: 8px; border: 1px solid #441111; border-radius: 6px;">
+                        <div style="flex: 1; padding-right: 10px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-size: 1.05em; color: #ffdd66; font-weight: bold;">${item.name}</span>
+                                <span style="font-size: 0.75em; background: #330000; color: #ff8888; padding: 1px 4px; border-radius: 3px;">所持:${count}</span>
                             </div>
-                            <div style="font-size: 0.85em; color: #bbb; margin-top: 4px; line-height: 1.4;">${item.desc}</div>
+                            <div style="font-size: 0.8em; color: #bbb; margin-top: 3px; line-height: 1.3;">${item.desc}</div>
                         </div>
-                        <div style="text-align: right; min-width: 90px;">
-                            <div style="color: #ffdd66; font-size: 1.1em; font-weight: bold; margin-bottom: 6px;">💰 ${item.price}</div>
-                            <button class="buy-item-btn" data-id="${item.id}" data-price="${item.price}" style="background: linear-gradient(180deg, #440000, #110000); color: #fff; border: 1px solid #ff3333; padding: 6px 14px; cursor: pointer; border-radius: 4px; font-family: inherit; font-size: 0.9em; transition: 0.2s; box-shadow: 0 0 5px rgba(255,0,0,0.3);">購入</button>
+                        <div style="text-align: right; min-width: 75px;">
+                            <div style="color: #ffdd66; font-size: 1em; font-weight: bold; margin-bottom: 4px;">💰 ${item.price}</div>
+                            <button class="buy-item-btn" data-id="${item.id}" data-price="${item.price}" style="background: linear-gradient(180deg, #440000, #110000); color: #fff; border: 1px solid #ff3333; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-family: inherit; font-size: 0.85em;">購入</button>
                         </div>
                     </div>
                 `;
             });
             contentDiv.innerHTML = html;
 
-            // 購入ボタンイベントリスナー
             document.querySelectorAll(".buy-item-btn").forEach(btn => {
-                btn.onmouseover = () => btn.style.borderColor = "#ff9999";
-                btn.onmouseout = () => btn.style.borderColor = "#ff3333";
                 btn.onclick = () => {
                     const itemId = btn.getAttribute("data-id");
                     const price = parseInt(btn.getAttribute("data-price"));
@@ -219,58 +215,44 @@ export function openShopUI(onClosed) {
                         gameState.money -= price;
                         if (!gameState.inventory[itemId]) gameState.inventory[itemId] = 0;
                         gameState.inventory[itemId]++;
-
                         document.getElementById("shop-money").innerText = gameState.money;
                         
                         btn.style.background = "#006600";
-                        btn.style.borderColor = "#00ff00";
                         btn.innerText = "完了！";
-                        
-                        setTimeout(() => {
-                            renderShopContent();
-                        }, 400);
+                        setTimeout(() => renderShopContent(), 400);
                     } else {
-                        btn.style.background = "#660000";
                         btn.innerText = "資金不足";
-                        setTimeout(() => {
-                            btn.style.background = "linear-gradient(180deg, #440000, #110000)";
-                            btn.innerText = "購入";
-                        }, 800);
+                        setTimeout(() => renderShopContent(), 800);
                     }
                 };
             });
-
         } else {
-            // 罪の清算タブ
             contentDiv.innerHTML = `
-                <div style="text-align: center; padding: 20px 10px;">
-                    <div style="font-size: 1.3em; color: #ff4444; margin-bottom: 15px; text-shadow: 0 0 8px red;">― 罪の代償と浄化 ―</div>
-                    <p style="color: #ccc; font-size: 0.95em; line-height: 1.8; margin-bottom: 25px;">
-                        誤って人間を撃ち、積み重なった狂気（SIN）をセルフレジの募金箱に供物を納めることで和らげます。<br>
+                <div style="text-align: center; padding: 15px 5px;">
+                    <div style="font-size: 1.2em; color: #ff4444; margin-bottom: 10px;">― 罪の代償と浄化 ―</div>
+                    <p style="color: #ccc; font-size: 0.85em; line-height: 1.6; margin-bottom: 20px;">
+                        誤って人間を撃ち、積み重なった狂気（SIN）を清算します。<br>
                         <span style="color: #ffaa88;">※現在の罪（SIN）: <strong>${gameState.sin}</strong></span>
                     </p>
-                    
-                    <div style="background: rgba(20,0,0,0.8); border: 1px solid #550000; padding: 20px; border-radius: 8px; max-width: 380px; margin: 0 auto;">
-                        <div style="font-size: 1.1em; color: #ffdd66; margin-bottom: 8px;">罪の免除（SIN -5）</div>
-                        <div style="color: #aaa; font-size: 0.85em; margin-bottom: 15px;">必要資金: 💰 200</div>
-                        <button id="clean-sin-btn" style="background: #330000; color: #ff8888; border: 1px solid #ff4444; padding: 10px 25px; font-size: 1em; cursor: pointer; border-radius: 4px; font-family: inherit;">200 💰 を払って贖罪する</button>
+                    <div style="background: rgba(20,0,0,0.8); border: 1px solid #550000; padding: 15px; border-radius: 8px;">
+                        <div style="font-size: 1em; color: #ffdd66; margin-bottom: 6px;">罪の免除（SIN -5）</div>
+                        <div style="color: #aaa; font-size: 0.8em; margin-bottom: 12px;">必要資金: 💰 200</div>
+                        <button id="clean-sin-btn" style="background: #330000; color: #ff8888; border: 1px solid #ff4444; padding: 8px 20px; font-size: 0.9em; cursor: pointer; border-radius: 4px;">200 💰 を払って清算</button>
                     </div>
                 </div>
             `;
-
             const cleanBtn = document.getElementById("clean-sin-btn");
             if (cleanBtn) {
                 cleanBtn.onclick = () => {
                     if (gameState.sin <= 0) {
-                        alert("あなたには現在、清算すべき罪（SIN）はありません。");
+                        alert("現在、清算すべき罪はありません。");
                         return;
                     }
                     if (gameState.money >= 200) {
                         gameState.money -= 200;
                         gameState.sin = Math.max(0, gameState.sin - 5);
                         document.getElementById("shop-money").innerText = gameState.money;
-                        document.getElementById("shop-sin").innerText = gameState.sin;
-                        alert("罪が和らいだ気がする……（SINが5減少しました）");
+                        alert("罪が和らいだ気がする……（SIN-5）");
                         renderShopContent();
                     } else {
                         alert("資金が足りません。");
@@ -280,7 +262,6 @@ export function openShopUI(onClosed) {
         }
     }
 
-    // タブ切り替え制御
     const tabBuy = document.getElementById("tab-buy");
     const tabSin = document.getElementById("tab-sin");
 
@@ -298,7 +279,6 @@ export function openShopUI(onClosed) {
         renderShopContent();
     };
 
-    // 初期表示
     renderShopContent();
 
     const closeHandler = () => {
@@ -318,12 +298,12 @@ export function openDebugMenu(onAction) {
     }
     const debugDiv = document.createElement("div"); debugDiv.id = "debug-modal"; debugDiv.className = "debug-modal";
     debugDiv.innerHTML = `
-        <h3 style="margin:0; border-bottom:1px solid #00ff00; padding-bottom:5px;">[DEBUG MENU] テスト用コマンド</h3>
-        <button class="debug-btn" id="dbg-all-clear">① 一括イベントクリア（全開放＆アイテム取得）</button>
-        <button class="debug-btn" id="dbg-warp-2f">② 2階（2F）へ直接ワープ</button>
-        <button class="debug-btn" id="dbg-warp-1f">③ 1階（1F）へ直接ワープ</button>
-        <button class="debug-btn" id="dbg-lv15">④ レベル15にする（使い魔解禁テスト用）</button>
-        <button class="debug-btn" id="dbg-money">⑤ お金を+1000追加</button>
+        <h3 style="margin:0; border-bottom:1px solid #00ff00; padding-bottom:5px;">[DEBUG MENU]</h3>
+        <button class="debug-btn" id="dbg-all-clear">① 一括イベントクリア</button>
+        <button class="debug-btn" id="dbg-warp-2f">② 2階（2F）ワープ</button>
+        <button class="debug-btn" id="dbg-warp-1f">③ 1階（1F）ワープ</button>
+        <button class="debug-btn" id="dbg-lv15">④ レベル15にする</button>
+        <button class="debug-btn" id="dbg-money">⑤ お金+1000</button>
         <button class="debug-btn" id="dbg-close" style="background:#550000; color:#fff; border-color:#ff0000;">閉じる [F2]</button>
     `;
     document.body.appendChild(debugDiv);
