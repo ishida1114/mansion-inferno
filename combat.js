@@ -82,12 +82,11 @@ function playerTurnAttack(gameState) {
         return;
     }
 
-    let basePower = 0;
+    // ★ 銃の基礎攻撃力（+10）を導入
+    let basePower = 10; 
     let isWeaknessHit = false;
 
-    if (gameState.equippedCards.length === 0) {
-        basePower = 5; 
-    } else {
+    if (gameState.equippedCards.length > 0) {
         gameState.equippedCards.forEach(cardName => {
             const numMatch = cardName.match(/\d+/);
             const cardNum = numMatch ? parseInt(numMatch[0]) : 1;
@@ -96,7 +95,7 @@ function playerTurnAttack(gameState) {
         });
     }
 
-    if (isWeaknessHit) basePower *= 2;
+    if (isWeaknessHit) basePower *= 2; // 弱点時は合計攻撃力2倍
     const damage = Math.max(1, basePower - currentEnemy.def);
     currentEnemy.hp -= damage;
 
@@ -112,28 +111,26 @@ function playerTurnAttack(gameState) {
             
             if (gameState.exp >= gameState.level) {
                 gameState.level += 1;
-                gameState.maxHp += 5; // ★ レベルアップHP増加も控えめ（+5）
+                gameState.maxHp += 5;
                 gameState.hp = gameState.maxHp;
                 gameState.def += 1;
                 gameState.agi += 1;
             }
-            setTimeout(() => finishCombat("victory"), 1500);
+            setTimeout(() => finishCombat("victory", gameState), 1500);
         }, 1200);
     } else {
         setTimeout(() => enemyTurn(gameState), 1200);
     }
 }
 
-// ★ 逃走率を大幅ダウン ＆ 失敗時は追撃確定
 function playerTurnEscape(gameState) {
     if (isProcessingTurn) return;
     isProcessingTurn = true;
 
-    // 逃走成功率：約 25% (AGI依存で微増)
     const escapeRate = Math.min(0.5, (gameState.agi / currentEnemy.agi) * 0.25);
     if (Math.random() < escapeRate) {
         appendLog("無事に逃げ切ることに成功した！");
-        setTimeout(() => finishCombat("escaped"), 1200);
+        setTimeout(() => finishCombat("escaped", gameState), 1200);
     } else {
         appendLog("逃走に失敗してしまった！ 背後を突かれる！");
         setTimeout(() => enemyTurn(gameState), 1200);
@@ -143,7 +140,6 @@ function playerTurnEscape(gameState) {
 function enemyTurn(gameState) {
     if (currentEnemy.hp <= 0) return;
 
-    // 回避判定
     const dodgeRate = Math.min(0.5, Math.max(0.05, (gameState.agi - currentEnemy.agi) * 0.02 + 0.05));
     if (Math.random() < dodgeRate) {
         appendLog(`${currentEnemy.name} の攻撃！\n間一髪で身をかわした！（回避成功）`);
@@ -171,15 +167,21 @@ function enemyTurn(gameState) {
     if (gameState.hp <= 0) {
         setTimeout(() => {
             appendLog("意識が遠のいていく……主人公は倒れた。");
-            setTimeout(() => finishCombat("died"), 1800);
+            setTimeout(() => finishCombat("died", gameState), 1800);
         }, 1200);
     } else {
         isProcessingTurn = false;
     }
 }
 
-function finishCombat(result) {
+function finishCombat(result, gameState) {
     const overlay = document.getElementById("combat-overlay");
     if (overlay) overlay.remove();
+
+    // ★ 死亡時は確実にHPを全回復させる
+    if (result === "died" && gameState) {
+        gameState.hp = gameState.maxHp;
+    }
+
     if (combatCallback) combatCallback(result);
 }

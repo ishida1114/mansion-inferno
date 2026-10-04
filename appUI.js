@@ -5,11 +5,20 @@ import { applyChromaKey, showMessageDialog } from './ui.js';
 let isMenuOpen = false;
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ アプリ専用スタイルの自動注入
 const appStyle = document.createElement("style");
 appStyle.innerHTML = `
-    .app-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); z-index: 3000; display: flex; justify-content: center; align-items: center; }
-    .smartphone { width: 360px; height: 720px; background-color: #0d0d12; border: 4px solid #1a1a24; border-radius: 24px; box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 15px rgba(100, 0, 0, 0.5); display: flex; flex-direction: column; overflow: hidden; font-family: 'Shippori Mincho', serif; color: #ddd; position: relative; }
+    .app-overlay { 
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+        background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); 
+        z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px;
+    }
+    .smartphone { 
+        width: 360px; height: 700px; background-color: #0d0d12; 
+        border: 4px solid #1a1a24; border-radius: 24px; 
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 15px rgba(100, 0, 0, 0.5); 
+        display: flex; flex-direction: column; overflow: hidden; 
+        font-family: 'Shippori Mincho', serif; color: #ddd; position: relative; 
+    }
     .app-header { background: linear-gradient(180deg, #220000, #000); padding: 8px 12px; font-size: 0.85em; display: flex; justify-content: space-between; border-bottom: 1px solid #550000; color: #aaa; }
     .app-header span { font-weight: bold; color: #ffdd66; }
     .app-content { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
@@ -18,7 +27,7 @@ appStyle.innerHTML = `
     .app-icon:hover { background-color: #2a0000; border-color: #ff3333; }
     .app-icon-emoji { font-size: 2em; margin-bottom: 10px; }
     .app-icon-title { font-size: 0.9em; color: #ccc; }
-    .app-footer { height: 50px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; background-color: #050505; }
+    .app-footer { height: 40px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; background-color: #050505; }
     .app-home-btn { width: 60px; height: 6px; background-color: #555; border-radius: 3px; cursor: pointer; }
     .app-home-btn:hover { background-color: #aaa; }
     
@@ -50,6 +59,8 @@ export function toggleMenu() {
         const overlay = document.createElement("div");
         overlay.id = "app-overlay"; 
         overlay.className = "app-overlay";
+        
+        // ★ ガイドテキストの位置を重ならないようスマホ枠の下へ分離配置
         overlay.innerHTML = `
             <div class="smartphone">
                 <div class="app-header">
@@ -59,9 +70,9 @@ export function toggleMenu() {
                     <div>💰: <span>${gameState.money}</span></div>
                 </div>
                 <div id="app-content" class="app-content"></div>
-                <div class="app-footer"><div class="app-home-btn" id="app-home-trigger"></div></div>
+                <div class="app-footer"><div class="app-home-btn" id="app-home-trigger" title="ホームに戻る"></div></div>
             </div>
-            <div style="position: absolute; bottom: 20px; color: #888; font-family: ${HORROR_FONT};">▼ [ESC] キーで閉じる</div>
+            <div style="color: #aaa; font-family: ${HORROR_FONT}; font-size: 0.9em; text-shadow: 0 0 5px black;">▼ [ESC] キーで閉じる</div>
         `;
         document.body.appendChild(overlay);
         document.getElementById("app-home-trigger").onclick = renderAppHome;
