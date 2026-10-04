@@ -23,7 +23,32 @@ const dx = [0, 1, 0, -1], dy = [-1, 0, 1, 0];
 // アセット初期化＆初回描画
 initRenderer(() => {
     draw(player, currentMap, currentFloor);
+    setupMobileControls(); // ★ スマホ用ボタン＆タップイベントの自動セットアップ
 });
+
+// スマホ用ボタン＆タッチ操作の自動アタッチ
+function setupMobileControls() {
+    // 画面内の全ボタンから移動ボタンを自動判別して登録
+    const buttons = document.querySelectorAll("button");
+    buttons.forEach(btn => {
+        const text = btn.innerText || "";
+        if (text.includes("左")) {
+            btn.onclick = (e) => { e.preventDefault(); turnLeft(); };
+        } else if (text.includes("前進")) {
+            btn.onclick = (e) => { e.preventDefault(); moveForward(); };
+        } else if (text.includes("右")) {
+            btn.onclick = (e) => { e.preventDefault(); turnRight(); };
+        } else if (text.includes("後退")) {
+            btn.onclick = (e) => { e.preventDefault(); moveBackward(); };
+        }
+    });
+
+    // 画面中央（Canvas）を直接タップしても「調べる」が発火するように登録
+    const canvas = document.getElementById("gameCanvas");
+    if (canvas) {
+        canvas.onclick = () => interact();
+    }
+}
 
 // 階層移動
 function changeFloor(targetFloor) {
@@ -92,10 +117,9 @@ function interact() {
             });
         }
         else if (action.type === "message") {
-            // ★ メッセージ表示中の移動操作をロック
             isEventPlaying = true;
             showMessageDialog(action.text, () => {
-                isEventPlaying = false; // ★ 閉じるまで解除しない
+                isEventPlaying = false;
             });
         }
         else if (action.type === "changeFloor") changeFloor(action.targetFloor);
@@ -152,14 +176,14 @@ function startExorcistSequence() {
 
 // 移動処理
 function moveForward() {
-    if (isEventPlaying || isAppMenuOpen()) return; // ★ 移動操作をガード
+    if (isEventPlaying || isAppMenuOpen()) return;
     const nx = player.x + dx[player.dir], ny = player.y + dy[player.dir];
     if (currentMap[ny] && currentMap[ny][nx] === 0) { 
         player.x = nx; player.y = ny; draw(player, currentMap, currentFloor); checkEncounter(); 
     }
 }
 function moveBackward() {
-    if (isEventPlaying || isAppMenuOpen()) return; // ★ 移動操作をガード
+    if (isEventPlaying || isAppMenuOpen()) return;
     const nx = player.x - dx[player.dir], ny = player.y - dy[player.dir];
     if (currentMap[ny] && currentMap[ny][nx] === 0) { 
         player.x = nx; player.y = ny; draw(player, currentMap, currentFloor); checkEncounter(); 
@@ -174,7 +198,7 @@ function turnRight() {
     player.dir = (player.dir + 1) % 4; draw(player, currentMap, currentFloor); 
 }
 
-// キーイベント
+// キーイベント（PC用）
 window.addEventListener("keydown", (e) => {
     if (e.key === "F2") {
         openDebugMenu((action) => {
