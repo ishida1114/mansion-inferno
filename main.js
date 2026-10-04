@@ -15,7 +15,7 @@ import { toggleMenu, isAppMenuOpen } from './appUI.js';
 let currentFloor = 1;
 let currentMap = map1F;
 let currentHandleEvent = handleEvent1F;
-let isEventPlaying = false;
+let isEventPlaying = false; // イベント（メッセージ等）実行中フラグ
 
 let player = { x: playerStart1F.x, y: playerStart1F.y, dir: playerStart1F.dir };
 const dx = [0, 1, 0, -1], dy = [-1, 0, 1, 0];
@@ -62,7 +62,10 @@ function triggerCombat(enemyDef) {
         isEventPlaying = false;
         if (result === "died") {
             changeFloor(1);
-            showMessageDialog("【絶望】\n悪魔の圧倒的な力の前に惨殺された……。\n気がつくと、1階の静けさの中に倒れていた。（HPが全回復した）");
+            isEventPlaying = true;
+            showMessageDialog("【絶望】\n悪魔の圧倒的な力の前に惨殺された……。\n気がつくと、1階の静けさの中に倒れていた。（HPが全回復した）", () => {
+                isEventPlaying = false;
+            });
         } else {
             draw(player, currentMap, currentFloor);
         }
@@ -77,8 +80,24 @@ function interact() {
     const action = currentHandleEvent(target, gameState);
 
     if (action) {
-        if (action.type === "video") playVideo(action.src, () => { if (action.next === "shop") startShop(); if (action.next === "message") showMessageDialog(action.text); });
-        else if (action.type === "message") showMessageDialog(action.text);
+        if (action.type === "video") {
+            isEventPlaying = true;
+            playVideo(action.src, () => { 
+                if (action.next === "shop") startShop(); 
+                else if (action.next === "message") {
+                    showMessageDialog(action.text, () => { isEventPlaying = false; });
+                } else {
+                    isEventPlaying = false;
+                }
+            });
+        }
+        else if (action.type === "message") {
+            // ★ メッセージ表示中の移動操作をロック
+            isEventPlaying = true;
+            showMessageDialog(action.text, () => {
+                isEventPlaying = false; // ★ 閉じるまで解除しない
+            });
+        }
         else if (action.type === "changeFloor") changeFloor(action.targetFloor);
         else if (action.type === "exorcistSequence") startExorcistSequence();
         else if (action.type === "grandmaEvent") startGrandmaEvent();
@@ -133,19 +152,27 @@ function startExorcistSequence() {
 
 // 移動処理
 function moveForward() {
+    if (isEventPlaying || isAppMenuOpen()) return; // ★ 移動操作をガード
     const nx = player.x + dx[player.dir], ny = player.y + dy[player.dir];
     if (currentMap[ny] && currentMap[ny][nx] === 0) { 
         player.x = nx; player.y = ny; draw(player, currentMap, currentFloor); checkEncounter(); 
     }
 }
 function moveBackward() {
+    if (isEventPlaying || isAppMenuOpen()) return; // ★ 移動操作をガード
     const nx = player.x - dx[player.dir], ny = player.y - dy[player.dir];
     if (currentMap[ny] && currentMap[ny][nx] === 0) { 
         player.x = nx; player.y = ny; draw(player, currentMap, currentFloor); checkEncounter(); 
     }
 }
-function turnLeft() { player.dir = (player.dir + 3) % 4; draw(player, currentMap, currentFloor); }
-function turnRight() { player.dir = (player.dir + 1) % 4; draw(player, currentMap, currentFloor); }
+function turnLeft() { 
+    if (isEventPlaying || isAppMenuOpen()) return; 
+    player.dir = (player.dir + 3) % 4; draw(player, currentMap, currentFloor); 
+}
+function turnRight() { 
+    if (isEventPlaying || isAppMenuOpen()) return; 
+    player.dir = (player.dir + 1) % 4; draw(player, currentMap, currentFloor); 
+}
 
 // キーイベント
 window.addEventListener("keydown", (e) => {
