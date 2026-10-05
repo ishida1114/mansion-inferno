@@ -29,7 +29,7 @@ export function applyChromaKey(imgElement) {
     }
 }
 
-// テキストダイアログ（スマホはみ出し防止版）
+// テキストダイアログ
 export function showMessageDialog(text, onClosed) {
     const msgDiv = document.createElement("div");
     msgDiv.style.cssText = `
@@ -53,7 +53,7 @@ export function showMessageDialog(text, onClosed) {
     setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// 立ち絵会話ダイアログ（スマホ最適化版）
+// 立ち絵会話ダイアログ
 export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
@@ -144,11 +144,13 @@ export function playVideo(src, onEnded) {
     overlay.onclick = () => { video.pause(); video.onended(); };
 }
 
+// ★ 背景で CVS.mp4 を背景再生する悪魔の無人レジ（コンビニUI）
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
     shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
 
     shopDiv.innerHTML = `
+        <!-- ★ 背景動画 (CVS.mp4) -->
         <video src="assets/videos/CVS.mp4" autoplay loop muted playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.35; filter: blur(2px);"></video>
         <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(20,0,0,0.7) 0%, rgba(0,0,0,0.95) 90%);"></div>
 
