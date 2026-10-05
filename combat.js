@@ -83,9 +83,10 @@ function playerTurnAttack(gameState) {
     if (isProcessingTurn) return;
     isProcessingTurn = true;
 
+    // ★ 武器未所持（モデルガンなし）の場合のテキスト変更
     if (!gameState.hasModelGun) {
-        appendLog("モデルガンを所持していない！\nVox Sacra（銃撃）の手段がない！");
-        setTimeout(() => enemyTurn(gameState), 1200);
+        appendLog("素手では太刀打ちできない！ 武器を何も持っていない！\n何か武器になるものを探さなければ、逃げるか倒されるしかない……！");
+        setTimeout(() => enemyTurn(gameState), 1500);
         return;
     }
 
