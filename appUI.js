@@ -8,12 +8,12 @@ const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 const appStyle = document.createElement("style");
 appStyle.innerHTML = `
     .app-overlay { 
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
         background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); 
         z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px;
     }
     .smartphone { 
-        width: 360px; height: 700px; background-color: #0d0d12; 
+        width: 360px; height: 700px; max-width: 90vw; max-height: 85vh; background-color: #0d0d12; 
         border: 4px solid #1a1a24; border-radius: 24px; 
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 15px rgba(100, 0, 0, 0.5); 
         display: flex; flex-direction: column; overflow: hidden; 
@@ -56,29 +56,42 @@ export function toggleMenu() {
             return false;
         }
         isMenuOpen = true;
-        const overlay = document.createElement("div");
-        overlay.id = "app-overlay"; 
-        overlay.className = "app-overlay";
-        
-        // ★ ガイドテキストの位置を重ならないようスマホ枠の下へ分離配置
-        overlay.innerHTML = `
-            <div class="smartphone">
-                <div class="app-header">
-                    <div>Lv.<span>${gameState.level}</span></div>
-                    <div>HP: <span>${gameState.hp}</span>/${gameState.maxHp}</div>
-                    <div>SIN: <span>${gameState.sin}</span></div>
-                    <div>💰: <span>${gameState.money}</span></div>
-                </div>
-                <div id="app-content" class="app-content"></div>
-                <div class="app-footer"><div class="app-home-btn" id="app-home-trigger" title="ホームに戻る"></div></div>
-            </div>
-            <div style="color: #aaa; font-family: ${HORROR_FONT}; font-size: 0.9em; text-shadow: 0 0 5px black;">▼ [ESC] キーで閉じる</div>
-        `;
-        document.body.appendChild(overlay);
-        document.getElementById("app-home-trigger").onclick = renderAppHome;
+        createAppOverlay();
         renderAppHome(); 
         return true;
     }
+}
+
+// チュートリアル用：指定してアプリを開く
+export function openAppToLoadout() {
+    if (!isMenuOpen) {
+        isMenuOpen = true;
+        createAppOverlay();
+    }
+    renderLoadout();
+}
+
+function createAppOverlay() {
+    const overlay = document.createElement("div");
+    overlay.id = "app-overlay"; 
+    overlay.className = "app-overlay";
+    
+    overlay.innerHTML = `
+        <div class="smartphone">
+            <div class="app-header">
+                <div>Lv.<span>${gameState.level}</span></div>
+                <div>HP: <span>${gameState.hp}</span>/${gameState.maxHp}</div>
+                <div>SIN: <span>${gameState.sin}</span></div>
+                <div>💰: <span>${gameState.money}</span></div>
+            </div>
+            <div id="app-content" class="app-content"></div>
+            <div class="app-footer"><div class="app-home-btn" id="app-home-trigger" title="ホームに戻る"></div></div>
+        </div>
+        <button id="app-close-btn" style="background: rgba(30,0,0,0.8); color: #fff; border: 1px solid #ff3333; padding: 8px 20px; border-radius: 20px; font-family: ${HORROR_FONT}; cursor: pointer;">閉じる [ESC]</button>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById("app-home-trigger").onclick = renderAppHome;
+    document.getElementById("app-close-btn").onclick = toggleMenu;
 }
 
 export function isAppMenuOpen() {
