@@ -1,59 +1,75 @@
 // enemies.js
-// 悪魔の基本データ定義（レベル固定型）
-
 export const enemyDefinitions = {
-    // 2F廊下 雑魚悪魔
     demon1: {
         id: "demon1",
-        name: "迷いの影悪魔",
-        level: 3,         // ★ 脅威度（レベル表示）
+        name: "小悪魔 インプ",
+        level: 2,
+        hp: 20,
+        atk: 6,
+        satk: 8,
+        def: 2,
+        agi: 4,
+        exp: 15,
+        money: 150,
+        weakness: "2Card.png",
         image: "assets/images/demon/demon1.png",
-        hp: 30,
-        maxHp: 30,
-        atk: 18,          // 物理攻撃力
-        satk: 22,         // 呪言攻撃力
-        def: 2,           // 防御力
-        agi: 4,           // 素速さ（主人公の初期AGI5より少し遅い）
-        exp: 0.5,         // 経験値（2体で1Lvアップ相当）
-        money: 150,       // 獲得お金
-        weakness: "1Card.png", // 弱点ラミナ
         actions: [
-            { name: "黒い爪で鋭く引き裂く！", type: "physical" },
-            { name: "不気味な呪言を吐き捨てる！", type: "magic" }
+            { name: "ひっかき", type: "physical" },
+            { name: "黒い呪言", type: "magic" }
         ]
     },
-
-    // 2Fボス：ストーカー影山
+    demon2: {
+        id: "demon2",
+        name: "擬態悪魔 ヴァーサル",
+        level: 3,
+        hp: 30,
+        atk: 9,
+        satk: 10,
+        def: 3,
+        agi: 5,
+        exp: 25,
+        money: 200,
+        weakness: "4Card.png",
+        image: "assets/images/demon/demon2.png",
+        actions: [
+            { name: "鋭い爪", type: "physical" },
+            { name: "狂気の眼光", type: "magic" }
+        ]
+    },
+    demon3: {
+        id: "demon3",
+        name: "潜伏悪魔 ベルゼフ",
+        level: 4,
+        hp: 40,
+        atk: 12,
+        satk: 14,
+        def: 4,
+        agi: 6,
+        exp: 40,
+        money: 300,
+        weakness: "7Card.png",
+        image: "assets/images/demon/demon3.png",
+        actions: [
+            { name: "かみくだく", type: "physical" },
+            { name: "血の波動", type: "magic" }
+        ]
+    },
     boss_kageyama: {
         id: "boss_kageyama",
-        name: "202号室の影山",
+        name: "ストーカー 影山",
         level: 5,
-        image: "assets/images/human4.png",
-        hp: 140,
-        maxHp: 140,
-        atk: 32,
-        satk: 38,
-        def: 6,
-        agi: 6,           // 主人公が育っていないと先制される
-        exp: 2.5,
-        money: 600,
-        weakness: "1Card.png",
+        hp: 60,
+        atk: 15,
+        satk: 18,
+        def: 5,
+        agi: 7,
+        exp: 100,
+        money: 500,
+        weakness: "3Card.png",
+        image: "assets/images/demon/2f-kageyama.mp4",
         actions: [
-            { name: "包丁を狂暴に振り下ろす！", type: "physical" },
-            { name: "耳元で執念の呪詛を囁く！", type: "magic" }
+            { name: "影の触手", type: "physical" },
+            { name: "絶望の咆哮", type: "magic" }
         ]
     }
-
-    /* 
-    // ★ 10階での再登場例（Lvが上がり、ステータスが激増している）
-    demon1_10F: {
-        id: "demon1_10F",
-        name: "迷いの影悪魔（怨念）",
-        level: 28,
-        image: "assets/images/demon/demon1.png",
-        hp: 350, maxHp: 350, atk: 120, satk: 145, def: 30, agi: 45,
-        exp: 8.0, money: 1200, weakness: "5Card.png",
-        actions: [ ... ]
-    }
-    */
 };
