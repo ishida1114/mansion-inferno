@@ -108,8 +108,8 @@ function interact() {
         else if (action.type === "changeFloor") changeFloor(action.targetFloor);
         else if (action.type === "exorcistSequence") startExorcistSequence();
         else if (action.type === "grandmaEvent") startGrandmaEvent();
-        else if (action.type === "studentInCvsEvent") startStudentInCvsEvent(); // ★ 追加
-        else if (action.type === "postEvent") startPostEvent();                 // ★ 追加
+        else if (action.type === "studentInCvsEvent") startStudentInCvsEvent();
+        else if (action.type === "postEvent") startPostEvent();
         else if (action.type === "shop") startShop();
         else if (action.type === "studentEvent") startStudentEvent();
     }
@@ -120,15 +120,17 @@ function startShop() {
     openShopUI(() => { isEventPlaying = false; });
 }
 
-// ★ ポストを調べたイベント（画像を表示）
+// ★ ポストイベント（assets/videos/post.mp4 を再生）
 function startPostEvent() {
     isEventPlaying = true;
-    showItemAcquiredModal("assets/videos/post.mp4", "1階 集合ポスト", "錆びついた住民用の郵便受け。\n\n「外で連絡したいことができたら、このポストに手紙を投函しておくれ……」\nおばあさんの言葉が頭をよぎる。", () => {
-        isEventPlaying = false;
+    playVideo("assets/videos/post.mp4", () => {
+        showMessageDialog("【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を投函しておくれ……」\nおばあさんの言葉が頭をよぎる。", () => {
+            isEventPlaying = false;
+        });
     });
 }
 
-// ★ コンビニで生徒と合流するイベント
+// コンビニで生徒と合流するイベント
 function startStudentInCvsEvent() {
     isEventPlaying = true;
     showConversationDialog("assets/images/human1.png", "【生徒】\n「先生……っ！ 無事だったんだね！ 良かった……！」\n\n「おばあさんが『ここなら悪魔も入ってこられない』って、僕を匿ってくれたんだ。お父さんのこと……よろしく頼むね！」", () => {
