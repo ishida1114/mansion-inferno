@@ -9,48 +9,39 @@ import {
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openShopUI, openDebugMenu 
 } from './ui.js';
-import { toggleMenu, isAppMenuOpen } from './appUI.js';
+import { toggleMenu, isAppMenuOpen, openAppToLoadout } from './appUI.js';
 
-// 階層データ管理
 let currentFloor = 1;
 let currentMap = map1F;
 let currentHandleEvent = handleEvent1F;
-let isEventPlaying = false; // イベント（メッセージ等）実行中フラグ
+let isEventPlaying = false;
 
+// 初期スタート位置（1階非常階段の真ん前）
 let player = { x: playerStart1F.x, y: playerStart1F.y, dir: playerStart1F.dir };
 const dx = [0, 1, 0, -1], dy = [-1, 0, 1, 0];
 
-// アセット初期化＆初回描画
 initRenderer(() => {
     draw(player, currentMap, currentFloor);
-    setupMobileControls(); // ★ スマホ用ボタン＆タップイベントの自動セットアップ
+    setupMobileControls();
 });
 
-// スマホ用ボタン＆タッチ操作の自動アタッチ
 function setupMobileControls() {
-    // 画面内の全ボタンから移動ボタンを自動判別して登録
-    const buttons = document.querySelectorAll("button");
+    const btnApp = document.getElementById("btn-open-app");
+    if (btnApp) btnApp.onclick = () => toggleMenu();
+
+    const buttons = document.querySelectorAll(".controls-container button");
     buttons.forEach(btn => {
         const text = btn.innerText || "";
-        if (text.includes("左")) {
-            btn.onclick = (e) => { e.preventDefault(); turnLeft(); };
-        } else if (text.includes("前進")) {
-            btn.onclick = (e) => { e.preventDefault(); moveForward(); };
-        } else if (text.includes("右")) {
-            btn.onclick = (e) => { e.preventDefault(); turnRight(); };
-        } else if (text.includes("後退")) {
-            btn.onclick = (e) => { e.preventDefault(); moveBackward(); };
-        }
+        if (text.includes("左")) btn.onclick = (e) => { e.preventDefault(); turnLeft(); };
+        else if (text.includes("前進")) btn.onclick = (e) => { e.preventDefault(); moveForward(); };
+        else if (text.includes("右")) btn.onclick = (e) => { e.preventDefault(); turnRight(); };
+        else if (text.includes("後退")) btn.onclick = (e) => { e.preventDefault(); moveBackward(); };
     });
 
-    // 画面中央（Canvas）を直接タップしても「調べる」が発火するように登録
     const canvas = document.getElementById("gameCanvas");
-    if (canvas) {
-        canvas.onclick = () => interact();
-    }
+    if (canvas) canvas.onclick = () => interact();
 }
 
-// 階層移動
 function changeFloor(targetFloor) {
     isEventPlaying = true;
     playFloorTransition(targetFloor, () => {
@@ -60,14 +51,13 @@ function changeFloor(targetFloor) {
             player.x = playerStart2F.x; player.y = playerStart2F.y; player.dir = playerStart2F.dir;
         } else {
             currentMap = map1F; currentHandleEvent = handleEvent1F;
-            player.x = 7; player.y = 1; player.dir = 2;
+            player.x = playerStart1F.x; player.y = playerStart1F.y; player.dir = playerStart1F.dir;
         }
         draw(player, currentMap, currentFloor);
         isEventPlaying = false;
     });
 }
 
-// エンカウント判定
 function checkEncounter() {
     if (currentFloor !== 2) return;
 
@@ -97,7 +87,6 @@ function triggerCombat(enemyDef) {
     });
 }
 
-// イベント発生処理
 function interact() {
     if (isEventPlaying || isAppMenuOpen()) return;
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
@@ -109,18 +98,13 @@ function interact() {
             isEventPlaying = true;
             playVideo(action.src, () => { 
                 if (action.next === "shop") startShop(); 
-                else if (action.next === "message") {
-                    showMessageDialog(action.text, () => { isEventPlaying = false; });
-                } else {
-                    isEventPlaying = false;
-                }
+                else if (action.next === "message") showMessageDialog(action.text, () => { isEventPlaying = false; });
+                else isEventPlaying = false;
             });
         }
         else if (action.type === "message") {
             isEventPlaying = true;
-            showMessageDialog(action.text, () => {
-                isEventPlaying = false;
-            });
+            showMessageDialog(action.text, () => { isEventPlaying = false; });
         }
         else if (action.type === "changeFloor") changeFloor(action.targetFloor);
         else if (action.type === "exorcistSequence") startExorcistSequence();
@@ -135,13 +119,19 @@ function startShop() {
     openShopUI(() => { isEventPlaying = false; });
 }
 
+// ★ モデルガン入手 ＆ ラミナ装填自動チュートリアル
 function startStudentEvent() {
     isEventPlaying = true;
     showConversationDialog("assets/images/human1.png", "【生徒】\n「先生……っ！ よかった、来てくれたんだ……！」\n\n「お父さんが、上の階の様子を見てくるって言ったまま戻ってこないんだ……。外からは変な声が聞こえるし、怖くて……」\n\n「先生、お願い……これを使ってお父さんを助けて……！」", () => {
-        showMessageDialog("【主人公】\n（これは……モデルガン？ なぜこんなものを……いや、今はこれでも心強い。）\n\n「わかった、お父さんは俺が探す。お前は1階のコンビニへ逃げろ。あそこなら安全なはずだ。後で必ず合流しよう」", () => {
-            showItemAcquiredModal("assets/images/modelgun.jpg", "物理モデルガン", "生徒から託された精巧なモデルガン。\n『悪魔辞典アプリ』と連動し、退魔の札『ラミナ』を装填できる！\n（生徒は1階のコンビニへ向かった）", () => {
+        showMessageDialog("【主人公】\n（これは……モデルガン？ なぜこんなものを……いや、今はこれでも心強い。）\n\n「わかった、お父さんは俺が探す。お前は1階のコンビニへ逃げろ。あそこなら安全なはずだ」", () => {
+            showItemAcquiredModal("assets/images/modelgun.jpg", "物理モデルガン", "生徒から託された精巧なモデルガン。\n『悪魔辞典アプリ』と連動し、退魔の札『ラミナ』を装填できる！", () => {
                 gameState.hasModelGun = true;
-                isEventPlaying = false;
+                
+                // ★ チュートリアル：自動的にラミナ装填画面を開く
+                showMessageDialog("【主人公】\n「待てよ……弾が入っていない。どうすれば……？」\n\n「あ、そうか！ エクソシストから受け取った『悪魔辞典アプリ』にラミナ（札）を装填すれば、弾として撃てるんだった！」", () => {
+                    isEventPlaying = false;
+                    openAppToLoadout(); // 強制的にラミナ装填画面を起動！
+                });
             });
         });
     });
@@ -174,7 +164,6 @@ function startExorcistSequence() {
     });
 }
 
-// 移動処理
 function moveForward() {
     if (isEventPlaying || isAppMenuOpen()) return;
     const nx = player.x + dx[player.dir], ny = player.y + dy[player.dir];
@@ -198,7 +187,6 @@ function turnRight() {
     player.dir = (player.dir + 1) % 4; draw(player, currentMap, currentFloor); 
 }
 
-// キーイベント（PC用）
 window.addEventListener("keydown", (e) => {
     if (e.key === "F2") {
         openDebugMenu((action) => {
