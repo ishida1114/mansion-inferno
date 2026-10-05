@@ -1,5 +1,5 @@
 // maps/map2F.js
-export const playerStart2F = { x: 1, y: 1, dir: 2 }; // ★ 階段の前（南向き）
+export const playerStart2F = { x: 1, y: 1, dir: 2 }; // 階段前（南向き）
 
 export const map2F = [
     [1, 4, 1], // y=0: 4は1階へ降りる階段のドア
@@ -15,7 +15,7 @@ export const map2F = [
 
 export function handleEvent2F(targetCell, gameState) {
     if (targetCell === 4) {
-        // ★ 1階へ戻る階段イベント
+        // 1階へ戻る階段イベント
         return { type: "changeFloor", targetFloor: 1 };
     }
     if (targetCell === 8) {

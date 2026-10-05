@@ -119,7 +119,6 @@ function startShop() {
     openShopUI(() => { isEventPlaying = false; });
 }
 
-// ★ モデルガン入手 ＆ ラミナ装填自動チュートリアル
 function startStudentEvent() {
     isEventPlaying = true;
     showConversationDialog("assets/images/human1.png", "【生徒】\n「先生……っ！ よかった、来てくれたんだ……！」\n\n「お父さんが、上の階の様子を見てくるって言ったまま戻ってこないんだ……。外からは変な声が聞こえるし、怖くて……」\n\n「先生、お願い……これを使ってお父さんを助けて……！」", () => {
@@ -127,7 +126,7 @@ function startStudentEvent() {
             showItemAcquiredModal("assets/images/modelgun.jpg", "物理モデルガン", "生徒から託された精巧なモデルガン。\n『悪魔辞典アプリ』と連動し、退魔の札『ラミナ』を装填できる！", () => {
                 gameState.hasModelGun = true;
                 
-                // ★ チュートリアル：自動的にラミナ装填画面を開く
+                // チュートリアル：自動的にラミナ装填画面を開く
                 showMessageDialog("【主人公】\n「待てよ……弾が入っていない。どうすれば……？」\n\n「あ、そうか！ エクソシストから受け取った『悪魔辞典アプリ』にラミナ（札）を装填すれば、弾として撃てるんだった！」", () => {
                     isEventPlaying = false;
                     openAppToLoadout(); // 強制的にラミナ装填画面を起動！

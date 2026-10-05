@@ -1,29 +1,54 @@
-// maps/map2F.js
-export const playerStart2F = { x: 1, y: 1, dir: 2 }; // ★ 階段の前（南向き）
-
-export const map2F = [
-    [1, 4, 1], // y=0: 4は1階へ降りる階段のドア
-    [1, 0, 1], // y=1: 初期位置(1,1)
-    [1, 0, 1],
-    [1, 0, 1],
-    [1, 0, 1],
-    [1, 0, 1],
-    [1, 0, 1],
-    [1, 8, 1], // y=7: 生徒の部屋
-    [1, 1, 1]
-];
-
-export function handleEvent2F(targetCell, gameState) {
-    if (targetCell === 4) {
-        // ★ 1階へ戻る階段イベント
-        return { type: "changeFloor", targetFloor: 1 };
-    }
-    if (targetCell === 8) {
-        if (!gameState.hasModelGun) {
-            return { type: "studentEvent" };
-        } else {
-            return { type: "message", text: "【201号室】\n部屋の中は空っぽだ。生徒はすでに1階のコンビニへ避難したようだ。" };
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>怠惰な僕の悪魔辞典</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #050505; color: #eee; font-family: 'Shippori Mincho', serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            min-height: 100vh; padding: 10px; overflow-x: hidden;
         }
-    }
-    return null;
-}
+        #game-container { width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .game-logo { width: 100%; max-width: 600px; height: auto; margin-bottom: 8px; }
+        #gameCanvas {
+            width: 100% !important; height: auto !important; max-width: 600px; aspect-ratio: 600 / 400;
+            border: 2px solid #550000; box-shadow: 0 0 15px rgba(255, 0, 0, 0.3); display: block; background-color: #000;
+        }
+        .action-bar { width: 100%; max-width: 600px; display: flex; gap: 8px; margin-top: 8px; }
+        .app-btn {
+            background: linear-gradient(180deg, #440000, #110000); color: #ffdd66; border: 1px solid #ff3333;
+            padding: 10px; font-size: 0.95em; cursor: pointer; border-radius: 4px; font-family: inherit; flex: 1; font-weight: bold;
+        }
+        .controls-container { width: 100%; max-width: 600px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+        .controls-container button {
+            background: #1a1a1a; color: #ddd; border: 1px solid #444; padding: 12px 4px; font-size: 0.85em; cursor: pointer; border-radius: 4px; font-family: inherit; touch-action: manipulation;
+        }
+        .controls-container button:active { background: #330000; border-color: #ff3333; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <img class="game-logo" src="assets/images/DictionariumDaemonum.webp" alt="怠惰な僕の悪魔辞典" onerror="this.style.display='none'">
+        
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+        <!-- スマホ用アプリ起動ボタン -->
+        <div class="action-bar">
+            <button id="btn-open-app" class="app-btn">📱 悪魔辞典アプリを開く</button>
+        </div>
+
+        <div class="controls-container">
+            <button id="btn-left">左を向く (A)</button>
+            <button id="btn-forward">前進 (W)</button>
+            <button id="btn-right">右を向く (D)</button>
+            <button id="btn-backward">後退 (S)</button>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>

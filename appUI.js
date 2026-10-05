@@ -62,7 +62,7 @@ export function toggleMenu() {
     }
 }
 
-// チュートリアル用：指定してアプリを開く
+// チュートリアル用：直接ラミナ装填画面を開く
 export function openAppToLoadout() {
     if (!isMenuOpen) {
         isMenuOpen = true;
