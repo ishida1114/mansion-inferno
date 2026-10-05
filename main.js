@@ -16,7 +16,6 @@ let currentMap = map1F;
 let currentHandleEvent = handleEvent1F;
 let isEventPlaying = false;
 
-// 初期スタート位置（1階非常階段の真ん前）
 let player = { x: playerStart1F.x, y: playerStart1F.y, dir: playerStart1F.dir };
 const dx = [0, 1, 0, -1], dy = [-1, 0, 1, 0];
 
@@ -109,6 +108,8 @@ function interact() {
         else if (action.type === "changeFloor") changeFloor(action.targetFloor);
         else if (action.type === "exorcistSequence") startExorcistSequence();
         else if (action.type === "grandmaEvent") startGrandmaEvent();
+        else if (action.type === "studentInCvsEvent") startStudentInCvsEvent(); // ★ 追加
+        else if (action.type === "postEvent") startPostEvent();                 // ★ 追加
         else if (action.type === "shop") startShop();
         else if (action.type === "studentEvent") startStudentEvent();
     }
@@ -119,6 +120,23 @@ function startShop() {
     openShopUI(() => { isEventPlaying = false; });
 }
 
+// ★ ポストを調べたイベント（画像を表示）
+function startPostEvent() {
+    isEventPlaying = true;
+    showItemAcquiredModal("assets/videos/post.mp4", "1階 集合ポスト", "錆びついた住民用の郵便受け。\n\n「外で連絡したいことができたら、このポストに手紙を投函しておくれ……」\nおばあさんの言葉が頭をよぎる。", () => {
+        isEventPlaying = false;
+    });
+}
+
+// ★ コンビニで生徒と合流するイベント
+function startStudentInCvsEvent() {
+    isEventPlaying = true;
+    showConversationDialog("assets/images/human1.png", "【生徒】\n「先生……っ！ 無事だったんだね！ 良かった……！」\n\n「おばあさんが『ここなら悪魔も入ってこられない』って、僕を匿ってくれたんだ。お父さんのこと……よろしく頼むね！」", () => {
+        gameState.hasTalkedStudentInCVS = true;
+        openShopUI(() => { isEventPlaying = false; });
+    });
+}
+
 function startStudentEvent() {
     isEventPlaying = true;
     showConversationDialog("assets/images/human1.png", "【生徒】\n「先生……っ！ よかった、来てくれたんだ……！」\n\n「お父さんが、上の階の様子を見てくるって言ったまま戻ってこないんだ……。外からは変な声が聞こえるし、怖くて……」\n\n「先生、お願い……これを使ってお父さんを助けて……！」", () => {
@@ -126,10 +144,9 @@ function startStudentEvent() {
             showItemAcquiredModal("assets/images/modelgun.jpg", "物理モデルガン", "生徒から託された精巧なモデルガン。\n『悪魔辞典アプリ』と連動し、退魔の札『ラミナ』を装填できる！", () => {
                 gameState.hasModelGun = true;
                 
-                // チュートリアル：自動的にラミナ装填画面を開く
                 showMessageDialog("【主人公】\n「待てよ……弾が入っていない。どうすれば……？」\n\n「あ、そうか！ エクソシストから受け取った『悪魔辞典アプリ』にラミナ（札）を装填すれば、弾として撃てるんだった！」", () => {
                     isEventPlaying = false;
-                    openAppToLoadout(); // 強制的にラミナ装填画面を起動！
+                    openAppToLoadout(); 
                 });
             });
         });
