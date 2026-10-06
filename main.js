@@ -1,147 +1,112 @@
-// main.js
+// main.js - ゲーム起点処理・タイトル画面遷移・操作イベント（完全版）
+
 import { gameState } from './gameState.js';
-import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
-import { map2F, playerStart2F, handleEvent2F } from './maps/map2F.js';
-import { enemyDefinitions } from './enemies.js';
-import { startCombat } from './combat.js';
-import { initRenderer, draw } from './renderer.js';
-import { showMessageDialog, playFloorTransition, openDebugMenu } from './ui.js';
-import { toggleMenu, isAppMenuOpen } from './appUI.js';
+import { AppUI } from './appUI.js';
 
-let currentFloor = 1;
-let currentMap = map1F;
-let currentHandleEvent = handleEvent1F;
-let isEventPlaying = false;
+// 1階のダミー/基本マップデータ（0: 通路, 1: 壁）
+const DEFAULT_MAP_1F = [
+  [1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 0, 0, 1],
+  [1, 0, 1, 1, 1, 0, 1],
+  [1, 0, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1]
+];
 
-let player = { x: playerStart1F.x, y: playerStart1F.y, dir: playerStart1F.dir };
-const dx = [0, 1, 0, -1], dy = [-1, 0, 1, 0];
+const appUI = new AppUI();
 
-initRenderer(() => {
-    draw(player, currentMap, currentFloor);
-    setupMobileControls();
-});
+// 画面読み込み完了時の初期化処理
+function init() {
+  const titleScreen = document.getElementById('title-screen');
+  const btnStart = document.getElementById('btn-start');
+  const btnLoad = document.getElementById('btn-load');
 
-function setupMobileControls() {
-    const btnApp = document.getElementById("btn-open-app");
-    if (btnApp) btnApp.onclick = () => toggleMenu();
-
-    const buttons = document.querySelectorAll(".controls-container button");
-    buttons.forEach(btn => {
-        const text = btn.innerText || "";
-        if (text.includes("左")) btn.onclick = (e) => { e.preventDefault(); turnLeft(); };
-        else if (text.includes("前進")) btn.onclick = (e) => { e.preventDefault(); moveForward(); };
-        else if (text.includes("右")) btn.onclick = (e) => { e.preventDefault(); turnRight(); };
-        else if (text.includes("後退")) btn.onclick = (e) => { e.preventDefault(); moveBackward(); };
+  // 【1. ゲームスタートボタンのクリック処理】
+  if (btnStart) {
+    btnStart.addEventListener('click', () => {
+      // タイトル画面を非表示にする
+      if (titleScreen) titleScreen.classList.add('hidden');
+      startNewGame();
     });
+  }
 
-    const canvas = document.getElementById("gameCanvas");
-    if (canvas) canvas.onclick = () => interact();
-}
-
-function changeFloor(targetFloor) {
-    isEventPlaying = true;
-    playFloorTransition(targetFloor, () => {
-        currentFloor = targetFloor;
-        if (currentFloor === 2) {
-            currentMap = map2F; currentHandleEvent = handleEvent2F;
-            player.x = playerStart2F.x; player.y = playerStart2F.y; player.dir = playerStart2F.dir;
-        } else {
-            currentMap = map1F; currentHandleEvent = handleEvent1F;
-            player.x = playerStart1F.x; player.y = playerStart1F.y; player.dir = playerStart1F.dir;
-        }
-        draw(player, currentMap, currentFloor);
-        isEventPlaying = false;
+  // 【2. つづきからボタンのクリック処理】
+  if (btnLoad) {
+    btnLoad.addEventListener('click', () => {
+      const hasSave = gameState.loadGame();
+      if (hasSave) {
+        if (titleScreen) titleScreen.classList.add('hidden');
+        resumeGame();
+      } else {
+        alert('保存されたセーブデータが見つかりませんでした。');
+      }
     });
+  }
 }
 
-function checkEncounter() {
-    if (currentFloor !== 2) return;
+// 新規ゲーム開始
+function startNewGame() {
+  gameState.currentFloor = 1;
+  gameState.currentMap = DEFAULT_MAP_1F;
+  gameState.player.x = 1;
+  gameState.player.y = 1;
+  gameState.player.dir = 0; // 北向き
 
-    if (!gameState.hasExperiencedFirstEncounter) {
-        gameState.hasExperiencedFirstEncounter = true;
-        triggerCombat(enemyDefinitions.demon1);
-        return;
+  // スマホ画面UIの更新描画
+  appUI.renderApp();
+
+  // キーボード移動のイベント登録
+  initInputListeners();
+}
+
+// セーブデータから再開
+function resumeGame() {
+  appUI.renderApp();
+  initInputListeners();
+}
+
+// キーボード移動（矢印キー / WASD）のイベント登録
+function initInputListeners() {
+  window.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowUp':
+      case 'w':
+      case 'W':
+        moveForward();
+        break;
+      case 'ArrowLeft':
+      case 'a':
+      case 'A':
+        // 左回転
+        gameState.player.dir = (gameState.player.dir + 3) % 4;
+        break;
+      case 'ArrowRight':
+      case 'd':
+      case 'D':
+        // 右回転
+        gameState.player.dir = (gameState.player.dir + 1) % 4;
+        break;
     }
-    if (Math.random() < 0.10) {
-        triggerCombat(enemyDefinitions.demon1);
-    }
+  });
 }
 
-function triggerCombat(enemyDef) {
-    isEventPlaying = true;
-    startCombat(enemyDef, gameState, false, (result) => {
-        isEventPlaying = false;
-        if (result === "died") {
-            changeFloor(1);
-            isEventPlaying = true;
-            showMessageDialog("【絶望】\n悪魔の圧倒的な力の前に惨殺された……。\n気がつくと、1階の静けさの中に倒れていた。（HPが全回復した）", () => {
-                isEventPlaying = false;
-            });
-        } else {
-            draw(player, currentMap, currentFloor);
-        }
-    });
-}
-
-// ★ 調べるアクション：マップ側にイベント実行を委譲するだけで完結！
-function interact() {
-    if (isEventPlaying || isAppMenuOpen()) return;
-    const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
-    const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
-    
-    const context = {
-        changeFloor: changeFloor,
-        redraw: () => draw(player, currentMap, currentFloor)
-    };
-
-    const action = currentHandleEvent(target, gameState, context);
-
-    if (action && action.run) {
-        isEventPlaying = true;
-        action.run(() => {
-            isEventPlaying = false;
-        });
-    }
-}
-
+// 一歩前進処理
 function moveForward() {
-    if (isEventPlaying || isAppMenuOpen()) return;
-    const nx = player.x + dx[player.dir], ny = player.y + dy[player.dir];
-    if (currentMap[ny] && currentMap[ny][nx] === 0) { 
-        player.x = nx; player.y = ny; draw(player, currentMap, currentFloor); checkEncounter(); 
-    }
-}
-function moveBackward() {
-    if (isEventPlaying || isAppMenuOpen()) return;
-    const nx = player.x - dx[player.dir], ny = player.y - dy[player.dir];
-    if (currentMap[ny] && currentMap[ny][nx] === 0) { 
-        player.x = nx; player.y = ny; draw(player, currentMap, currentFloor); checkEncounter(); 
-    }
-}
-function turnLeft() { 
-    if (isEventPlaying || isAppMenuOpen()) return; 
-    player.dir = (player.dir + 3) % 4; draw(player, currentMap, currentFloor); 
-}
-function turnRight() { 
-    if (isEventPlaying || isAppMenuOpen()) return; 
-    player.dir = (player.dir + 1) % 4; draw(player, currentMap, currentFloor); 
+  const dirVectors = [
+    { x: 0, y: -1 }, // 0: 北
+    { x: 1, y: 0 },  // 1: 東
+    { x: 0, y: 1 },  // 2: 南
+    { x: -1, y: 0 }  // 3: 西
+  ];
+  const vec = dirVectors[gameState.player.dir];
+  const nextX = gameState.player.x + vec.x;
+  const nextY = gameState.player.y + vec.y;
+
+  const map = gameState.currentMap;
+  if (map && map[nextY] && map[nextY][nextX] === 0) {
+    gameState.player.x = nextX;
+    gameState.player.y = nextY;
+  }
 }
 
-window.addEventListener("keydown", (e) => {
-    if (e.key === "F2") {
-        openDebugMenu((action) => {
-            if (action === "warp2F") changeFloor(2);
-            if (action === "warp1F") changeFloor(1);
-            draw(player, currentMap, currentFloor);
-        });
-        return;
-    }
-    if (e.key === "Escape") { toggleMenu(); return; }
-    if (isEventPlaying || isAppMenuOpen()) return;
-
-    if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") moveForward();
-    if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") moveBackward();
-    if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") turnLeft();
-    if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") turnRight();
-    if (e.key === " " || e.key === "Enter") interact();
-});
+// ページ読み込み時に実行
+window.addEventListener('DOMContentLoaded', init);
