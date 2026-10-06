@@ -1,54 +1,69 @@
-// main.js - ゲーム起点処理・移動操作・1F固有マップ＆イベント連動（完全修正版）
+// main.js - ゲーム起点処理・移動操作・1F固有マップ＆イベント連動（エラー検知・堅牢版）
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 
-const appUI = new AppUI();
-const renderer = new Renderer();
+let appUI;
+let renderer;
 let isRunning = false;
 
 function init() {
-  const titleScreen = document.getElementById('title-screen');
-  const btnStart = document.getElementById('btn-start');
-  const btnLoad = document.getElementById('btn-load');
+  try {
+    appUI = new AppUI();
+    renderer = new Renderer();
 
-  if (btnStart) {
-    btnStart.onclick = () => {
-      if (titleScreen) titleScreen.classList.add('hidden');
-      startNewGame();
-    };
-  }
+    // 画面全体のクリックイベントを監視（ボタン反応を確実にキャッチ）
+    document.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!target) return;
 
-  if (btnLoad) {
-    btnLoad.onclick = () => {
-      const hasSave = gameState.loadGame();
-      if (hasSave) {
+      // ゲームスタートボタン
+      if (target.id === 'btn-start' || target.closest('#btn-start')) {
+        const titleScreen = document.getElementById('title-screen');
         if (titleScreen) titleScreen.classList.add('hidden');
-        resumeGame();
-      } else {
-        alert('保存されたセーブデータが見つかりませんでした。');
+        startNewGame();
+      } 
+      // つづきからボタン
+      else if (target.id === 'btn-load' || target.closest('#btn-load')) {
+        const hasSave = gameState.loadGame();
+        if (hasSave) {
+          const titleScreen = document.getElementById('title-screen');
+          if (titleScreen) titleScreen.classList.add('hidden');
+          resumeGame();
+        } else {
+          alert('保存されたセーブデータが見つかりませんでした。');
+        }
       }
-    };
+    });
+
+  } catch (err) {
+    console.error("初期化エラー:", err);
+    alert("初期化中にエラーが発生しました:\n" + err.message);
   }
 }
 
 // 新規ゲーム開始
 function startNewGame() {
-  gameState.currentFloor = 1;
-  gameState.currentMap = map1F;                // ★ maps/map1F.js の正しい1Fマップを読み込み
-  gameState.player.x = playerStart1F.x;        // ★ 正しい初期位置 X:7
-  gameState.player.y = playerStart1F.y;        // ★ 正しい初期位置 Y:1
-  gameState.player.dir = playerStart1F.dir;    // ★ 正しい初期向き (北向き)
+  try {
+    gameState.currentFloor = 1;
+    gameState.currentMap = map1F;                // maps/map1F.js の1Fマップ
+    gameState.player.x = playerStart1F.x;        // 初期位置 X:7
+    gameState.player.y = playerStart1F.y;        // 初期位置 Y:1
+    gameState.player.dir = playerStart1F.dir;    // 初期向き (北)
 
-  document.getElementById('touch-controls')?.classList.remove('hidden');
-  appUI.renderApp();
-  initInputListeners();
+    document.getElementById('touch-controls')?.classList.remove('hidden');
+    appUI.renderApp();
+    initInputListeners();
 
-  if (!isRunning) {
-    isRunning = true;
-    gameLoop();
+    if (!isRunning) {
+      isRunning = true;
+      gameLoop();
+    }
+  } catch (err) {
+    console.error("スタート処理エラー:", err);
+    alert("ゲームスタート処理でエラーが発生しました:\n" + err.message);
   }
 }
 
@@ -98,7 +113,7 @@ function initInputListeners() {
       case ' ':
       case 'Spacebar':
         e.preventDefault();
-        interactFrontCell(); // ★ スペースキーで目の前のマスを調べる
+        interactFrontCell();
         break;
       case 'Escape':
         toggleAppUI();
@@ -110,25 +125,20 @@ function initInputListeners() {
     }
   };
 
-  // UIボタンイベントの登録
-  const btnUp = document.getElementById('btn-up');
-  const btnDown = document.getElementById('btn-down');
-  const btnLeft = document.getElementById('btn-left');
-  const btnRight = document.getElementById('btn-right');
-  const btnAction = document.getElementById('btn-action');
-  const btnApp = document.getElementById('btn-app-toggle');
-  const btnDebug = document.getElementById('btn-close-debug');
-
-  if (btnUp) btnUp.onclick = () => moveForward();
-  if (btnDown) btnDown.onclick = () => moveBackward();
-  if (btnLeft) btnLeft.onclick = () => gameState.player.dir = (gameState.player.dir + 3) % 4;
-  if (btnRight) btnRight.onclick = () => gameState.player.dir = (gameState.player.dir + 1) % 4;
-  if (btnAction) btnAction.onclick = () => interactFrontCell(); // ★ 「調べる」ボタン連動
-  if (btnApp) btnApp.onclick = () => toggleAppUI();
-  if (btnDebug) btnDebug.onclick = () => toggleDebugUI();
+  // UI操作ボタンクリックイベントの全域登録
+  document.addEventListener('click', (e) => {
+    const id = e.target?.id;
+    if (id === 'btn-up') moveForward();
+    else if (id === 'btn-down') moveBackward();
+    else if (id === 'btn-left') gameState.player.dir = (gameState.player.dir + 3) % 4;
+    else if (id === 'btn-right') gameState.player.dir = (gameState.player.dir + 1) % 4;
+    else if (id === 'btn-action') interactFrontCell();
+    else if (id === 'btn-app-toggle') toggleAppUI();
+    else if (id === 'btn-close-debug') toggleDebugUI();
+  });
 }
 
-// 目の前のマス（コンビニ・血の池・ポスト・扉等）を調べるイベント処理
+// 目の前のマスの調べ処理
 function interactFrontCell() {
   const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
   const vec = dirVectors[gameState.player.dir];
@@ -139,14 +149,13 @@ function interactFrontCell() {
   if (!map || !map[frontY]) return;
 
   const cellType = map[frontY][frontX];
-  if (!cellType || cellType === 0 || cellType === 1) return; // 壁や通路は無視
+  if (!cellType || cellType === 0 || cellType === 1) return;
 
-  // 1階固有イベントの発火
   if (gameState.currentFloor === 1) {
     const eventObj = handleEvent1F(cellType, gameState, {
       changeFloor: (floor) => {
         gameState.currentFloor = floor;
-        alert(`${floor}Fへ移動します（2F処理準備中）`);
+        alert(`${floor}Fへ移動します`);
       },
       redraw: () => renderer.render()
     });
