@@ -1,54 +1,52 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>怠惰な僕の悪魔辞典</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background-color: #050505; color: #eee; font-family: 'Shippori Mincho', serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            min-height: 100vh; padding: 10px; overflow-x: hidden;
-        }
-        #game-container { width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; position: relative; }
-        .game-logo { width: 100%; max-width: 600px; height: auto; margin-bottom: 8px; }
-        #gameCanvas {
-            width: 100% !important; height: auto !important; max-width: 600px; aspect-ratio: 600 / 400;
-            border: 2px solid #550000; box-shadow: 0 0 15px rgba(255, 0, 0, 0.3); display: block; background-color: #000;
-        }
-        .action-bar { width: 100%; max-width: 600px; display: flex; gap: 8px; margin-top: 8px; }
-        .app-btn {
-            background: linear-gradient(180deg, #440000, #110000); color: #ffdd66; border: 1px solid #ff3333;
-            padding: 10px; font-size: 0.95em; cursor: pointer; border-radius: 4px; font-family: inherit; flex: 1; font-weight: bold;
-        }
-        .controls-container { width: 100%; max-width: 600px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
-        .controls-container button {
-            background: #1a1a1a; color: #ddd; border: 1px solid #444; padding: 12px 4px; font-size: 0.85em; cursor: pointer; border-radius: 4px; font-family: inherit; touch-action: manipulation;
-        }
-        .controls-container button:active { background: #330000; border-color: #ff3333; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>怠惰な僕の悪魔辞典～マンション・インフェルノ～</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- ゲーム全体コンテナ -->
+  <div id="game-container">
 
-    <div id="game-container">
-        <img class="game-logo" src="assets/images/DictionariumDaemonum.webp" alt="怠惰な僕の悪魔辞典" onerror="this.style.display='none'">
-        
-        <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <!-- 1. 3Dダンジョン描画用 Canvas (renderer.js がここへ描画します) -->
+    <canvas id="game-canvas" width="640" height="480"></canvas>
 
-        <!-- スマホ用アプリ起動ボタン -->
-        <div class="action-bar">
-            <button id="btn-open-app" class="app-btn">📱 悪魔辞典アプリを開く</button>
+    <!-- 2. タイトル画面 (タイトルロゴ: akumanologo.png) -->
+    <div id="title-screen" class="overlay-screen">
+      <div class="title-content">
+        <img id="title-logo" src="assets/images/akumanologo.png" alt="怠惰な僕の悪魔辞典" />
+        <div class="title-menu">
+          <button id="btn-start" class="menu-btn">ゲームスタート</button>
+          <button id="btn-load" class="menu-btn">つづきから</button>
         </div>
-
-        <div class="controls-container">
-            <button id="btn-left">左を向く (A)</button>
-            <button id="btn-forward">前進 (W)</button>
-            <button id="btn-right">右を向く (D)</button>
-            <button id="btn-backward">後退 (S)</button>
-        </div>
+      </div>
     </div>
 
-    <script type="module" src="main.js"></script>
+    <!-- 3. スマホアプリ「悪魔辞典」画面 (appUI.js がここへ描画します) -->
+    <div id="app-ui-container" class="hidden"></div>
+
+    <!-- 4. メッセージ・会話ダイアログ (ui.js 用) -->
+    <div id="dialog-overlay" class="hidden">
+      <div id="dialog-box">
+        <div id="dialog-speaker"></div>
+        <div id="dialog-text"></div>
+        <button id="dialog-next-btn">次へ</button>
+      </div>
+    </div>
+
+    <!-- 5. 戦闘・査問画面オーバーレイ (combat.js 用) -->
+    <div id="combat-overlay" class="hidden">
+      <div id="combat-box"></div>
+    </div>
+
+    <!-- 6. イベント・背景動画再生用要素 (影山や血の池などの演出用) -->
+    <video id="event-video" class="hidden" playsinline muted></video>
+
+  </div>
+
+  <!-- JavaScriptモジュールのエントリーポイント -->
+  <script type="module" src="main.js"></script>
 </body>
 </html>

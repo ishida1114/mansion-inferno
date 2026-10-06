@@ -3,8 +3,8 @@ import { gameState } from './gameState.js';
 
 // 画像アセットパスの正本定義
 export const LOGO_ASSETS = {
-  TITLE_LOGO: 'assets/images/akumanologo.png',          // タイトル画面ロゴ
-  APP_LOGO: 'assets/images/DictionariumDaemonum.webp'   // スマホアプリ「悪魔辞典」用ロゴ
+  TITLE_LOGO: 'assets/images/akumanologo.png',          // ゲームタイトルロゴ
+  APP_LOGO: 'assets/images/DictionariumDaemonum.webp'   // 悪魔辞典アプリ用ロゴ
 };
 
 export class AppUI {

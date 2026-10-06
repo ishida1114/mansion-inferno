@@ -1,8 +1,11 @@
-// gameState.js - プレイヤー状態・セーブ・ラミナ装備コスト計算（完全版）
+// gameState.js - プレイヤー状態・位置座標・3Dマップ・セーブ・ラミナ装填コスト計算（完全版）
 
 export const gameState = {
-  // プレイヤー基本ステータス
+  // プレイヤー基本ステータスおよび3Dダンジョン位置座標
   player: {
+    x: 1,          // X座標
+    y: 1,          // Y座標
+    dir: 0,        // 向き (0:北, 1:東, 2:南, 3:西)
     level: 1,
     hp: 20,
     maxHp: 20,
@@ -12,6 +15,10 @@ export const gameState = {
     money: 0,      // 所持金（💰）
     hasModelGun: false, // 2Fで教え子から入手するまでfalse
   },
+
+  // 現在滞在している階層とマップデータ
+  currentFloor: 1,
+  currentMap: null, // main.js / map1F.js 等で初期化
 
   // 現在装備している防具
   equippedArmor: null,
