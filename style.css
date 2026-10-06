@@ -1,55 +1,243 @@
+/* style.css - 怠惰な僕の悪魔辞典 全体デザインスタイルシート */
+
+/* 全体リセット & 黒背景設定 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 body {
-    background-color: #0d0d0d;
-    color: #e0e0e0;
-    font-family: 'Courier New', Courier, monospace;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
+  background-color: #050505;
+  color: #e0e0e0;
+  font-family: 'Helvetica Neue', Arial, 'メイリオ', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
 }
 
+/* ゲーム画面コンテナ（640x480固定枠） */
 #game-container {
-    text-align: center;
+  position: relative;
+  width: 640px;
+  height: 480px;
+  background-color: #000;
+  border: 2px solid #333;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.2);
+  overflow: hidden;
 }
 
-/* ロゴ画像のスタイル設定 */
-#logo-wrapper {
-    margin-bottom: 15px;
+/* 3Dダンジョン描画用 Canvas */
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-#game-logo {
-    max-width: 450px;
-    width: 100%;
-    height: auto;
-    filter: drop-shadow(0 0 12px rgba(179, 0, 0, 0.6));
-    transition: filter 0.3s ease;
+/* オーバーレイ画面共通（タイトル・会話・戦闘など） */
+.overlay-screen,
+#dialog-overlay,
+#combat-overlay,
+#app-ui-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
 }
 
-#game-logo:hover {
-    filter: drop-shadow(0 0 18px rgba(255, 0, 0, 0.9));
+/* 非表示切り替え用クラス */
+.hidden {
+  display: none !important;
 }
 
-canvas {
-    background-color: #000;
-    border: 2px solid #444;
-    box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+/* -------------------------------------------------------------
+ * 1. タイトル画面スタイル
+ * ------------------------------------------------------------- */
+.title-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
 }
 
-#controls {
-    margin-top: 15px;
+/* タイトルロゴサイズ調整（枠からはみ出ないよう制限） */
+#title-logo {
+  max-width: 75%;
+  max-height: 220px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 25px;
+  filter: drop-shadow(0 0 10px rgba(180, 0, 0, 0.6));
 }
 
-button {
-    background-color: #222;
-    color: #ccc;
-    border: 1px solid #555;
-    padding: 8px 16px;
-    margin: 3px;
-    cursor: pointer;
+.title-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 200px;
 }
 
-button:hover {
-    background-color: #444;
-    color: #fff;
+/* ボタンのダークホラー風デザイン */
+.menu-btn,
+.app-btn {
+  background: linear-gradient(180deg, #2a2a2a 0%, #111111 100%);
+  color: #fff;
+  border: 1px solid #770000;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.menu-btn:hover,
+.app-btn:hover {
+  background: linear-gradient(180deg, #550000 0%, #220000 100%);
+  border-color: #ff3333;
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.5);
+}
+
+/* -------------------------------------------------------------
+ * 2. スマホUI画面（悪魔辞典アプリ）
+ * ------------------------------------------------------------- */
+.smartphone-screen {
+  width: 90%;
+  height: 90%;
+  background-color: #121212;
+  border: 2px solid #444;
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+}
+
+.app-logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.app-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: #cc3333;
+}
+
+.player-status-panel,
+.lamina-slot-panel {
+  background-color: #1a1a1a;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.lamina-slot-panel h3 {
+  font-size: 13px;
+  color: #ff9900;
+  margin-bottom: 8px;
+}
+
+.slot-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slot-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #262626;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.card-icon {
+  width: 24px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.warning-text {
+  color: #ff4444;
+}
+
+.total-power {
+  margin-top: 8px;
+  color: #00ff66;
+}
+
+/* -------------------------------------------------------------
+ * 3. ダイアログ・会話画面
+ * ------------------------------------------------------------- */
+#dialog-box {
+  width: 85%;
+  background-color: rgba(20, 20, 20, 0.95);
+  border: 1px solid #660000;
+  border-radius: 6px;
+  padding: 15px;
+  color: #fff;
+  position: absolute;
+  bottom: 20px;
+}
+
+#dialog-speaker {
+  font-weight: bold;
+  color: #ff4444;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+#dialog-text {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+#dialog-next-btn {
+  float: right;
+  background: #440000;
+  color: #fff;
+  border: 1px solid #aa0000;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* 動画背景要素 */
+#event-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 5;
 }
