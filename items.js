@@ -1,8 +1,7 @@
-// items.js - 回復アイテム・ビニール傘4種・防具データ（完全版）
+// items.js - アイテム定義データ（完全修正版）
 
 // --- 消費アイテム（コンビニ購入） ---
 export const CONSUMABLE_ITEMS = {
-  // 回復系
   ENERGY_DRINK: {
     id: 'energy_drink',
     name: 'エナジードリンク',
@@ -78,4 +77,10 @@ export const ARMOR_ITEMS = {
     def: 4,
     description: 'お札が縫い付けられた漆黒のジャケット。'
   }
+};
+
+// ui.js が参照する一括エクスポート定義
+export const itemDefinitions = {
+  ...CONSUMABLE_ITEMS,
+  ...ARMOR_ITEMS
 };
