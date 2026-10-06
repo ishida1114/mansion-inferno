@@ -1,4 +1,4 @@
-// main.js - ゲーム起点処理・移動操作・1F固有マップ＆イベント連動（エラー検知・堅牢版）
+// main.js - 移動操作・操作ボタン・イベント二重発火防止ロック（完全版）
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -8,66 +8,50 @@ import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 let appUI;
 let renderer;
 let isRunning = false;
+let isProcessingEvent = false; // ★ イベント重複発火防止フラグ
 
 function init() {
-  try {
-    appUI = new AppUI();
-    renderer = new Renderer();
+  appUI = new AppUI();
+  renderer = new Renderer();
 
-    // 画面全体のクリックイベントを監視（ボタン反応を確実にキャッチ）
-    document.addEventListener('click', (e) => {
-      const target = e.target;
-      if (!target) return;
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!target) return;
 
-      // ゲームスタートボタン
-      if (target.id === 'btn-start' || target.closest('#btn-start')) {
+    if (target.id === 'btn-start' || target.closest('#btn-start')) {
+      const titleScreen = document.getElementById('title-screen');
+      if (titleScreen) titleScreen.classList.add('hidden');
+      startNewGame();
+    } else if (target.id === 'btn-load' || target.closest('#btn-load')) {
+      const hasSave = gameState.loadGame();
+      if (hasSave) {
         const titleScreen = document.getElementById('title-screen');
         if (titleScreen) titleScreen.classList.add('hidden');
-        startNewGame();
-      } 
-      // つづきからボタン
-      else if (target.id === 'btn-load' || target.closest('#btn-load')) {
-        const hasSave = gameState.loadGame();
-        if (hasSave) {
-          const titleScreen = document.getElementById('title-screen');
-          if (titleScreen) titleScreen.classList.add('hidden');
-          resumeGame();
-        } else {
-          alert('保存されたセーブデータが見つかりませんでした。');
-        }
+        resumeGame();
+      } else {
+        alert('保存されたセーブデータが見つかりませんでした。');
       }
-    });
-
-  } catch (err) {
-    console.error("初期化エラー:", err);
-    alert("初期化中にエラーが発生しました:\n" + err.message);
-  }
-}
-
-// 新規ゲーム開始
-function startNewGame() {
-  try {
-    gameState.currentFloor = 1;
-    gameState.currentMap = map1F;                // maps/map1F.js の1Fマップ
-    gameState.player.x = playerStart1F.x;        // 初期位置 X:7
-    gameState.player.y = playerStart1F.y;        // 初期位置 Y:1
-    gameState.player.dir = playerStart1F.dir;    // 初期向き (北)
-
-    document.getElementById('touch-controls')?.classList.remove('hidden');
-    appUI.renderApp();
-    initInputListeners();
-
-    if (!isRunning) {
-      isRunning = true;
-      gameLoop();
     }
-  } catch (err) {
-    console.error("スタート処理エラー:", err);
-    alert("ゲームスタート処理でエラーが発生しました:\n" + err.message);
+  });
+}
+
+function startNewGame() {
+  gameState.currentFloor = 1;
+  gameState.currentMap = map1F;
+  gameState.player.x = playerStart1F.x;
+  gameState.player.y = playerStart1F.y;
+  gameState.player.dir = playerStart1F.dir;
+
+  document.getElementById('touch-controls')?.classList.remove('hidden');
+  appUI.renderApp();
+  initInputListeners();
+
+  if (!isRunning) {
+    isRunning = true;
+    gameLoop();
   }
 }
 
-// セーブデータから再開
 function resumeGame() {
   document.getElementById('touch-controls')?.classList.remove('hidden');
   appUI.renderApp();
@@ -86,9 +70,10 @@ function gameLoop() {
   }
 }
 
-// キーボード & UI操作ボタンの登録
 function initInputListeners() {
   window.onkeydown = (e) => {
+    if (isProcessingEvent) return; // ★ イベント処理中はキー操作を無効化
+
     switch (e.key) {
       case 'ArrowUp':
       case 'w':
@@ -125,8 +110,9 @@ function initInputListeners() {
     }
   };
 
-  // UI操作ボタンクリックイベントの全域登録
   document.addEventListener('click', (e) => {
+    if (isProcessingEvent) return; // ★ イベント処理中はボタン操作を無効化
+
     const id = e.target?.id;
     if (id === 'btn-up') moveForward();
     else if (id === 'btn-down') moveBackward();
@@ -138,8 +124,10 @@ function initInputListeners() {
   });
 }
 
-// 目の前のマスの調べ処理
+// 目の前のマスを調べる（ロック制御付き）
 function interactFrontCell() {
+  if (isProcessingEvent) return; // ★ 既にイベント進行中なら何もしない
+
   const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
   const vec = dirVectors[gameState.player.dir];
   const frontX = gameState.player.x + vec.x;
@@ -161,7 +149,10 @@ function interactFrontCell() {
     });
 
     if (eventObj && typeof eventObj.run === 'function') {
+      isProcessingEvent = true; // ★ ロック開始
+
       eventObj.run(() => {
+        isProcessingEvent = false; // ★ イベント終了時にロック解除
         renderer.render();
       });
     }

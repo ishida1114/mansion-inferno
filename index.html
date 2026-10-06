@@ -9,10 +9,10 @@
 <body>
   <div id="game-container">
 
-    <!-- 1. 3Dダンジョン Canvas -->
-    <canvas id="game-canvas" width="640" height="480"></canvas>
+    <!-- 3Dダンジョン Canvas (本来の標準解像度 600x400) -->
+    <canvas id="game-canvas" width="600" height="400"></canvas>
 
-    <!-- 2. タイトル画面 -->
+    <!-- タイトル画面 -->
     <div id="title-screen" class="overlay-screen">
       <div class="title-content">
         <img id="title-logo" src="assets/images/akumanologo.png" alt="怠惰な僕の悪魔辞典" />
@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <!-- 3. 前後左右・アクション操作コントローラー -->
+    <!-- 操作コントローラー -->
     <div id="touch-controls" class="hidden">
       <div class="dpad-container">
         <button id="btn-up" class="pad-btn pad-up">▲</button>
@@ -39,10 +39,10 @@
       </div>
     </div>
 
-    <!-- 4. スマホアプリ「悪魔辞典」画面 -->
+    <!-- スマホUI「悪魔辞典」画面 -->
     <div id="app-ui-container" class="hidden"></div>
 
-    <!-- 5. F2 デバッグオーバーレイ -->
+    <!-- F2 デバッグ画面 -->
     <div id="debug-overlay" class="hidden">
       <div class="debug-content">
         <h3>【F2】デバッグ情報</h3>
@@ -51,7 +51,7 @@
       </div>
     </div>
 
-    <!-- 6. 会話ダイアログ -->
+    <!-- 会話・メッセージダイアログ -->
     <div id="dialog-overlay" class="hidden">
       <div id="dialog-box">
         <div id="dialog-speaker"></div>
@@ -60,12 +60,12 @@
       </div>
     </div>
 
-    <!-- 7. 戦闘オーバーレイ -->
+    <!-- 戦闘画面 -->
     <div id="combat-overlay" class="hidden">
       <div id="combat-box"></div>
     </div>
 
-    <!-- 8. 動画再生要素 -->
+    <!-- 動画再生要素 -->
     <video id="event-video" class="hidden" playsinline muted></video>
 
   </div>
