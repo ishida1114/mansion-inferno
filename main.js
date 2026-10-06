@@ -1,18 +1,9 @@
-// main.js - 移動操作・操作ボタン・ESC/F2キー制御（完全版）
+// main.js - ゲーム起点処理・移動操作・1F固有マップ＆イベント連動（完全修正版）
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
-
-const DEFAULT_MAP_1F = [
-  [1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 1, 0, 0, 0, 1],
-  [1, 0, 1, 0, 1, 0, 1, 0, 1],
-  [1, 0, 1, 0, 0, 0, 1, 0, 1],
-  [1, 0, 1, 1, 1, 0, 1, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 1, 1, 1, 1, 1, 1, 1, 1]
-];
+import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 
 const appUI = new AppUI();
 const renderer = new Renderer();
@@ -43,12 +34,13 @@ function init() {
   }
 }
 
+// 新規ゲーム開始
 function startNewGame() {
   gameState.currentFloor = 1;
-  gameState.currentMap = DEFAULT_MAP_1F;
-  gameState.player.x = 1;
-  gameState.player.y = 1;
-  gameState.player.dir = 1;
+  gameState.currentMap = map1F;                // ★ maps/map1F.js の正しい1Fマップを読み込み
+  gameState.player.x = playerStart1F.x;        // ★ 正しい初期位置 X:7
+  gameState.player.y = playerStart1F.y;        // ★ 正しい初期位置 Y:1
+  gameState.player.dir = playerStart1F.dir;    // ★ 正しい初期向き (北向き)
 
   document.getElementById('touch-controls')?.classList.remove('hidden');
   appUI.renderApp();
@@ -60,6 +52,7 @@ function startNewGame() {
   }
 }
 
+// セーブデータから再開
 function resumeGame() {
   document.getElementById('touch-controls')?.classList.remove('hidden');
   appUI.renderApp();
@@ -78,11 +71,8 @@ function gameLoop() {
   }
 }
 
-// -------------------------------------------------------------
-// 【キーボード & 操作UIボタンの登録】
-// -------------------------------------------------------------
+// キーボード & UI操作ボタンの登録
 function initInputListeners() {
-  // キーボード入力
   window.onkeydown = (e) => {
     switch (e.key) {
       case 'ArrowUp':
@@ -105,6 +95,11 @@ function initInputListeners() {
       case 'D':
         gameState.player.dir = (gameState.player.dir + 1) % 4;
         break;
+      case ' ':
+      case 'Spacebar':
+        e.preventDefault();
+        interactFrontCell(); // ★ スペースキーで目の前のマスを調べる
+        break;
       case 'Escape':
         toggleAppUI();
         break;
@@ -115,16 +110,55 @@ function initInputListeners() {
     }
   };
 
-  // UIボタンイベント登録
-  document.getElementById('btn-up').onclick = () => moveForward();
-  document.getElementById('btn-down').onclick = () => moveBackward();
-  document.getElementById('btn-left').onclick = () => gameState.player.dir = (gameState.player.dir + 3) % 4;
-  document.getElementById('btn-right').onclick = () => gameState.player.dir = (gameState.player.dir + 1) % 4;
-  document.getElementById('btn-app-toggle').onclick = () => toggleAppUI();
-  document.getElementById('btn-close-debug').onclick = () => toggleDebugUI();
+  // UIボタンイベントの登録
+  const btnUp = document.getElementById('btn-up');
+  const btnDown = document.getElementById('btn-down');
+  const btnLeft = document.getElementById('btn-left');
+  const btnRight = document.getElementById('btn-right');
+  const btnAction = document.getElementById('btn-action');
+  const btnApp = document.getElementById('btn-app-toggle');
+  const btnDebug = document.getElementById('btn-close-debug');
+
+  if (btnUp) btnUp.onclick = () => moveForward();
+  if (btnDown) btnDown.onclick = () => moveBackward();
+  if (btnLeft) btnLeft.onclick = () => gameState.player.dir = (gameState.player.dir + 3) % 4;
+  if (btnRight) btnRight.onclick = () => gameState.player.dir = (gameState.player.dir + 1) % 4;
+  if (btnAction) btnAction.onclick = () => interactFrontCell(); // ★ 「調べる」ボタン連動
+  if (btnApp) btnApp.onclick = () => toggleAppUI();
+  if (btnDebug) btnDebug.onclick = () => toggleDebugUI();
 }
 
-// ESCキー: アプリUI表示切り替え
+// 目の前のマス（コンビニ・血の池・ポスト・扉等）を調べるイベント処理
+function interactFrontCell() {
+  const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+  const vec = dirVectors[gameState.player.dir];
+  const frontX = gameState.player.x + vec.x;
+  const frontY = gameState.player.y + vec.y;
+
+  const map = gameState.currentMap;
+  if (!map || !map[frontY]) return;
+
+  const cellType = map[frontY][frontX];
+  if (!cellType || cellType === 0 || cellType === 1) return; // 壁や通路は無視
+
+  // 1階固有イベントの発火
+  if (gameState.currentFloor === 1) {
+    const eventObj = handleEvent1F(cellType, gameState, {
+      changeFloor: (floor) => {
+        gameState.currentFloor = floor;
+        alert(`${floor}Fへ移動します（2F処理準備中）`);
+      },
+      redraw: () => renderer.render()
+    });
+
+    if (eventObj && typeof eventObj.run === 'function') {
+      eventObj.run(() => {
+        renderer.render();
+      });
+    }
+  }
+}
+
 function toggleAppUI() {
   const container = document.getElementById('app-ui-container');
   if (container) {
@@ -138,7 +172,6 @@ function toggleAppUI() {
   }
 }
 
-// F2キー: デバッグ画面表示切り替え
 function toggleDebugUI() {
   const overlay = document.getElementById('debug-overlay');
   const info = document.getElementById('debug-info');
