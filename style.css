@@ -1,6 +1,3 @@
-/* style.css - 怠惰な僕の悪魔辞典 全体デザインスタイルシート */
-
-/* 全体リセット & 黒背景設定 */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -18,7 +15,6 @@ body {
   overflow: hidden;
 }
 
-/* ゲーム画面コンテナ（640x480固定枠） */
 #game-container {
   position: relative;
   width: 640px;
@@ -29,18 +25,17 @@ body {
   overflow: hidden;
 }
 
-/* 3Dダンジョン描画用 Canvas */
 #game-canvas {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-/* オーバーレイ画面共通（タイトル・会話・戦闘など） */
 .overlay-screen,
 #dialog-overlay,
 #combat-overlay,
-#app-ui-container {
+#app-ui-container,
+#debug-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -54,13 +49,12 @@ body {
   z-index: 10;
 }
 
-/* 非表示切り替え用クラス */
 .hidden {
   display: none !important;
 }
 
 /* -------------------------------------------------------------
- * 1. タイトル画面スタイル
+ * 1. タイトル画面
  * ------------------------------------------------------------- */
 .title-content {
   display: flex;
@@ -72,7 +66,6 @@ body {
   padding: 20px;
 }
 
-/* タイトルロゴサイズ調整（枠からはみ出ないよう制限） */
 #title-logo {
   max-width: 75%;
   max-height: 220px;
@@ -90,7 +83,6 @@ body {
   width: 200px;
 }
 
-/* ボタンのダークホラー風デザイン */
 .menu-btn,
 .app-btn {
   background: linear-gradient(180deg, #2a2a2a 0%, #111111 100%);
@@ -113,7 +105,81 @@ body {
 }
 
 /* -------------------------------------------------------------
- * 2. スマホUI画面（悪魔辞典アプリ）
+ * 2. 操作パッド・UIボタン
+ * ------------------------------------------------------------- */
+#touch-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.dpad-container,
+.action-container {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.dpad-middle {
+  display: flex;
+  gap: 5px;
+}
+
+.pad-btn {
+  width: 42px;
+  height: 42px;
+  background: rgba(30, 0, 0, 0.7);
+  color: #ffdd66;
+  border: 1px solid #880000;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.pad-btn:active {
+  background: rgba(120, 0, 0, 0.9);
+}
+
+.action-btn {
+  background: rgba(20, 20, 20, 0.85);
+  color: #fff;
+  border: 1px solid #ff3333;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* -------------------------------------------------------------
+ * 3. デバッグパネル
+ * ------------------------------------------------------------- */
+.debug-content {
+  background: #111;
+  border: 2px solid #ff3333;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  color: #00ff66;
+  font-family: monospace;
+}
+
+.debug-content h3 {
+  color: #ff3333;
+  margin-bottom: 10px;
+}
+
+/* -------------------------------------------------------------
+ * 4. スマホUI画面
  * ------------------------------------------------------------- */
 .smartphone-screen {
   width: 90%;
@@ -194,9 +260,6 @@ body {
   color: #00ff66;
 }
 
-/* -------------------------------------------------------------
- * 3. ダイアログ・会話画面
- * ------------------------------------------------------------- */
 #dialog-box {
   width: 85%;
   background-color: rgba(20, 20, 20, 0.95);
@@ -231,7 +294,6 @@ body {
   font-size: 12px;
 }
 
-/* 動画背景要素 */
 #event-video {
   position: absolute;
   top: 0;

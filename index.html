@@ -7,13 +7,12 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- ゲーム全体コンテナ -->
   <div id="game-container">
 
-    <!-- 1. 3Dダンジョン描画用 Canvas (renderer.js がここへ描画します) -->
+    <!-- 1. 3Dダンジョン Canvas -->
     <canvas id="game-canvas" width="640" height="480"></canvas>
 
-    <!-- 2. タイトル画面 (タイトルロゴ: akumanologo.png) -->
+    <!-- 2. タイトル画面 -->
     <div id="title-screen" class="overlay-screen">
       <div class="title-content">
         <img id="title-logo" src="assets/images/akumanologo.png" alt="怠惰な僕の悪魔辞典" />
@@ -24,10 +23,35 @@
       </div>
     </div>
 
-    <!-- 3. スマホアプリ「悪魔辞典」画面 (appUI.js がここへ描画します) -->
+    <!-- 3. 前後左右・アクション操作コントローラー -->
+    <div id="touch-controls" class="hidden">
+      <div class="dpad-container">
+        <button id="btn-up" class="pad-btn pad-up">▲</button>
+        <div class="dpad-middle">
+          <button id="btn-left" class="pad-btn pad-left">◄</button>
+          <button id="btn-down" class="pad-btn pad-down">▼</button>
+          <button id="btn-right" class="pad-btn pad-right">►</button>
+        </div>
+      </div>
+      <div class="action-container">
+        <button id="btn-app-toggle" class="action-btn">悪魔辞典 (ESC)</button>
+        <button id="btn-action" class="action-btn">調べる (SPACE)</button>
+      </div>
+    </div>
+
+    <!-- 4. スマホアプリ「悪魔辞典」画面 -->
     <div id="app-ui-container" class="hidden"></div>
 
-    <!-- 4. メッセージ・会話ダイアログ (ui.js 用) -->
+    <!-- 5. F2 デバッグオーバーレイ -->
+    <div id="debug-overlay" class="hidden">
+      <div class="debug-content">
+        <h3>【F2】デバッグ情報</h3>
+        <p id="debug-info">位置: -</p>
+        <button id="btn-close-debug" class="menu-btn">閉じる</button>
+      </div>
+    </div>
+
+    <!-- 6. 会話ダイアログ -->
     <div id="dialog-overlay" class="hidden">
       <div id="dialog-box">
         <div id="dialog-speaker"></div>
@@ -36,17 +60,16 @@
       </div>
     </div>
 
-    <!-- 5. 戦闘・査問画面オーバーレイ (combat.js 用) -->
+    <!-- 7. 戦闘オーバーレイ -->
     <div id="combat-overlay" class="hidden">
       <div id="combat-box"></div>
     </div>
 
-    <!-- 6. イベント・背景動画再生用要素 (影山や血の池などの演出用) -->
+    <!-- 8. 動画再生要素 -->
     <video id="event-video" class="hidden" playsinline muted></video>
 
   </div>
 
-  <!-- JavaScriptモジュールのエントリーポイント -->
   <script type="module" src="main.js"></script>
 </body>
 </html>

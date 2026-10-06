@@ -1,4 +1,4 @@
-// renderer.js - 画像アセットベースの擬似3Dダンジョンレンダラー（完全版）
+// renderer.js - 画像アセットベース擬似3Dダンジョン描画（壁座標補正版）
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -6,7 +6,6 @@ const dirNames = ["北 (N)", "東 (E)", "南 (S)", "西 (W)"];
 const dx = [0, 1, 0, -1];
 const dy = [-1, 0, 1, 0];
 
-// 画像アセット管理
 export const images = {};
 const imageSources = {
     logo: "assets/images/DictionariumDaemonum.webp",
@@ -42,41 +41,43 @@ export function initRenderer(onReady) {
     }
 }
 
-// 台形＆座標スロット
+// 640x480 解像度に正確に合わせた遠近台形データ (消失点: 320, 240)
 const leftClips = { 
-    1: [{x:0, y:0}, {x:150, y:75}, {x:150, y:325}, {x:0, y:400}], 
-    2: [{x:150, y:75}, {x:220, y:135}, {x:220, y:265}, {x:150, y:325}], 
-    3: [{x:220, y:135}, {x:255, y:165}, {x:255, y:235}, {x:220, y:265}], 
-    4: [{x:255, y:165}, {x:275, y:180}, {x:275, y:220}, {x:255, y:235}] 
+    1: [{x:0, y:0}, {x:160, y:60}, {x:160, y:420}, {x:0, y:480}], 
+    2: [{x:160, y:60}, {x:220, y:105}, {x:220, y:375}, {x:160, y:420}], 
+    3: [{x:220, y:105}, {x:260, y:135}, {x:260, y:345}, {x:220, y:375}], 
+    4: [{x:260, y:135}, {x:285, y:153}, {x:285, y:327}, {x:260, y:345}] 
 };
+
 const rightClips = { 
-    1: [{x:450, y:75}, {x:600, y:0}, {x:600, y:400}, {x:450, y:325}], 
-    2: [{x:380, y:135}, {x:450, y:75}, {x:450, y:325}, {x:380, y:265}], 
-    3: [{x:345, y:165}, {x:380, y:135}, {x:380, y:265}, {x:345, y:235}], 
-    4: [{x:325, y:180}, {x:345, y:165}, {x:345, y:235}, {x:325, y:220}] 
+    1: [{x:480, y:60}, {x:640, y:0}, {x:640, y:480}, {x:480, y:420}], 
+    2: [{x:420, y:105}, {x:480, y:60}, {x:480, y:420}, {x:420, y:375}], 
+    3: [{x:380, y:135}, {x:420, y:105}, {x:420, y:375}, {x:380, y:345}], 
+    4: [{x:355, y:153}, {x:380, y:135}, {x:380, y:345}, {x:355, y:327}] 
 };
+
 const frontBounds = { 
-    4: { x: 275, y: 180, w: 50, h: 40 }, 
-    3: { x: 255, y: 165, w: 90, h: 70 }, 
-    2: { x: 220, y: 135, w: 160, h: 130 }, 
-    1: { x: 150, y: 75, w: 300, h: 250 } 
+    1: { x: 160, y: 60, w: 320, h: 360 }, 
+    2: { x: 220, y: 105, w: 200, h: 270 }, 
+    3: { x: 260, y: 135, w: 120, h: 210 }, 
+    4: { x: 285, y: 153, w: 70, h: 174 } 
 };
+
 const sideCornerSlots = { 
     left: { 
-        1: { x: 0, y: 75, w: 150, h: 250 }, 
-        2: { x: 150, y: 135, w: 70, h: 130 }, 
-        3: { x: 220, y: 165, w: 35, h: 70 }, 
-        4: { x: 255, y: 180, w: 20, h: 40 } 
+        1: { x: 0, y: 60, w: 160, h: 360 }, 
+        2: { x: 160, y: 105, w: 60, h: 270 }, 
+        3: { x: 220, y: 135, w: 40, h: 210 }, 
+        4: { x: 260, y: 153, w: 25, h: 174 } 
     }, 
     right: { 
-        1: { x: 450, y: 75, w: 150, h: 250 }, 
-        2: { x: 380, y: 135, w: 70, h: 130 }, 
-        3: { x: 345, y: 165, w: 35, h: 70 }, 
-        4: { x: 325, y: 180, w: 20, h: 40 } 
+        1: { x: 480, y: 60, w: 160, h: 360 }, 
+        2: { x: 420, y: 105, w: 60, h: 270 }, 
+        3: { x: 380, y: 135, w: 40, h: 210 }, 
+        4: { x: 355, y: 153, w: 25, h: 174 } 
     } 
 };
 
-// main.jsからの呼び出しに対応するためのクラス定義
 export class Renderer {
     constructor() {
         initRenderer();
@@ -92,7 +93,6 @@ export class Renderer {
     }
 }
 
-// メイン描画処理
 export function draw(player, currentMap, currentFloor, customCtx, customCanvas) {
     const canvas = customCanvas || document.getElementById("game-canvas") || document.getElementById("gameCanvas");
     if (!canvas) return;
@@ -109,7 +109,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir], lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
         const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir], rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
-        // 左壁
+        // 左壁描画
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
             const imgKey = "left" + depth;
             if (images[imgKey] && images[imgKey].complete) {
@@ -136,7 +136,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // 右壁
+        // 右壁描画
         if (currentMap[rY] && currentMap[rY][rX] !== 0) {
             const imgKey = "right" + depth;
             if (images[imgKey] && images[imgKey].complete) {
@@ -163,7 +163,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // 正面
+        // 正面壁描画
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;
@@ -181,8 +181,8 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
     drawCompass(ctx, canvas, player, currentFloor);
     drawActionHint(ctx, canvas, player, currentMap);
 
-    ctx.fillStyle = "rgba(0,0,0,0.5)"; 
-    ctx.fillRect(10, canvas.height - 30, 260, 25);
+    ctx.fillStyle = "rgba(0,0,0,0.6)"; 
+    ctx.fillRect(10, canvas.height - 30, 270, 25);
     ctx.fillStyle = "#fff"; 
     ctx.font = `12px ${HORROR_FONT}`; 
     ctx.textAlign = "left";
@@ -193,9 +193,9 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
     if ([2, 3, 4, 5, 6, 7, 8, 9].includes(target)) {
-        ctx.fillStyle = "rgba(15, 0, 0, 0.75)"; 
+        ctx.fillStyle = "rgba(15, 0, 0, 0.85)"; 
         ctx.fillRect(canvas.width / 2 - 90, canvas.height - 50, 180, 32);
-        ctx.strokeStyle = "#550000"; 
+        ctx.strokeStyle = "#880000"; 
         ctx.lineWidth = 1; 
         ctx.strokeRect(canvas.width / 2 - 90, canvas.height - 50, 180, 32);
         ctx.fillStyle = "#ffdd66"; 
@@ -213,7 +213,7 @@ function drawEnvironment(ctx, canvas) {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; 
     ctx.lineWidth = 1;
     const cx = canvas.width / 2, cy = canvas.height / 2;
-    [0, 100, 150, 220, 255].forEach(x => {
+    [0, 100, 160, 220, 285].forEach(x => {
         ctx.beginPath(); 
         ctx.moveTo(cx - x, cy); 
         ctx.lineTo(0 - x * 2, canvas.height); 
