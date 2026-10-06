@@ -1,25 +1,22 @@
-// appUI.js - スマホアプリ「悪魔辞典」画面UI・正確なロゴ定義（完全版）
+// appUI.js - スマホアプリ「悪魔辞典」画面UI（完全版）
 import { gameState } from './gameState.js';
 
-// 画像アセットパスの正本定義
 export const LOGO_ASSETS = {
   TITLE_LOGO: 'assets/images/akumanologo.png',          // ゲームタイトルロゴ
   APP_LOGO: 'assets/images/DictionariumDaemonum.webp'   // 悪魔辞典アプリ用ロゴ
 };
 
 export class AppUI {
-  constructor() {
-    this.appContainer = document.getElementById('app-ui-container');
-  }
+  constructor() {}
 
   // スマホ画面（悪魔辞典アプリ）の描画
   renderApp() {
-    if (!this.appContainer) return;
+    const appContainer = document.getElementById('app-ui-container');
+    if (!appContainer) return;
 
-    // 最新の装填スロット状態を更新
     gameState.updateEquippedCards();
 
-    this.appContainer.innerHTML = `
+    appContainer.innerHTML = `
       <div class="smartphone-screen">
         <!-- アプリヘッダー -->
         <div class="app-header">
@@ -50,7 +47,6 @@ export class AppUI {
     this.bindEvents();
   }
 
-  // スロット装填状況の生成
   renderSlots() {
     if (gameState.equippedCards.length === 0) {
       return '<p>装填されているカードはありません</p>';
@@ -73,10 +69,10 @@ export class AppUI {
   bindEvents() {
     const saveBtn = document.getElementById('btn-save-game');
     if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
+      saveBtn.onclick = () => {
         gameState.saveGame();
         alert('悪魔辞典アプリに進行状況を保存しました。');
-      });
+      };
     }
   }
 }

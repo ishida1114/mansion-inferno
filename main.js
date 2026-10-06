@@ -1,72 +1,160 @@
-// renderer.js - 擬似3Dダンジョン描画ロジック（完全版）
+// main.js - ゲーム起点処理・タイトル画面遷移・操作イベント・描画ループ（完全版）
+
 import { gameState } from './gameState.js';
+import { AppUI } from './appUI.js';
+import { Renderer } from './renderer.js';
 
-export class Renderer {
-  constructor() {
-    this.canvas = document.getElementById('game-canvas');
-    this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
-    this.fov = Math.PI / 3; // 視野角 (60度)
+// 1階の基本マップデータ（0: 通路, 1: 壁）
+const DEFAULT_MAP_1F = [
+  [1, 1, 1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 1, 0, 0, 0, 1],
+  [1, 0, 1, 0, 1, 0, 1, 0, 1],
+  [1, 0, 1, 0, 0, 0, 1, 0, 1],
+  [1, 0, 1, 1, 1, 0, 1, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1, 1]
+];
+
+const appUI = new AppUI();
+const renderer = new Renderer();
+let isRunning = false;
+
+// 初期化処理（ボタンイベントの登録）
+function init() {
+  const titleScreen = document.getElementById('title-screen');
+  const btnStart = document.getElementById('btn-start');
+  const btnLoad = document.getElementById('btn-load');
+
+  // スタートボタンの処理
+  if (btnStart) {
+    btnStart.onclick = () => {
+      if (titleScreen) titleScreen.classList.add('hidden');
+      startNewGame();
+    };
   }
 
-  // 毎フレーム実行される3D描画処理
-  render() {
-    if (!this.ctx || !gameState.currentMap) return;
-
-    const width = this.canvas.width;
-    const height = this.canvas.height;
-    const map = gameState.currentMap;
-    const player = gameState.player;
-
-    // 1. 天井と床の描画 (暗い赤黒いホラー空間)
-    this.ctx.fillStyle = '#0a0505';
-    this.ctx.fillRect(0, 0, width, height / 2); // 天井
-    this.ctx.fillStyle = '#1a1010';
-    this.ctx.fillRect(0, height / 2, width, height / 2); // 床
-
-    // 2. プレイヤーの向き (0:北, 1:東, 2:南, 3:西)
-    const dirAngles = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
-    const playerAngle = dirAngles[player.dir];
-
-    const numRays = width; // 画面横幅分の視線を飛ばす
-    const halfFov = this.fov / 2;
-
-    // 3. 視線（レイ）を飛ばして壁を描く
-    for (let i = 0; i < numRays; i++) {
-      const rayAngle = playerAngle - halfFov + (i / numRays) * this.fov;
-      let distance = 0;
-      let hitWall = false;
-
-      const cos = Math.cos(rayAngle);
-      const sin = Math.sin(rayAngle);
-
-      // 壁に当たるまでレイを進める
-      while (!hitWall && distance < 12) {
-        distance += 0.05;
-        const checkX = Math.floor(player.x + cos * distance);
-        const checkY = Math.floor(player.y + sin * distance);
-
-        if (checkY < 0 || checkY >= map.length || checkX < 0 || checkX >= map[0].length) {
-          hitWall = true;
-          distance = 12;
-        } else if (map[checkY][checkX] === 1) {
-          hitWall = true;
-        }
+  // つづきからボタンの処理
+  if (btnLoad) {
+    btnLoad.onclick = () => {
+      const hasSave = gameState.loadGame();
+      if (hasSave) {
+        if (titleScreen) titleScreen.classList.add('hidden');
+        resumeGame();
+      } else {
+        alert('保存されたセーブデータが見つかりませんでした。');
       }
+    };
+  }
+}
 
-      // 歪み補正 (魚眼レンズ補正)
-      const correctedDist = distance * Math.cos(rayAngle - playerAngle);
-      const wallHeight = Math.min(height, (height / (correctedDist + 0.0001)));
+// 新規ゲーム開始
+function startNewGame() {
+  gameState.currentFloor = 1;
+  gameState.currentMap = DEFAULT_MAP_1F;
+  gameState.player.x = 1;
+  gameState.player.y = 1;
+  gameState.player.dir = 1; // 東向き
 
-      // 距離に応じた影（遠いほど暗く）
-      const colorVal = Math.max(15, Math.floor(180 - correctedDist * 14));
-      this.ctx.fillStyle = `rgb(${colorVal}, 15, 15)`; // 赤黒い壁
-      this.ctx.fillRect(i, (height - wallHeight) / 2, 1, wallHeight);
+  appUI.renderApp();
+  initInputListeners();
 
-      // 壁の立体感を出す輪郭線
-      if (i % 12 === 0) {
-        this.ctx.fillStyle = '#000000';
-        this.ctx.fillRect(i, (height - wallHeight) / 2, 1, wallHeight);
-      }
+  // 3Dダンジョン描画ループをスタート
+  if (!isRunning) {
+    isRunning = true;
+    gameLoop();
+  }
+}
+
+// つづきから開始
+function resumeGame() {
+  appUI.renderApp();
+  initInputListeners();
+
+  if (!isRunning) {
+    isRunning = true;
+    gameLoop();
+  }
+}
+
+// 毎フレーム3D画面を描画するループ関数
+function gameLoop() {
+  if (isRunning) {
+    renderer.render(); // 画面描画
+    requestAnimationFrame(gameLoop);
+  }
+}
+
+// 移動操作イベント（矢印キー / WASD）
+function initInputListeners() {
+  window.onkeydown = (e) => {
+    switch (e.key) {
+      case 'ArrowUp':
+      case 'w':
+      case 'W':
+        moveForward();
+        break;
+      case 'ArrowDown':
+      case 's':
+      case 'S':
+        moveBackward();
+        break;
+      case 'ArrowLeft':
+      case 'a':
+      case 'A':
+        // 左に90度回転
+        gameState.player.dir = (gameState.player.dir + 3) % 4;
+        break;
+      case 'ArrowRight':
+      case 'd':
+      case 'D':
+        // 右に90度回転
+        gameState.player.dir = (gameState.player.dir + 1) % 4;
+        break;
     }
+  };
+}
+
+// 一歩前進
+function moveForward() {
+  const dirVectors = [
+    { x: 0, y: -1 }, // 0: 北
+    { x: 1, y: 0 },  // 1: 東
+    { x: 0, y: 1 },  // 2: 南
+    { x: -1, y: 0 }  // 3: 西
+  ];
+  const vec = dirVectors[gameState.player.dir];
+  const nextX = gameState.player.x + vec.x;
+  const nextY = gameState.player.y + vec.y;
+
+  const map = gameState.currentMap;
+  if (map && map[nextY] && map[nextY][nextX] === 0) {
+    gameState.player.x = nextX;
+    gameState.player.y = nextY;
   }
+}
+
+// 一歩後退
+function moveBackward() {
+  const dirVectors = [
+    { x: 0, y: -1 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 }
+  ];
+  const vec = dirVectors[gameState.player.dir];
+  const nextX = gameState.player.x - vec.x;
+  const nextY = gameState.player.y - vec.y;
+
+  const map = gameState.currentMap;
+  if (map && map[nextY] && map[nextY][nextX] === 0) {
+    gameState.player.x = nextX;
+    gameState.player.y = nextY;
+  }
+}
+
+// DOMの読み込み状況に関わらず確実に初期化を呼び出す
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
 }
