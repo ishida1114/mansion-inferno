@@ -1,4 +1,4 @@
-// appUI.js - スマホアプリ「悪魔辞典」UI（ロゴ拡大・日本語表記・閉じるボタン追加完全版）
+// appUI.js - スマホアプリ「悪魔辞典」UI（表示固定化解除・ロゴ横幅拡大完全版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 
@@ -7,7 +7,7 @@ export const LOGO_ASSETS = {
   APP_LOGO: 'assets/images/DictionariumDaemonum.webp'
 };
 
-// --- ホラー風フォントとアプリUI用スタイルの自動注入 ---
+// スタイル自動注入（1回のみ実行）
 if (!document.getElementById("app-style-element")) {
     const fontLink = document.createElement("link");
     fontLink.href = "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;800&display=swap";
@@ -36,9 +36,10 @@ if (!document.getElementById("app-style-element")) {
         }
         .app-header span { font-weight: bold; color: #ffdd66; }
         .app-close-x {
-            color: #ff4444; font-weight: bold; cursor: pointer; padding: 0 4px; font-size: 1.1em;
+            color: #ff4444; font-weight: bold; cursor: pointer; padding: 2px 6px; font-size: 1.2em;
+            line-height: 1; user-select: none;
         }
-        .app-close-x:hover { color: #fff; }
+        .app-close-x:hover { color: #fff; background: rgba(255,0,0,0.3); border-radius: 3px; }
         
         .app-content { flex: 1; padding: 15px; overflow-y: auto; position: relative; }
         .app-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
@@ -57,7 +58,6 @@ if (!document.getElementById("app-style-element")) {
         .app-home-btn { width: 50px; height: 6px; background-color: #555; border-radius: 3px; cursor: pointer; }
         .app-home-btn:hover { background-color: #aaa; }
         
-        /* サブ画面用スタイル */
         .sub-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #550000; padding-bottom: 8px; margin-bottom: 12px; }
         .back-btn { cursor: pointer; color: #888; font-size: 0.85em; transition: color 0.2s; padding: 4px; }
         .back-btn:hover { color: #fff; }
@@ -76,24 +76,26 @@ if (!document.getElementById("app-style-element")) {
 export class AppUI {
   constructor() {
     this.currentSubView = 'home';
-    this.onCloseCallback = null;
   }
 
-  // 閉じるコールバックの登録
-  setOnCloseCallback(cb) {
-    this.onCloseCallback = cb;
+  // アプリを確実に非表示にする処理
+  closeApp() {
+    const container = document.getElementById('app-ui-container');
+    if (container) {
+      container.classList.add('hidden');
+    }
   }
 
   renderApp() {
     const appContainer = document.getElementById('app-ui-container');
     if (!appContainer) return;
 
-    appContainer.className = 'app-overlay';
-    gameState.updateEquippedCards();
+    // className の上書きによる hidden 消去を防止
+    appContainer.classList.add('app-overlay');
 
+    gameState.updateEquippedCards();
     const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
 
-    // ★ ステータスバー（罪・使い魔の日本語表記化 ＆ 閉じる[✕]ボタン追加）
     appContainer.innerHTML = `
       <div class="smartphone">
         <div class="app-header">
@@ -101,7 +103,7 @@ export class AppUI {
           <span>HP:${gameState.player.hp}/${gameState.player.maxHp}</span>
           <span>罪:${gameState.player.sin}</span>
           <span>使い魔:${familiarPercent}%</span>
-          <span class="app-close-x" id="btn-app-close-x" title="アプリを閉じる">✕</span>
+          <span class="app-close-x" id="btn-app-close-x" title="閉じる">✕</span>
         </div>
 
         <div class="app-content">
@@ -139,12 +141,11 @@ export class AppUI {
     }
   }
 
-  // 1. ホーム画面（★ロゴ画像を大きく綺麗に拡大表示: width: 140px）
+  // 1. ホーム画面（ロゴ横幅いっぱいデザイン）
   renderHomeGridView() {
     return `
-      <div style="text-align: center; margin-bottom: 15px; padding-top: 5px;">
-        <img src="${LOGO_ASSETS.APP_LOGO}" alt="悪魔辞典" style="width: 140px; max-height: 80px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.4));" />
-        <div style="font-size: 0.95em; color: #ff3333; margin-top: 6px; font-weight: bold; letter-spacing: 1px;">悪魔辞典</div>
+      <div style="text-align: center; margin-bottom: 12px; padding: 5px 0;">
+        <img src="${LOGO_ASSETS.APP_LOGO}" alt="悪魔辞典" style="width: 90%; max-height: 110px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.5)); margin: 0 auto; display: block;" />
       </div>
 
       <div class="app-grid">
@@ -333,20 +334,22 @@ export class AppUI {
   }
 
   bindEvents() {
-    // ✕ ボタン（アプリを閉じる）
+    // ✕ ボタン直接クリックで非表示化
     const closeX = document.getElementById('btn-app-close-x');
     if (closeX) {
-      closeX.onclick = () => {
-        if (this.onCloseCallback) this.onCloseCallback();
+      closeX.onclick = (e) => {
+        e.stopPropagation();
+        this.closeApp();
       };
     }
 
-    // フッターホームバー（ホーム画面へ戻る、ホーム画面にいる時は閉じる）
+    // フッターのホームボタン（ホーム画面時はアプリを閉じる）
     const homeBtn = document.getElementById('app-home-btn');
     if (homeBtn) {
-      homeBtn.onclick = () => {
+      homeBtn.onclick = (e) => {
+        e.stopPropagation();
         if (this.currentSubView === 'home') {
-          if (this.onCloseCallback) this.onCloseCallback();
+          this.closeApp();
         } else {
           this.currentSubView = 'home';
           this.renderApp();

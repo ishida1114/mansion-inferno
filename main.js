@@ -1,4 +1,4 @@
-// main.js - 移動操作・操作ボタン・フロア遷移・アプリ解放条件管理（完全修正版）
+// main.js - 移動操作・操作ボタン・アプリ表示制御統合（バグ修正版）
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -16,15 +16,21 @@ function init() {
   appUI = new AppUI();
   renderer = new Renderer();
 
+  // 単一のクリックイベントリスナー（多重登録を阻止）
   document.addEventListener('click', (e) => {
     const target = e.target;
     if (!target) return;
 
+    // タイトル画面：スタート
     if (target.id === 'btn-start' || target.closest('#btn-start')) {
       const titleScreen = document.getElementById('title-screen');
       if (titleScreen) titleScreen.classList.add('hidden');
       startNewGame();
-    } else if (target.id === 'btn-load' || target.closest('#btn-load')) {
+      return;
+    } 
+    
+    // タイトル画面：つづきから
+    if (target.id === 'btn-load' || target.closest('#btn-load')) {
       const hasSave = gameState.loadGame();
       if (hasSave) {
         const titleScreen = document.getElementById('title-screen');
@@ -33,47 +39,23 @@ function init() {
       } else {
         alert('保存されたセーブデータが見つかりませんでした。');
       }
+      return;
     }
+
+    // ゲーム中のUIボタン操作
+    if (isProcessingEvent) return;
+
+    const id = target.id;
+    if (id === 'btn-up') moveForward();
+    else if (id === 'btn-down') moveBackward();
+    else if (id === 'btn-left') gameState.player.dir = (gameState.player.dir + 3) % 4;
+    else if (id === 'btn-right') gameState.player.dir = (gameState.player.dir + 1) % 4;
+    else if (id === 'btn-action') interactFrontCell();
+    else if (id === 'btn-app-toggle') toggleAppUI();
+    else if (id === 'btn-close-debug') toggleDebugUI();
   });
-}
 
-// 新規ゲーム開始 (1F非常階段前からスタート)
-function startNewGame() {
-  gameState.currentFloor = 1;
-  gameState.currentMap = map1F;
-  gameState.player.x = playerStart1F.x;
-  gameState.player.y = playerStart1F.y;
-  gameState.player.dir = playerStart1F.dir;
-
-  document.getElementById('touch-controls')?.classList.remove('hidden');
-  appUI.renderApp();
-  initInputListeners();
-
-  if (!isRunning) {
-    isRunning = true;
-    gameLoop();
-  }
-}
-
-function resumeGame() {
-  document.getElementById('touch-controls')?.classList.remove('hidden');
-  appUI.renderApp();
-  initInputListeners();
-
-  if (!isRunning) {
-    isRunning = true;
-    gameLoop();
-  }
-}
-
-function gameLoop() {
-  if (isRunning) {
-    renderer.render();
-    requestAnimationFrame(gameLoop);
-  }
-}
-
-function initInputListeners() {
+  // キーボード操作の登録
   window.onkeydown = (e) => {
     if (isProcessingEvent) return;
 
@@ -112,22 +94,47 @@ function initInputListeners() {
         break;
     }
   };
-
-  document.addEventListener('click', (e) => {
-    if (isProcessingEvent) return;
-
-    const id = e.target?.id;
-    if (id === 'btn-up') moveForward();
-    else if (id === 'btn-down') moveBackward();
-    else if (id === 'btn-left') gameState.player.dir = (gameState.player.dir + 3) % 4;
-    else if (id === 'btn-right') gameState.player.dir = (gameState.player.dir + 1) % 4;
-    else if (id === 'btn-action') interactFrontCell();
-    else if (id === 'btn-app-toggle') toggleAppUI();
-    else if (id === 'btn-close-debug') toggleDebugUI();
-  });
 }
 
-// 目の前のマスを調べる
+// 新規ゲーム開始
+function startNewGame() {
+  gameState.currentFloor = 1;
+  gameState.currentMap = map1F;
+  gameState.player.x = playerStart1F.x;
+  gameState.player.y = playerStart1F.y;
+  gameState.player.dir = playerStart1F.dir;
+
+  // 初期状態でアプリUIを確実に非表示にする
+  const container = document.getElementById('app-ui-container');
+  if (container) container.classList.add('hidden');
+
+  document.getElementById('touch-controls')?.classList.remove('hidden');
+
+  if (!isRunning) {
+    isRunning = true;
+    gameLoop();
+  }
+}
+
+function resumeGame() {
+  const container = document.getElementById('app-ui-container');
+  if (container) container.classList.add('hidden');
+
+  document.getElementById('touch-controls')?.classList.remove('hidden');
+
+  if (!isRunning) {
+    isRunning = true;
+    gameLoop();
+  }
+}
+
+function gameLoop() {
+  if (isRunning) {
+    renderer.render();
+    requestAnimationFrame(gameLoop);
+  }
+}
+
 function interactFrontCell() {
   if (isProcessingEvent) return;
 
@@ -151,12 +158,9 @@ function interactFrontCell() {
 
   let eventObj = null;
 
-  // 1階イベントハンドラ
   if (gameState.currentFloor === 1) {
     eventObj = handleEvent1F(cellType, gameState, context);
-  } 
-  // 2階イベントハンドラ
-  else if (gameState.currentFloor === 2) {
+  } else if (gameState.currentFloor === 2) {
     eventObj = handleEvent2F(cellType, gameState, context);
   }
 
@@ -169,7 +173,6 @@ function interactFrontCell() {
   }
 }
 
-// フロア移動（1F ↔ 2F）処理
 function changeFloor(floor) {
   gameState.currentFloor = floor;
   if (floor === 2) {
@@ -215,7 +218,7 @@ function toggleDebugUI() {
     const isHidden = overlay.classList.contains('hidden');
     if (isHidden) {
       const p = gameState.player;
-      info.innerHTML = `階層: ${gameState.currentFloor}F<br>座標 (X:${p.x}, Y:${p.y})<br>向き: ${p.dir} (0:北,1:東,2:南,3:西)<br>Lv: ${p.level} | HP: ${p.hp}/${p.maxHp} | SIN: ${p.sin}`;
+      info.innerHTML = `階層: ${gameState.currentFloor}F<br>座標 (X:${p.x}, Y:${p.y})<br>向き: ${p.dir} (0:北,1:東,2:南,3:西)<br>Lv: ${p.level} | HP: ${p.hp}/${p.maxHp} | 罪: ${p.sin}`;
       overlay.classList.remove('hidden');
     } else {
       overlay.classList.add('hidden');
