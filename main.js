@@ -1,4 +1,4 @@
-// main.js - 移動操作・イベント制御・戦闘＆アプリ自動起動連携版
+// main.js - 移動・イベント・敗北時1F帰還・インクイジション連携完全版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -67,6 +67,7 @@ function init() {
 }
 
 function startNewGame() {
+  gameState.resetGame();
   gameState.currentFloor = 1;
   gameState.currentMap = map1F;
   gameState.player.x = playerStart1F.x;
@@ -120,17 +121,15 @@ function interactFrontCell() {
   const context = {
     changeFloor: (floor) => { changeFloor(floor); },
     redraw: () => renderer.render(),
-    // ★ 教え子イベント後のアプリ（ラミナ装填画面）自動起動関数
     openLoadoutApp: () => {
       appUI.currentSubView = 'loadout';
       appUI.renderApp();
       const container = document.getElementById('app-ui-container');
       if (container) container.classList.remove('hidden');
     },
-    // ★ ドアの査問画面起動
     openInquisitionUI: (entity, cb) => {
-      openInquisitionUI(entity, gameState, () => {
-        if (cb) cb();
+      openInquisitionUI(entity, gameState, (result) => {
+        if (cb) cb(result);
       });
     }
   };
@@ -204,12 +203,14 @@ function toggleDebugUI() {
   }
 }
 
-// ★ 廊下歩行時エンカウント：openCombatUI を呼び出して通常戦闘を開始
 function checkEncounterAfterMove() {
   if (gameState.currentFloor === 2) {
     check2FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
       openCombatUI(enemy, gameState, (result) => {
+        if (result === "defeat") {
+          changeFloor(1); // 敗北時は1階（コンビニ）へ帰還！
+        }
         isProcessingEvent = false;
         renderer.render();
       });

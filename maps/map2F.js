@@ -1,22 +1,21 @@
-// maps/map2F.js - 2階マップ（1F下り階段設置・各種イベント）
-
+// maps/map2F.js - 2階マップデータおよびイベント制御
 import { showMessageDialog, showConversationDialog, showItemAcquiredModal, playFloorTransition } from '../ui.js';
 
 export const playerStart2F = { x: 1, y: 1, dir: 0 };
 
-// ★ (1, 0) にセル値 4（1階へ戻る非常階段の扉）を配置
+// 2階マップ配列 (0: 通路, 1: 壁, 2: 教え子の部屋, 3: 一般部屋ドア, 4: 1F行き階段, 8: 影山ボス部屋)
 export const map2F = [
     [1, 4, 1, 1, 1, 1, 1, 1, 1], // (1, 0) 1階非常階段扉
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
     [1, 0, 1, 0, 2, 0, 1, 0, 1], // (4, 2) 教え子の部屋
     [1, 0, 1, 0, 0, 0, 1, 0, 1],
-    [1, 3, 1, 1, 1, 0, 1, 8, 1], // (1, 4) 一般部屋ドア（査問）
+    [1, 3, 1, 1, 1, 0, 1, 8, 1], // (1, 4) 一般部屋ドア
     [1, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
 export function handleEvent2F(targetCell, gameState, context) {
-    // ★ 4: 1階へ下りる非常階段扉
+    // 4: 1階へ下りる非常階段扉
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
@@ -28,7 +27,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // 2: 教え子の部屋（モデルガン入手 ➔ アプリ自動起動）
+    // 2: 教え子の部屋
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
@@ -57,15 +56,28 @@ export function handleEvent2F(targetCell, gameState, context) {
             };
         } else {
             return {
-                run: (onComplete) => showMessageDialog("【教え子の部屋】\n教え子は息をひそめて無事を祈っている。", onComplete)
+                run: (onComplete) => showMessageDialog("【教え子の部屋】\n教え子は1階のコンビニへ無事に避難した。部屋は空っぽだ。", onComplete)
             };
         }
     }
 
-    // 3: ドアを開ける（査問）
+    // 3: 一般部屋ドア（査問）- クリアしたら記録して空部屋化
     if (targetCell === 3) {
         return {
             run: (onComplete) => {
+                const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+                const vec = dirVectors[gameState.player.dir];
+                const frontX = gameState.player.x + vec.x;
+                const frontY = gameState.player.y + vec.y;
+                const roomKey = `2F_${frontX}_${frontY}`;
+
+                if (!gameState.clearedRooms) gameState.clearedRooms = {};
+
+                if (gameState.clearedRooms[roomKey]) {
+                    showMessageDialog("【住人の部屋】\nこの部屋にはもう誰もいない……。", onComplete);
+                    return;
+                }
+
                 const isDemon = Math.random() < 0.5;
                 const entity = isDemon ? {
                     name: "2階の不審な住人",
@@ -80,7 +92,12 @@ export function handleEvent2F(targetCell, gameState, context) {
                 };
 
                 if (context && context.openInquisitionUI) {
-                    context.openInquisitionUI(entity, onComplete);
+                    context.openInquisitionUI(entity, (result) => {
+                        if (result === "combat_win" || result === "finish" || result === "kill_human") {
+                            gameState.clearedRooms[roomKey] = true;
+                        }
+                        onComplete();
+                    });
                 } else {
                     onComplete();
                 }

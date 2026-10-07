@@ -3,15 +3,15 @@
 export const gameState = {
   // プレイヤー基本ステータスおよび3Dダンジョン位置座標
   player: {
-    x: 1,          // X座標
-    y: 1,          // Y座標
+    x: 7,          // X座標（1F初期位置: 7）
+    y: 1,          // Y座標（1F初期位置: 1）
     dir: 0,        // 向き (0:北, 1:東, 2:南, 3:西)
     level: 1,
     hp: 20,
     maxHp: 20,
     def: 0,        // 装備防具＋自動上昇DEFの合計
     agi: 5,        // 素早さ
-    sin: 0,        // 罪ゲージ（人間の誤射で+1）
+    sin: 0,        // 罪ゲージ（人間の誤射で+30）
     money: 0,      // 所持金（💰）
     hasModelGun: false, // 2Fで教え子から入手するまでfalse
   },
@@ -28,6 +28,17 @@ export const gameState = {
 
   // 現在銃に装填されているカードのリスト
   equippedCards: [],
+
+  // イベント進行フラグ類
+  hasExorcistInherited: false,
+  hasKey2F: false,
+  hasModelGun: false,
+  hasMetGrandma: false,
+  hasTalkedStudentInCVS: false,
+  cards: [],
+
+  // クリア済み部屋の記録（重複査問・無限稼ぎ防止）
+  clearedRooms: {},
 
   // 所持アイテム
   inventory: {
@@ -46,7 +57,7 @@ export const gameState = {
   // 1スロット目上限9, 2スロット目上限8, 3スロット目上限7...
   // -------------------------------------------------------------
   updateEquippedCards() {
-    if (!this.player.hasModelGun) {
+    if (!this.player.hasModelGun && !this.hasModelGun) {
       this.equippedCards = [];
       return;
     }
@@ -92,18 +103,56 @@ export const gameState = {
     this.updateEquippedCards();
   },
 
+  // ゲーム状態リセット
+  resetGame() {
+    this.currentFloor = 1;
+    this.player.x = 7;
+    this.player.y = 1;
+    this.player.dir = 0;
+    this.player.level = 1;
+    this.player.hp = 20;
+    this.player.maxHp = 20;
+    this.player.def = 0;
+    this.player.agi = 5;
+    this.player.sin = 0;
+    this.player.money = 0;
+    this.player.hasModelGun = false;
+
+    this.hasExorcistInherited = false;
+    this.hasKey2F = false;
+    this.hasModelGun = false;
+    this.hasMetGrandma = false;
+    this.hasTalkedStudentInCVS = false;
+    this.equippedArmor = null;
+    this.cards = [];
+    this.equippedCards = [];
+    this.clearedRooms = {};
+    this.inventory.items = [];
+    this.flags.cleared2F = false;
+    this.flags.hasCat = false;
+  },
+
   // セーブ処理（悪魔辞典アプリ機能）
   saveGame() {
-    localStorage.setItem('mansion_inferno_save', JSON.stringify(this));
+    try {
+      localStorage.setItem('mansion_inferno_save', JSON.stringify(this));
+      return true;
+    } catch (e) {
+      return false;
+    }
   },
 
   // ロード処理
   loadGame() {
-    const data = localStorage.getItem('mansion_inferno_save');
-    if (data) {
-      Object.assign(this, JSON.parse(data));
-      return true;
+    try {
+      const data = localStorage.getItem('mansion_inferno_save');
+      if (data) {
+        Object.assign(this, JSON.parse(data));
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
-    return false;
   }
 };

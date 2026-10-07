@@ -4,27 +4,38 @@ import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ 緑背景（クロマキー）自動透過処理
+// ★ 緑背景（クロマキー）自動透過関数（非同期ロード対応）
 export function applyChromaKey(imgElement) {
-    if (!imgElement || imgElement.naturalWidth === 0) return;
-    try {
-        const canvas = document.createElement("canvas");
-        canvas.width = imgElement.naturalWidth; 
-        canvas.height = imgElement.naturalHeight;
-        const cctx = canvas.getContext("2d"); 
-        cctx.drawImage(imgElement, 0, 0);
-        const imgData = cctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imgData.data;
-        for (let i = 0; i < data.length; i += 4) {
-            const r = data[i], g = data[i + 1], b = data[i + 2];
-            // 緑色成分（G）が強いピクセルを透過
-            if (g > 50 && g > r * 1.05 && g > b * 1.05) {
-                data[i + 3] = 0;
+    if (!imgElement) return;
+    if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
+
+    const process = () => {
+        if (!imgElement.naturalWidth) return;
+        try {
+            const canvas = document.createElement("canvas");
+            canvas.width = imgElement.naturalWidth; 
+            canvas.height = imgElement.naturalHeight;
+            const cctx = canvas.getContext("2d"); 
+            cctx.drawImage(imgElement, 0, 0);
+            const imgData = cctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i + 1], b = data[i + 2];
+                if (g > 50 && g > r * 1.05 && g > b * 1.05) {
+                    data[i + 3] = 0;
+                }
             }
-        }
-        cctx.putImageData(imgData, 0, 0); 
-        imgElement.src = canvas.toDataURL();
-    } catch(e) {}
+            cctx.putImageData(imgData, 0, 0);
+            if (imgElement.dataset) imgElement.dataset.chromaKeyed = "true";
+            imgElement.src = canvas.toDataURL();
+        } catch(e) {}
+    };
+
+    if (imgElement.complete && imgElement.naturalWidth > 0) {
+        process();
+    } else {
+        imgElement.onload = process;
+    }
 }
 
 export function showMessageDialog(text, onClosed) {
@@ -52,8 +63,7 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     imgDiv.src = imageSrc; 
     imgDiv.style.cssText = "max-height: 220px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
     
-    if (imgDiv.complete) applyChromaKey(imgDiv); 
-    else imgDiv.onload = () => applyChromaKey(imgDiv);
+    applyChromaKey(imgDiv);
     imgDiv.onerror = () => imgDiv.style.display = 'none';
 
     const msgDiv = document.createElement("div");
@@ -76,7 +86,6 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// アイテム獲得モーダル（緑背景画像も自動透過）
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
     modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.88); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
@@ -86,8 +95,7 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     imgEl.src = imagePath;
     imgEl.style.cssText = "max-height: 200px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;";
     imgEl.onerror = () => { imgEl.style.display = 'none'; };
-    if (imgEl.complete) applyChromaKey(imgEl);
-    else imgEl.onload = () => applyChromaKey(imgEl);
+    applyChromaKey(imgEl);
 
     modal.innerHTML = `<div style="color: #ff3333; font-size: 1.6em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
     modal.appendChild(imgEl);
@@ -109,7 +117,6 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// 階段暗転演出
 export function playFloorTransition(targetFloor, onComplete) {
     const fadeDiv = document.createElement("div");
     fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 4000; transition: opacity 0.5s ease; opacity: 0; display: flex; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em;`;
@@ -212,10 +219,7 @@ export function openCombatUI(enemy, gameState, onResult) {
     document.body.appendChild(ui);
 
     const enemyImg = document.getElementById("combat-enemy-img");
-    if (enemyImg) {
-        if (enemyImg.complete) applyChromaKey(enemyImg);
-        else enemyImg.onload = () => applyChromaKey(enemyImg);
-    }
+    applyChromaKey(enemyImg);
 
     const log = document.getElementById("combat-log");
     const playerHpText = document.getElementById("player-hp-text");
@@ -303,10 +307,7 @@ export function openInquisitionUI(entity, gameState, onResult) {
     document.body.appendChild(ui);
 
     const entityImg = document.getElementById("inq-entity-img");
-    if (entityImg) {
-        if (entityImg.complete) applyChromaKey(entityImg);
-        else entityImg.onload = () => applyChromaKey(entityImg);
-    }
+    applyChromaKey(entityImg);
 
     let step = 1;
     let selected = [];
@@ -392,7 +393,7 @@ export function openInquisitionUI(entity, gameState, onResult) {
         if (entity.type === "human") {
             gameState.player.sin += 30;
             showMessageDialog(`【人間誤射！】\n怯えていた無抵抗の人間を撃ち抜いてしまった……！\n（罪(SIN)が 30 増加した！ 現在の罪:${gameState.player.sin}）`, () => {
-                onResult("finish");
+                onResult("kill_human");
             });
         } else {
             showMessageDialog(`【正解！ 悪魔撃退】\n正体を見破られた悪魔は悲鳴を上げて消滅した！`, () => {

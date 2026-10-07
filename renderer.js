@@ -1,4 +1,4 @@
-// renderer.js - 擬似3Dダンジョン描画（ミニマップ自機 ▲▼▶◀ 表示完全対応版）
+// renderer.js - 擬似3Dダンジョン描画（アクションヒント最適化版）
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -33,7 +33,6 @@ export function initRenderer(onReady) {
             if (loadedCount === totalImages && onReady) onReady();
         };
         images[key].onerror = () => {
-            console.warn(`画像見つからず: ${imageSources[key]}`);
             loadedCount++;
             if (loadedCount === totalImages && onReady) onReady();
         };
@@ -197,15 +196,21 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
     if ([2, 3, 4, 5, 6, 7, 8, 9].includes(target)) {
+        let label = "[ SPACE ] 調べる";
+        if (target === 4) {
+            label = gameState.currentFloor === 2 ? "[ SPACE ] 1階へ下りる" : "[ SPACE ] 2階へ登る";
+        } else if (target === 2 && gameState.currentFloor === 1) {
+            label = "[ SPACE ] コンビニに入る";
+        }
         ctx.fillStyle = "rgba(15, 0, 0, 0.75)"; 
-        ctx.fillRect(canvas.width / 2 - 90, canvas.height - 50, 180, 32);
+        ctx.fillRect(canvas.width / 2 - 100, canvas.height - 50, 200, 32);
         ctx.strokeStyle = "#550000"; 
         ctx.lineWidth = 1; 
-        ctx.strokeRect(canvas.width / 2 - 90, canvas.height - 50, 180, 32);
+        ctx.strokeRect(canvas.width / 2 - 100, canvas.height - 50, 200, 32);
         ctx.fillStyle = "#ffdd66"; 
         ctx.font = `bold 16px ${HORROR_FONT}`; 
         ctx.textAlign = "center"; 
-        ctx.fillText("[ SPACE ] 調べる", canvas.width / 2, canvas.height - 28);
+        ctx.fillText(label, canvas.width / 2, canvas.height - 28);
     }
 }
 
@@ -253,7 +258,6 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 
-// ★ ミニマップ描画（自機を 1マス内に ▲ ▶ ▼ ◀ 1文字で綺麗に表示）
 function drawMiniMap(ctx, player, currentMap) {
     if (!gameState.hasExorcistInherited) return; 
     const size = 10, margin = 10;
@@ -275,7 +279,6 @@ function drawMiniMap(ctx, player, currentMap) {
         }
     }
 
-    // ★ 1マスの中心に ▲▶▼◀ アイコンを赤く描画
     const px = margin + 3 + player.x * size + size / 2;
     const py = margin + 3 + player.y * size + size / 2;
     const arrowChars = ["▲", "▶", "▼", "◀"];
