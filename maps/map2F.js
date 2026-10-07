@@ -1,4 +1,4 @@
-// maps/map2F.js - 2階マップ（査問バリエーションランダム化完全版）
+// maps/map2F.js - 2階マップ（査問対面時の悪魔擬態化完全版）
 import { showMessageDialog, showConversationDialog, showItemAcquiredModal, playFloorTransition } from '../ui.js';
 
 export const playerStart2F = { x: 1, y: 1, dir: 0 };
@@ -59,7 +59,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         }
     }
 
-    // ★ 3: 一般部屋ドア（人間/悪魔のランダムバリエーション査問）
+    // ★ 3: 一般部屋ドア（対面時は人間と同じ見た目で擬態）
     if (targetCell === 3) {
         return {
             run: (onComplete) => {
@@ -76,19 +76,14 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // 人間住民のランダム生成
-                const humanList = [
-                    { name: "怯える男性住民", image: "assets/images/human1.png" },
-                    { name: "困惑する女性住民", image: "assets/images/human2.png" },
-                    { name: "震えている住人", image: "assets/images/human3.png" }
-                ];
-                const randHuman = humanList[Math.floor(Math.random() * humanList.length)];
+                // 擬態用イラストのランダム選択
+                const humanImages = ["assets/images/human1.png", "assets/images/human2.png", "assets/images/human3.png"];
+                const randFace = humanImages[Math.floor(Math.random() * humanImages.length)];
 
-                // 悪魔のランダム生成
                 const demonList = [
-                    { name: "2階の不審な住人", image: "assets/images/demon/demon1.png", weaknesses: [1, 3] },
-                    { name: "気妙な笑顔の住人", image: "assets/images/demon/demon2.png", weaknesses: [2, 4] },
-                    { name: "言葉遣いがおかしい住民", image: "assets/images/demon/demon3.png", weaknesses: [5, 7] }
+                    { name: "2階の不審な住人", realImage: "assets/images/demon/demon1.png", weaknesses: [1, 3] },
+                    { name: "気妙な笑顔の住人", realImage: "assets/images/demon/demon2.png", weaknesses: [2, 4] },
+                    { name: "言葉遣いがおかしい住民", realImage: "assets/images/demon/demon3.png", weaknesses: [5, 7] }
                 ];
                 const randDemon = demonList[Math.floor(Math.random() * demonList.length)];
 
@@ -96,12 +91,15 @@ export function handleEvent2F(targetCell, gameState, context) {
                 const entity = isDemon ? {
                     name: randDemon.name,
                     type: "demon",
-                    image: randDemon.image,
+                    faceImage: randFace, // ★ 対面時は人間の見た目で擬態！
+                    realImage: randDemon.realImage, // 正体が暴かれたら悪魔画像へ
+                    image: randDemon.realImage,
                     weaknesses: randDemon.weaknesses
                 } : {
-                    name: randHuman.name,
+                    name: "怯えるマンション住民",
                     type: "human",
-                    image: randHuman.image,
+                    faceImage: randFace,
+                    image: randFace,
                     weaknesses: []
                 };
 

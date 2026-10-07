@@ -7,7 +7,7 @@ export const gameState = {
     dir: 0,        // 向き (0:北, 1:東, 2:南, 3:西)
     level: 1,
     exp: 0,        // 現在の経験値
-    maxExp: 100,   // 次のレベルまでの必要経験値（1体=50EXP）
+    maxExp: 100,   // Lv1➔2の必要EXP (100)
     hp: 20,
     maxHp: 20,
     def: 0,        // 防具＋成長による防御力
@@ -67,11 +67,11 @@ export const gameState = {
     this.equippedCards = newEquipped;
   },
 
-  // ★ 経験値獲得処理（100でレベルアップ）
+  // 経験値獲得処理（必要EXPに達したらレベルアップ）
   gainExp(amount) {
     this.player.exp += amount;
     let leveledUp = false;
-    if (this.player.exp >= this.player.maxExp) {
+    while (this.player.exp >= this.player.maxExp) {
       this.player.exp -= this.player.maxExp;
       this.levelUp(1);
       leveledUp = true;
@@ -79,12 +79,16 @@ export const gameState = {
     return leveledUp;
   },
 
-  // レベルアップ処理（自動上昇）
+  // レベルアップ処理（レベルに応じて必要EXP（maxExp）が増加）
   levelUp(amount = 1) {
     this.player.level += amount;
     this.player.maxHp += 5 * amount;
     this.player.hp = this.player.maxHp; // 自動全回復
     this.player.agi += 1 * amount;
+
+    // ★ レベルに応じた必要経験値（maxExp）の増加計算
+    // Lv1: 100, Lv2: 160, Lv3: 230, Lv4: 310, Lv5: 400 ...
+    this.player.maxExp = Math.floor(100 + (this.player.level - 1) * 60 + Math.pow(this.player.level, 1.3) * 10);
 
     if (this.player.level % 2 === 0) {
       this.player.def += 1;

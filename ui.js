@@ -1,10 +1,10 @@
-// ui.js - 会話・査問・ショップ・戦闘UI・クロマキー完全版
+// ui.js - 会話・査問・ショップ・戦闘UI・非同期クロマキー完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ 強力クロマキー（緑背景）自動透過処理
+// ★ 画像ロード完了を保証する強力クロマキー透過処理
 export function applyChromaKey(imgElement) {
     if (!imgElement) return;
     if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
@@ -22,7 +22,6 @@ export function applyChromaKey(imgElement) {
             const data = imgData.data;
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i], g = data[i + 1], b = data[i + 2];
-                // JPG画像の圧縮ノイズを含む緑色領域を透過化
                 if (g > 40 && g > r * 1.02 && g > b * 1.02) {
                     data[i + 3] = 0;
                 }
@@ -62,11 +61,12 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
     const imgDiv = document.createElement("img");
-    imgDiv.src = imageSrc; 
     imgDiv.style.cssText = "max-height: 220px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
     
-    applyChromaKey(imgDiv);
     imgDiv.onerror = () => imgDiv.style.display = 'none';
+    imgDiv.onload = () => applyChromaKey(imgDiv);
+    imgDiv.src = imageSrc;
+    if (imgDiv.complete) applyChromaKey(imgDiv);
 
     const msgDiv = document.createElement("div");
     msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
@@ -88,16 +88,18 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
+// ★ アップ画像（アイテム獲得モーダル）非同期クロマキー完全対応
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
     modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.88); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
     
     const imgEl = document.createElement("img");
     imgEl.id = "modal-item-img";
-    imgEl.src = imagePath;
     imgEl.style.cssText = "max-height: 200px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;";
     imgEl.onerror = () => { imgEl.style.display = 'none'; };
-    applyChromaKey(imgEl);
+    imgEl.onload = () => applyChromaKey(imgEl);
+    imgEl.src = imagePath;
+    if (imgEl.complete) applyChromaKey(imgEl);
 
     modal.innerHTML = `<div style="color: #ff3333; font-size: 1.6em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
     modal.appendChild(imgEl);
@@ -138,7 +140,6 @@ export function playFloorTransition(targetFloor, onComplete) {
     }, 1500);
 }
 
-// ★ エラー原因修正：抜け落ちていた playVideo 関数を復活！
 export function playVideo(src, onEnded) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
@@ -377,7 +378,8 @@ export function openInquisitionUI(entity, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
     
-    let visualHTML = `<img id="inq-entity-img" src="${entity.image}" style="max-height: 180px; border-radius: 8px;" onerror="this.style.display='none'">`;
+    // ★ 査問開始時、対面画像には「擬態している画像(faceImage)」を使用（悪魔ネタバレ防止）
+    let visualHTML = `<img id="inq-entity-img" src="${entity.faceImage || entity.image}" style="max-height: 180px; border-radius: 8px;" onerror="this.style.display='none'">`;
 
     ui.innerHTML = `
         <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 8px red;">【査問】住人との対面</h2>
@@ -466,6 +468,12 @@ export function openInquisitionUI(entity, gameState, onResult) {
             } else {
                 const isWeak1 = entity.weaknesses && entity.weaknesses.includes(parseInt(selected[0]));
                 const isWeak2 = entity.weaknesses && entity.weaknesses.includes(parseInt(selected[1]));
+
+                // ★ 正体を現したタイミングで本物の悪魔画像に差し替え！
+                if (entityImg && entity.realImage) {
+                    entityImg.src = entity.realImage;
+                    applyChromaKey(entityImg);
+                }
 
                 if (isWeak1 && isWeak2) {
                     log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n「ギャアアアッ！？ や、やめろォォォッ！！」\n（完全に正体を暴いた！ 肌が焼け焦げ、悪魔の正体を露わにした！）`;
