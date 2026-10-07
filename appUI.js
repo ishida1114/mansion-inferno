@@ -1,4 +1,4 @@
-// appUI.js - スマホアプリ「悪魔辞典」UI（表示固定化解除・ロゴ横幅拡大完全版）
+// appUI.js - スマホアプリ「悪魔辞典」UI（ラミナパス大文字化・モデルガン画像追加版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 
@@ -7,7 +7,6 @@ export const LOGO_ASSETS = {
   APP_LOGO: 'assets/images/DictionariumDaemonum.webp'
 };
 
-// スタイル自動注入（1回のみ実行）
 if (!document.getElementById("app-style-element")) {
     const fontLink = document.createElement("link");
     fontLink.href = "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;800&display=swap";
@@ -78,7 +77,6 @@ export class AppUI {
     this.currentSubView = 'home';
   }
 
-  // アプリを確実に非表示にする処理
   closeApp() {
     const container = document.getElementById('app-ui-container');
     if (container) {
@@ -90,9 +88,7 @@ export class AppUI {
     const appContainer = document.getElementById('app-ui-container');
     if (!appContainer) return;
 
-    // className の上書きによる hidden 消去を防止
     appContainer.classList.add('app-overlay');
-
     gameState.updateEquippedCards();
     const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
 
@@ -141,7 +137,6 @@ export class AppUI {
     }
   }
 
-  // 1. ホーム画面（ロゴ横幅いっぱいデザイン）
   renderHomeGridView() {
     return `
       <div style="text-align: center; margin-bottom: 12px; padding: 5px 0;">
@@ -181,7 +176,7 @@ export class AppUI {
     `;
   }
 
-  // 2. ラミナ装填
+  // 2. ラミナ装填（★モデルガン画像 ＆ カード大文字パス 『1Card.png』 修正版）
   renderLoadoutView() {
     const totalPower = gameState.equippedCards.reduce((a, b) => a + b, 0);
 
@@ -191,6 +186,15 @@ export class AppUI {
         <h3 class="sub-title">ラミナ装填</h3>
       </div>
       
+      <div style="text-align: center; margin-bottom: 10px; background: #000; padding: 8px; border-radius: 6px; border: 1px solid #330000;">
+        ${gameState.player.hasModelGun ? `
+          <img src="assets/images/modelgun.jpg" alt="モデルガン" style="max-width: 100px; max-height: 60px; object-fit: contain; display: block; margin: 0 auto 5px auto; border-radius: 4px;" />
+          <span style="color:#00ff66; font-size:0.8em; font-weight:bold;">モデルガン連携完了</span>
+        ` : `
+          <span style="color:#ff4444; font-size:0.8em;">※モデルガン未所持（素手攻撃のみ）</span>
+        `}
+      </div>
+
       <div style="font-size: 0.8em; color: #aaa; margin-bottom: 8px;">
         Lv.${gameState.player.level}（コスト上限:${gameState.player.level}）
       </div>
@@ -210,7 +214,8 @@ export class AppUI {
       <div class="card-list">
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => `
           <div class="card-item">
-            <img src="assets/images/cards/${num}card.png" alt="${num}" onerror="this.src='assets/images/cards/1card.png'" />
+            <!-- ★ 大文字の 1Card.png〜9Card.png を正確に読み込み -->
+            <img src="assets/images/cards/${num}Card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}card.png'" />
             <div style="font-size: 0.7em;">【${num}】</div>
           </div>
         `).join('')}
@@ -218,7 +223,6 @@ export class AppUI {
     `;
   }
 
-  // 3. 所持品
   renderInventoryView() {
     const items = gameState.inventory?.items || [];
 
@@ -246,7 +250,6 @@ export class AppUI {
     `;
   }
 
-  // 4. 悪魔手記
   renderNotesView() {
     return `
       <div class="sub-header">
@@ -260,7 +263,6 @@ export class AppUI {
     `;
   }
 
-  // 5. 使い魔
   renderFamiliarView() {
     return `
       <div class="sub-header">
@@ -275,7 +277,6 @@ export class AppUI {
     `;
   }
 
-  // 6. 詳細地図
   renderFullMapView() {
     const map = gameState.currentMap || [];
     const player = gameState.player;
@@ -305,7 +306,6 @@ export class AppUI {
     `;
   }
 
-  // 7. 調査ログ
   renderLogView() {
     return `
       <div class="sub-header">
@@ -319,7 +319,6 @@ export class AppUI {
     `;
   }
 
-  // 8. システム
   renderSystemView() {
     return `
       <div class="sub-header">
@@ -334,7 +333,6 @@ export class AppUI {
   }
 
   bindEvents() {
-    // ✕ ボタン直接クリックで非表示化
     const closeX = document.getElementById('btn-app-close-x');
     if (closeX) {
       closeX.onclick = (e) => {
@@ -343,7 +341,6 @@ export class AppUI {
       };
     }
 
-    // フッターのホームボタン（ホーム画面時はアプリを閉じる）
     const homeBtn = document.getElementById('app-home-btn');
     if (homeBtn) {
       homeBtn.onclick = (e) => {

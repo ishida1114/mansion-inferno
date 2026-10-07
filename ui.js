@@ -1,45 +1,58 @@
-// ui.js
+// ui.js - 会話・査問・ショップ・動画再生・デバッグ完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
+// 画像用クロマキー処理（立ち絵等）
 export function applyChromaKey(imgElement) {
     if (!imgElement || imgElement.naturalWidth === 0) return;
     try {
         const canvas = document.createElement("canvas");
-        canvas.width = imgElement.naturalWidth; canvas.height = imgElement.naturalHeight;
-        const cctx = canvas.getContext("2d"); cctx.drawImage(imgElement, 0, 0);
+        canvas.width = imgElement.naturalWidth; 
+        canvas.height = imgElement.naturalHeight;
+        const cctx = canvas.getContext("2d"); 
+        cctx.drawImage(imgElement, 0, 0);
         const imgData = cctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imgData.data;
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i], g = data[i + 1], b = data[i + 2];
             if (g > 60 && g > r * 1.15 && g > b * 1.15) data[i + 3] = 0;
         }
-        cctx.putImageData(imgData, 0, 0); imgElement.src = canvas.toDataURL();
+        cctx.putImageData(imgData, 0, 0); 
+        imgElement.src = canvas.toDataURL();
     } catch(e) {}
 }
 
+// 汎用メッセージダイアログ
 export function showMessageDialog(text, onClosed) {
     const msgDiv = document.createElement("div");
     msgDiv.style.cssText = `position: fixed; bottom: 8%; left: 5%; width: 90%; max-width: 560px; margin: 0 auto; padding: 20px; background-color: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; z-index: 2000; font-family: ${HORROR_FONT}; font-size: 1.1em; line-height: 1.7; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
     msgDiv.innerText = text;
     msgDiv.innerHTML += `<div style="margin-top: 12px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
     document.body.appendChild(msgDiv);
+
     const closeHandler = (e) => {
         if (e.type === "click" || e.key === " " || e.key === "Enter") {
-            window.removeEventListener("keydown", closeHandler); msgDiv.onclick = null; msgDiv.remove(); if (onClosed) onClosed();
+            window.removeEventListener("keydown", closeHandler); 
+            msgDiv.onclick = null; 
+            msgDiv.remove(); 
+            if (onClosed) onClosed();
         }
     };
     setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
+// 会話ダイアログ（立ち絵付き）
 export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
     const imgDiv = document.createElement("img");
-    imgDiv.src = imageSrc; imgDiv.style.cssText = "max-height: 220px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
-    if (imgDiv.complete) applyChromaKey(imgDiv); else imgDiv.onload = () => applyChromaKey(imgDiv);
+    imgDiv.src = imageSrc; 
+    imgDiv.style.cssText = "max-height: 220px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
+    
+    if (imgDiv.complete) applyChromaKey(imgDiv); 
+    else imgDiv.onload = () => applyChromaKey(imgDiv);
     imgDiv.onerror = () => imgDiv.style.display = 'none';
 
     const msgDiv = document.createElement("div");
@@ -47,15 +60,22 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     msgDiv.innerText = text;
     msgDiv.innerHTML += `<div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
 
-    overlay.appendChild(imgDiv); overlay.appendChild(msgDiv); document.body.appendChild(overlay);
+    overlay.appendChild(imgDiv); 
+    overlay.appendChild(msgDiv); 
+    document.body.appendChild(overlay);
+
     const closeHandler = (e) => {
         if (e.type === "click" || e.key === " " || e.key === "Enter") {
-            window.removeEventListener("keydown", closeHandler); overlay.onclick = null; overlay.remove(); if (onClosed) onClosed();
+            window.removeEventListener("keydown", closeHandler); 
+            overlay.onclick = null; 
+            overlay.remove(); 
+            if (onClosed) onClosed();
         }
     };
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
+// アイテム獲得モーダル
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
     modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.88); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
@@ -67,14 +87,19 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
         <div style="color: #888; font-size: 0.85em;">タップ または [ SPACE ] で閉じる</div>
     `;
     document.body.appendChild(modal);
+
     const closeHandler = (e) => {
         if (e.type === "click" || e.key === " " || e.key === "Enter") {
-            window.removeEventListener("keydown", closeHandler); modal.onclick = null; modal.remove(); if (onClosed) onClosed();
+            window.removeEventListener("keydown", closeHandler); 
+            modal.onclick = null; 
+            modal.remove(); 
+            if (onClosed) onClosed();
         }
     };
     setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
+// 階層切り替え暗転フェード演出
 export function playFloorTransition(targetFloor, onComplete) {
     const fadeDiv = document.createElement("div");
     fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 2000; transition: opacity 0.5s ease; opacity: 0; display: flex; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em;`;
@@ -83,17 +108,75 @@ export function playFloorTransition(targetFloor, onComplete) {
     setTimeout(() => { if (onComplete) onComplete(); setTimeout(() => { fadeDiv.style.opacity = "0"; setTimeout(() => fadeDiv.remove(), 500); }, 800); }, 600);
 }
 
+// ★ 動画再生（緑色チラつき防止 ＆ 爆速クロマキー統合版）
 export function playVideo(src, onEnded) {
     const overlay = document.createElement("div");
-    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 1800; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
+
     const video = document.createElement("video");
-    video.src = src; video.style.cssText = "width: 100%; max-width: 500px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); background-color: black;";
-    video.controls = false; video.autoplay = true; video.playsInline = true;
-    overlay.appendChild(video); document.body.appendChild(overlay);
-    video.onended = () => { overlay.remove(); if (onEnded) onEnded(); };
-    overlay.onclick = () => { video.pause(); video.onended(); };
+    video.src = src;
+    video.style.cssText = "display: none;"; // 動画本体は非表示で裏再生
+    video.controls = false;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 600;
+    canvas.height = 400;
+    canvas.style.cssText = "width: 100%; max-width: 500px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); background-color: transparent; display: none;";
+
+    overlay.appendChild(video);
+    overlay.appendChild(canvas);
+    document.body.appendChild(overlay);
+
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    let animId = null;
+    let isFirstFrameDone = false;
+
+    const renderFrame = () => {
+        if (video.paused || video.ended) return;
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const l = frame.data.length;
+
+        for (let i = 0; i < l; i += 4) {
+            const r = frame.data[i], g = frame.data[i + 1], b = frame.data[i + 2];
+            // 緑色成分の透過判定
+            if (g > 70 && g > r * 1.15 && g > b * 1.15) {
+                frame.data[i + 3] = 0;
+            }
+        }
+        ctx.putImageData(frame, 0, 0);
+
+        // 最初の1フレーム目が透明化できた「瞬間」に画面に表示！
+        if (!isFirstFrameDone) {
+            isFirstFrameDone = true;
+            canvas.style.display = "block";
+        }
+
+        animId = requestAnimationFrame(renderFrame);
+    };
+
+    video.onplay = () => {
+        animId = requestAnimationFrame(renderFrame);
+    };
+
+    const cleanup = () => {
+        if (animId) cancelAnimationFrame(animId);
+        overlay.remove();
+        if (onEnded) onEnded();
+    };
+
+    video.onended = cleanup;
+    overlay.onclick = () => {
+        video.pause();
+        cleanup();
+    };
 }
 
+// 1階 無人レジショップUI
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
     shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
@@ -103,7 +186,7 @@ export function openShopUI(onClosed) {
         <div style="position: relative; z-index: 10; width: 100%; max-width: 540px; height: 90%; background: rgba(10, 5, 5, 0.92); border: 2px solid #770000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
             <div style="padding: 12px 15px; border-bottom: 2px solid #550000; background: linear-gradient(180deg, #2a0000, #0a0000); display: flex; justify-content: space-between; align-items: center;">
                 <div><h2 style="color: #ff3333; margin: 0; font-size: 1.5em;">悪魔の無人レジ</h2></div>
-                <div style="font-size: 1.05em; color: #ffdd66; font-weight: bold;">💰 <span id="shop-money">${gameState.money}</span> <span style="color:#ff4444; font-size:0.8em;">(SIN:${gameState.sin})</span></div>
+                <div style="font-size: 1.05em; color: #ffdd66; font-weight: bold;">💰 <span id="shop-money">${gameState.player?.money || 0}</span> <span style="color:#ff4444; font-size:0.8em;">(罪:${gameState.player?.sin || 0})</span></div>
             </div>
             <div id="shop-content" style="flex: 1; overflow-y: auto; padding: 12px; box-sizing: border-box;"></div>
             <div style="padding: 10px; text-align: center; border-top: 1px solid #440000; background: #050505;"><button id="closeBtn" style="background: transparent; color: #aaa; border: 1px solid #555; padding: 8px 25px; cursor: pointer; border-radius: 4px;">立ち去る</button></div>
@@ -115,7 +198,7 @@ export function openShopUI(onClosed) {
     Object.values(itemDefinitions).forEach(item => {
         html += `
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(20, 10, 10, 0.85); padding: 10px 12px; margin-bottom: 8px; border: 1px solid #441111; border-radius: 6px;">
-                <div style="flex: 1;"><div style="color: #ffdd66; font-weight: bold;">${item.name}</div><div style="font-size: 0.8em; color: #bbb;">${item.desc}</div></div>
+                <div style="flex: 1;"><div style="color: #ffdd66; font-weight: bold;">${item.name}</div><div style="font-size: 0.8em; color: #bbb;">${item.description || ''}</div></div>
                 <div style="text-align: right;"><div style="color: #ffdd66; font-weight: bold; margin-bottom: 4px;">💰 ${item.price}</div><button class="buy-item-btn" data-id="${item.id}" data-price="${item.price}" style="background: linear-gradient(180deg, #440000, #110000); color: #fff; border: 1px solid #ff3333; padding: 5px 10px; cursor: pointer; border-radius: 4px;">購入</button></div>
             </div>`;
     });
@@ -124,11 +207,15 @@ export function openShopUI(onClosed) {
     document.querySelectorAll(".buy-item-btn").forEach(btn => {
         btn.onclick = () => {
             const price = parseInt(btn.getAttribute("data-price"));
-            if (gameState.money >= price) {
-                gameState.money -= price; document.getElementById("shop-money").innerText = gameState.money;
-                btn.style.background = "#006600"; btn.innerText = "完了！"; setTimeout(() => { btn.style.background = ""; btn.innerText = "購入"; }, 500);
+            if (gameState.player.money >= price) {
+                gameState.player.money -= price; 
+                document.getElementById("shop-money").innerText = gameState.player.money;
+                btn.style.background = "#006600"; 
+                btn.innerText = "完了！"; 
+                setTimeout(() => { btn.style.background = ""; btn.innerText = "購入"; }, 500);
             } else {
-                btn.innerText = "資金不足"; setTimeout(() => { btn.innerText = "購入"; }, 800);
+                btn.innerText = "資金不足"; 
+                setTimeout(() => { btn.innerText = "購入"; }, 800);
             }
         };
     });
@@ -177,7 +264,8 @@ export function openInquisitionUI(entity, gameState, onResult) {
         
         cDiv.onclick = () => {
             if (selected.length < 2 && !selected.includes(num)) {
-                selected.push(num); updateSlots();
+                selected.push(num); 
+                updateSlots();
             }
         };
         cardsDiv.appendChild(cDiv);
@@ -191,7 +279,6 @@ export function openInquisitionUI(entity, gameState, onResult) {
     document.getElementById("slot1").onclick = () => { selected.shift(); updateSlots(); };
     document.getElementById("slot2").onclick = () => { if(selected.length > 1) selected.pop(); updateSlots(); };
 
-    // 提示ボタン押下時（誤差に応じた反応）
     document.getElementById("btn-show").onclick = () => {
         if (selected.length < 2) { alert("ラミナを2枚選んでください。"); return; }
         
@@ -223,19 +310,28 @@ export function openInquisitionUI(entity, gameState, onResult) {
     document.getElementById("btn-leave").onclick = () => { ui.remove(); onResult("leave"); };
 }
 
+// デバッグメニュー
 export function openDebugMenu(onAction) {
     if (document.getElementById("debug-modal")) { document.getElementById("debug-modal").remove(); return; }
-    const debugDiv = document.createElement("div"); debugDiv.id = "debug-modal"; debugDiv.className = "debug-modal";
+    const debugDiv = document.createElement("div"); 
+    debugDiv.id = "debug-modal"; 
+    debugDiv.className = "debug-modal";
     debugDiv.innerHTML = `<h3 style="margin:0; border-bottom:1px solid #00ff00; padding-bottom:5px;">[DEBUG MENU]</h3><button class="debug-btn" id="dbg-all-clear">① 一括イベントクリア</button><button class="debug-btn" id="dbg-warp-2f">② 2階ワープ</button><button class="debug-btn" id="dbg-warp-1f">③ 1階ワープ</button><button class="debug-btn" id="dbg-lv15">④ Lv15</button><button class="debug-btn" id="dbg-money">⑤ お金+1000</button><button class="debug-btn" id="dbg-close" style="background:#550000; color:#fff; border-color:#ff0000;">閉じる [F2]</button>`;
     document.body.appendChild(debugDiv);
+
     document.getElementById("dbg-all-clear").onclick = () => {
-        gameState.hasExorcistInherited = true; gameState.hasKey2F = true; gameState.hasModelGun = true; gameState.hasMetGrandma = true;
+        gameState.hasExorcistInherited = true; 
+        gameState.hasKey2F = true; 
+        gameState.hasModelGun = true; 
+        gameState.hasMetGrandma = true;
         gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
-        alert("全解放！"); debugDiv.remove(); if (onAction) onAction();
+        alert("全解放！"); 
+        debugDiv.remove(); 
+        if (onAction) onAction();
     };
     document.getElementById("dbg-warp-2f").onclick = () => { gameState.hasKey2F = true; debugDiv.remove(); if (onAction) onAction("warp2F"); };
     document.getElementById("dbg-warp-1f").onclick = () => { debugDiv.remove(); if (onAction) onAction("warp1F"); };
-    document.getElementById("dbg-lv15").onclick = () => { gameState.level = 15; gameState.familiarSync = 100; alert("Lv15！"); debugDiv.remove(); };
-    document.getElementById("dbg-money").onclick = () => { gameState.money += 1000; alert("お金+1000！"); debugDiv.remove(); };
+    document.getElementById("dbg-lv15").onclick = () => { gameState.player.level = 15; alert("Lv15！"); debugDiv.remove(); };
+    document.getElementById("dbg-money").onclick = () => { gameState.player.money += 1000; alert("お金+1000！"); debugDiv.remove(); };
     document.getElementById("dbg-close").onclick = () => debugDiv.remove();
 }

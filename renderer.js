@@ -1,4 +1,4 @@
-// renderer.js - 擬似3Dダンジョンレンダラー（非常階段ドア＆アスペクト比調整完全版）
+// renderer.js - 消失点(300, 200) 完全幾何学透視投影 擬似3Dダンジョン描画
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -41,41 +41,41 @@ export function initRenderer(onReady) {
     }
 }
 
-// 600x400 Canvas規格に合わせた視界台形スロット
+// 600x400 Canvas 消失点(300, 200)に基づく完全正確な透視投影座標テーブル
 const leftClips = { 
-    1: [{x:0, y:0}, {x:150, y:75}, {x:150, y:325}, {x:0, y:400}], 
-    2: [{x:150, y:75}, {x:220, y:135}, {x:220, y:265}, {x:150, y:325}], 
-    3: [{x:220, y:135}, {x:255, y:165}, {x:255, y:235}, {x:220, y:265}], 
-    4: [{x:255, y:165}, {x:275, y:180}, {x:275, y:220}, {x:255, y:235}] 
+    1: [{x:0, y:0}, {x:150, y:100}, {x:150, y:300}, {x:0, y:400}], 
+    2: [{x:150, y:100}, {x:225, y:150}, {x:225, y:250}, {x:150, y:300}], 
+    3: [{x:225, y:150}, {x:262, y:175}, {x:262, y:225}, {x:225, y:250}], 
+    4: [{x:262, y:175}, {x:281, y:187}, {x:281, y:213}, {x:262, y:225}] 
 };
 
 const rightClips = { 
-    1: [{x:450, y:75}, {x:600, y:0}, {x:600, y:400}, {x:450, y:325}], 
-    2: [{x:380, y:135}, {x:450, y:75}, {x:450, y:325}, {x:380, y:265}], 
-    3: [{x:345, y:165}, {x:380, y:135}, {x:380, y:265}, {x:345, y:235}], 
-    4: [{x:325, y:180}, {x:345, y:165}, {x:345, y:235}, {x:325, y:220}] 
+    1: [{x:450, y:100}, {x:600, y:0}, {x:600, y:400}, {x:450, y:300}], 
+    2: [{x:375, y:150}, {x:450, y:100}, {x:450, y:300}, {x:375, y:250}], 
+    3: [{x:338, y:175}, {x:375, y:150}, {x:375, y:250}, {x:338, y:225}], 
+    4: [{x:319, y:187}, {x:338, y:175}, {x:338, y:225}, {x:319, y:213}] 
 };
 
-// 正面描画枠（横幅300, 高さ250）
+// 正面描画枠（比率 1.5 : 1 / ドア画像に最適化）
 const frontBounds = { 
-    1: { x: 150, y: 75, w: 300, h: 250 }, 
-    2: { x: 220, y: 135, w: 160, h: 130 }, 
-    3: { x: 255, y: 165, w: 90, h: 70 }, 
-    4: { x: 275, y: 180, w: 50, h: 40 } 
+    1: { x: 150, y: 100, w: 300, h: 200 }, 
+    2: { x: 225, y: 150, w: 150, h: 100 }, 
+    3: { x: 262, y: 175, w: 76, h: 50 }, 
+    4: { x: 281, y: 187, w: 38, h: 26 } 
 };
 
 const sideCornerSlots = { 
     left: { 
-        1: { x: 0, y: 75, w: 150, h: 250 }, 
-        2: { x: 150, y: 135, w: 70, h: 130 }, 
-        3: { x: 220, y: 165, w: 35, h: 70 }, 
-        4: { x: 255, y: 180, w: 20, h: 40 } 
+        1: { x: 0, y: 100, w: 150, h: 200 }, 
+        2: { x: 150, y: 150, w: 75, h: 100 }, 
+        3: { x: 225, y: 175, w: 37, h: 50 }, 
+        4: { x: 262, y: 187, w: 19, h: 26 } 
     }, 
     right: { 
-        1: { x: 450, y: 75, w: 150, h: 250 }, 
-        2: { x: 380, y: 135, w: 70, h: 130 }, 
-        3: { x: 345, y: 165, w: 35, h: 70 }, 
-        4: { x: 325, y: 180, w: 20, h: 40 } 
+        1: { x: 450, y: 100, w: 150, h: 200 }, 
+        2: { x: 375, y: 150, w: 75, h: 100 }, 
+        3: { x: 338, y: 175, w: 37, h: 50 }, 
+        4: { x: 319, y: 187, w: 19, h: 26 } 
     } 
 };
 
@@ -110,7 +110,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir], lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
         const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir], rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
-        // 左壁
+        // 左壁描画
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
             const imgKey = "left" + depth;
             if (images[imgKey] && images[imgKey].complete) {
@@ -137,7 +137,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // 右壁
+        // 右壁描画
         if (currentMap[rY] && currentMap[rY][rX] !== 0) {
             const imgKey = "right" + depth;
             if (images[imgKey] && images[imgKey].complete) {
@@ -164,7 +164,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // 正面壁・ドア描画（cellType === 4 で stair_door.png を優先使用）
+        // 正面壁・ドア描画（枠ぴったりにフィット）
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;
@@ -219,7 +219,7 @@ function drawEnvironment(ctx, canvas) {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; 
     ctx.lineWidth = 1;
     const cx = canvas.width / 2, cy = canvas.height / 2;
-    [0, 100, 150, 220, 255].forEach(x => {
+    [0, 100, 150, 225, 262].forEach(x => {
         ctx.beginPath(); 
         ctx.moveTo(cx - x, cy); 
         ctx.lineTo(0 - x * 2, canvas.height); 

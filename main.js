@@ -1,10 +1,10 @@
-// main.js - 移動操作・操作ボタン・アプリ表示制御統合（バグ修正版）
+// main.js - 移動操作・2Fランダム敵遭遇組み込み版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
-import { map2F, playerStart2F, handleEvent2F } from './maps/map2F.js';
+import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './maps/map2F.js';
 import { showMessageDialog } from './ui.js';
 
 let appUI;
@@ -16,12 +16,10 @@ function init() {
   appUI = new AppUI();
   renderer = new Renderer();
 
-  // 単一のクリックイベントリスナー（多重登録を阻止）
   document.addEventListener('click', (e) => {
     const target = e.target;
     if (!target) return;
 
-    // タイトル画面：スタート
     if (target.id === 'btn-start' || target.closest('#btn-start')) {
       const titleScreen = document.getElementById('title-screen');
       if (titleScreen) titleScreen.classList.add('hidden');
@@ -29,7 +27,6 @@ function init() {
       return;
     } 
     
-    // タイトル画面：つづきから
     if (target.id === 'btn-load' || target.closest('#btn-load')) {
       const hasSave = gameState.loadGame();
       if (hasSave) {
@@ -42,7 +39,6 @@ function init() {
       return;
     }
 
-    // ゲーム中のUIボタン操作
     if (isProcessingEvent) return;
 
     const id = target.id;
@@ -55,7 +51,6 @@ function init() {
     else if (id === 'btn-close-debug') toggleDebugUI();
   });
 
-  // キーボード操作の登録
   window.onkeydown = (e) => {
     if (isProcessingEvent) return;
 
@@ -96,7 +91,6 @@ function init() {
   };
 }
 
-// 新規ゲーム開始
 function startNewGame() {
   gameState.currentFloor = 1;
   gameState.currentMap = map1F;
@@ -104,7 +98,6 @@ function startNewGame() {
   gameState.player.y = playerStart1F.y;
   gameState.player.dir = playerStart1F.dir;
 
-  // 初期状態でアプリUIを確実に非表示にする
   const container = document.getElementById('app-ui-container');
   if (container) container.classList.add('hidden');
 
@@ -180,7 +173,7 @@ function changeFloor(floor) {
     gameState.player.x = playerStart2F.x;
     gameState.player.y = playerStart2F.y;
     gameState.player.dir = playerStart2F.dir;
-    showMessageDialog("【2階 非常階段前】\n2階へ到達した。薄暗い廊下に不気味な気配が漂っている……", () => {
+    showMessageDialog("【2階 非常階段前】\n2階へ到達した。廊下に人ならざる者の禍々しい気が満ちている……", () => {
       renderer.render();
     });
   } else if (floor === 1) {
@@ -192,7 +185,6 @@ function changeFloor(floor) {
   }
 }
 
-// ESCキー / ボタン：アプリ表示（※血の池イベントクリア後のみ解放）
 function toggleAppUI() {
   if (!gameState.hasExorcistInherited) {
     showMessageDialog("【スマホ】\nまだ『悪魔辞典アプリ』を入手していない……。", () => {});
@@ -226,6 +218,19 @@ function toggleDebugUI() {
   }
 }
 
+// 2階移動時のランダムエンカウントチェック
+function checkEncounterAfterMove() {
+  if (gameState.currentFloor === 2) {
+    check2FRandomEncounter(gameState, () => {
+      isProcessingEvent = true;
+      showMessageDialog("【悪魔遭遇！】\n廊下の闇から悪魔が襲いかかってきた！", () => {
+        isProcessingEvent = false;
+        renderer.render();
+      });
+    });
+  }
+}
+
 function moveForward() {
   const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
   const vec = dirVectors[gameState.player.dir];
@@ -235,6 +240,7 @@ function moveForward() {
   if (map && map[nextY] && map[nextY][nextX] === 0) {
     gameState.player.x = nextX;
     gameState.player.y = nextY;
+    checkEncounterAfterMove(); // 歩行時チェック
   }
 }
 
@@ -247,6 +253,7 @@ function moveBackward() {
   if (map && map[nextY] && map[nextY][nextX] === 0) {
     gameState.player.x = nextX;
     gameState.player.y = nextY;
+    checkEncounterAfterMove(); // 歩行時チェック
   }
 }
 

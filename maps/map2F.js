@@ -1,11 +1,9 @@
-// maps/map2F.js - 2階マップデータおよび教え子・影山ボス部屋イベント定義
+// maps/map2F.js - 2階固有イベント（モデルガンモーダル表示 ＆ 2F敵遭遇制御版）
 
-import { showMessageDialog, showConversationDialog } from '../ui.js';
+import { showMessageDialog, showConversationDialog, showItemAcquiredModal } from '../ui.js';
 
-// 2階スタート位置 (x: 1, y: 1, 東向き)
 export const playerStart2F = { x: 1, y: 1, dir: 1 };
 
-// 2階マップ配列 (0: 通路, 1: 壁, 2: 教え子の部屋, 8: ボス影山の部屋)
 export const map2F = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -16,9 +14,8 @@ export const map2F = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
-// 2階イベントハンドラー
 export function handleEvent2F(targetCell, gameState, context) {
-    // 2: 教え子の部屋（モデルガン獲得イベント）
+    // 2: 教え子の部屋（★モデルガン獲得モーダル＆画像表示）
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
@@ -26,13 +23,20 @@ export function handleEvent2F(targetCell, gameState, context) {
                     showConversationDialog("assets/images/human1.png", "【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nこれ……父親の部屋にあったモデルガンなんだけど、持っていって！」", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
-                        showMessageDialog("【モデルガンを入手した！】\n悪魔辞典アプリにモデルガンが連携され、ラミナの装填・射撃機能が解放された！", onComplete);
+                        
+                        // ★ modelgun.jpg 画像モーダルのポップアップ呼び出し
+                        showItemAcquiredModal(
+                            "assets/images/modelgun.jpg", 
+                            "モデルガン（Vox Sacra連動）", 
+                            "悪魔辞典アプリとモデルガンが同期！\nラミナカードを装填して聖なる弾丸を撃てるようになった！", 
+                            onComplete
+                        );
                     });
                 }
             };
         } else {
             return {
-                run: (onComplete) => showMessageDialog("【教え子の部屋】\n教え子は身をひそめて無事を祈っている。", onComplete)
+                run: (onComplete) => showMessageDialog("【教え子の部屋】\n教え子は息をひそめて無事を祈っている。", onComplete)
             };
         }
     }
@@ -45,4 +49,14 @@ export function handleEvent2F(targetCell, gameState, context) {
     }
 
     return null;
+}
+
+// ★ 2階の歩行移動時にランダムで悪魔（ザコ敵）とエンカウントする処理
+export function check2FRandomEncounter(gameState, onEncounter) {
+    // モデルガン入手前でも敗走チュートリアルとして遭遇可能（20%の確率）
+    if (Math.random() < 0.20) {
+        if (onEncounter) onEncounter();
+        return true;
+    }
+    return false;
 }
