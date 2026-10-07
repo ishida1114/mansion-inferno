@@ -1,17 +1,19 @@
-// gameState.js - プレイヤーステータス・カード装填・レベル成長一元管理
+// gameState.js - プレイヤー状態・位置座標・3Dマップ・セーブ・ラミナ装填コスト計算（完全版）
+
 export const gameState = {
+  // プレイヤー基本ステータスおよび3Dダンジョン位置座標
   player: {
-    x: 7,
-    y: 1,
-    dir: 0,
+    x: 7,          // X座標（1F初期位置: 7）
+    y: 1,          // Y座標（1F初期位置: 1）
+    dir: 0,        // 向き (0:北, 1:東, 2:南, 3:西)
     level: 1,
     hp: 20,
     maxHp: 20,
-    def: 0,        // 防具＋成長による防御力
-    agi: 5,        // 素早さ（回避率）
-    sin: 0,        // 罪ゲージ
-    money: 0,      // 所持金
-    hasModelGun: false // 初期状態は必ずfalse
+    def: 0,        // 装備防具＋自動上昇DEFの合計
+    agi: 5,        // 素早さ（逃走率・回避率に影響）
+    sin: 0,        // 罪ゲージ（人間の誤射で+30）
+    money: 0,      // 所持金（💰）
+    hasModelGun: false, // 2Fで教え子から入手するまでfalse
   },
 
   currentFloor: 1,
@@ -19,24 +21,25 @@ export const gameState = {
   equippedArmor: null,
 
   ownedCards: [1, 2, 3, 4, 5, 6, 7, 8, 9],
-  equippedCards: [], // 装填カード
+  equippedCards: [], // 現在銃に装填されているカードのリスト
 
   hasExorcistInherited: false,
   hasKey2F: false,
   hasModelGun: false,
   hasMetGrandma: false,
   hasTalkedStudentInCVS: false,
-
   cards: [],
+
+  // クリア済み部屋の記録（重複査問・無限稼ぎ防止）
   clearedRooms: {},
 
   inventory: {
-    items: []
+    items: [],
   },
 
   flags: {
     cleared2F: false,
-    hasCat: false
+    hasCat: false, // Lv15以上で自動加入
   },
 
   // コスト上限に基づくカード装填自動計算
@@ -63,10 +66,11 @@ export const gameState = {
     this.equippedCards = newEquipped;
   },
 
+  // レベルアップ処理（自動上昇）
   levelUp(amount = 1) {
     this.player.level += amount;
     this.player.maxHp += 5 * amount;
-    this.player.hp = this.player.maxHp;
+    this.player.hp = this.player.maxHp; // 自動全回復
     this.player.agi += 1 * amount;
 
     if (this.player.level % 2 === 0) {
@@ -80,6 +84,7 @@ export const gameState = {
     this.updateEquippedCards();
   },
 
+  // ゲーム状態リセット
   resetGame() {
     this.currentFloor = 1;
     this.player.x = 7;

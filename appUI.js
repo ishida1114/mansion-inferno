@@ -1,4 +1,4 @@
-// appUI.js - スマホUI（モデルガン未所持時装填ブロック ＆ 強力クロマキー透過）
+// appUI.js - スマホUI（アプリ起動時トップ画面固定 ＆ 強力クロマキー透過）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -82,6 +82,8 @@ export class AppUI {
   closeApp() {
     const container = document.getElementById('app-ui-container');
     if (container) container.classList.add('hidden');
+    // 次回起動時のためにトップ画面にリセット
+    this.currentSubView = 'home';
   }
 
   renderApp() {
@@ -222,7 +224,7 @@ export class AppUI {
     const items = gameState.inventory?.items || [];
     return `
       <div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">所持品</h3></div>
-      <div style="font-size: 0.85em; color: #ffdd66; margin-bottom: 10px;">所持金: ${gameState.player.money} 💰</div>
+      <div style="font-size: 0.85em; color: #ffdd66; margin-bottom: 10px;">所持金: ${gameState.player.money} 💰 (DEF:+${gameState.player.def})</div>
       <div>
         ${items.length > 0 ? items.map((item, idx) => `
           <div class="loadout-slot" style="display: flex; justify-content: space-between; align-items: center; border-style: solid; text-align: left;">
@@ -273,7 +275,6 @@ export class AppUI {
       };
     });
 
-    // モデルガン画像のクロマキー自動透過
     const gunImg = document.getElementById('loadout-gun-img');
     applyChromaKey(gunImg);
 

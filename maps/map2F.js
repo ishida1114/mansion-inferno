@@ -3,7 +3,6 @@ import { showMessageDialog, showConversationDialog, showItemAcquiredModal, playF
 
 export const playerStart2F = { x: 1, y: 1, dir: 0 };
 
-// 2階マップ配列 (0: 通路, 1: 壁, 2: 教え子の部屋, 3: 一般部屋ドア, 4: 1F行き階段, 8: 影山ボス部屋)
 export const map2F = [
     [1, 4, 1, 1, 1, 1, 1, 1, 1], // (1, 0) 1階非常階段扉
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -27,19 +26,20 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // 2: 教え子の部屋
+    // ★ 2: 教え子の部屋（モデルガン ＋ 作業用ジャケット DEF +1 入手）
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
                 run: (onComplete) => {
-                    showConversationDialog("assets/images/human1.png", "【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nこれ……父親の部屋にあったモデルガンなんだけど、持っていって！」", () => {
+                    showConversationDialog("assets/images/human1.png", "【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nこれ……父親の部屋にあったモデルガンと防刃ジャケットなんだ。使って！」", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
+                        gameState.player.def += 1; // ★ 防具DEF +1 補正！
                         
                         showItemAcquiredModal(
                             "assets/images/modelgun.jpg", 
-                            "モデルガン（Vox Sacra連動）", 
-                            "手渡されたモデルガンを受け取った！", 
+                            "モデルガン ＆ 防刃ジャケット", 
+                            "『モデルガン（Vox Sacra連動）』と『防刃ジャケット（DEF +1）』を受け取った！", 
                             () => {
                                 showMessageDialog("【現象が発生！】\nモデルガンが青白く光った！\nポケットの中でスマホが激しく振動し、『悪魔辞典アプリ』が自動的に立ち上がった……！", () => {
                                     showMessageDialog("【悪魔辞典】\n「手持ちの退魔カード『ラミナ』が共鳴して光っている……。\nモデルガンにラミナを装填しろということだろうか？」", () => {
@@ -61,7 +61,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         }
     }
 
-    // 3: 一般部屋ドア（査問）- クリアしたら記録して空部屋化
+    // 3: 一般部屋ドア（査問）
     if (targetCell === 3) {
         return {
             run: (onComplete) => {
