@@ -1,11 +1,11 @@
-// main.js - 廊下移動時は査問なしで直接戦闘へ遷移（完全修正版）
+// main.js - 移動操作・イベント制御・戦闘＆アプリ自動起動連携版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './maps/map2F.js';
-import { showMessageDialog } from './ui.js';
+import { showMessageDialog, openCombatUI, openInquisitionUI } from './ui.js';
 
 let appUI;
 let renderer;
@@ -119,7 +119,20 @@ function interactFrontCell() {
 
   const context = {
     changeFloor: (floor) => { changeFloor(floor); },
-    redraw: () => renderer.render()
+    redraw: () => renderer.render(),
+    // ★ 教え子イベント後のアプリ（ラミナ装填画面）自動起動関数
+    openLoadoutApp: () => {
+      appUI.currentSubView = 'loadout';
+      appUI.renderApp();
+      const container = document.getElementById('app-ui-container');
+      if (container) container.classList.remove('hidden');
+    },
+    // ★ ドアの査問画面起動
+    openInquisitionUI: (entity, cb) => {
+      openInquisitionUI(entity, gameState, () => {
+        if (cb) cb();
+      });
+    }
   };
 
   let eventObj = null;
@@ -191,12 +204,12 @@ function toggleDebugUI() {
   }
 }
 
-// ★ 2階の歩行時エンカウント：査問なしでザコ悪魔（demon1.png〜demon3.png）と直接戦闘！
+// ★ 廊下歩行時エンカウント：openCombatUI を呼び出して通常戦闘を開始
 function checkEncounterAfterMove() {
   if (gameState.currentFloor === 2) {
     check2FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
-      showMessageDialog(`【悪魔遭遇！】\n暗闇から ${enemy.name} が襲いかかってきた！\n（※コマンド戦闘開始）`, () => {
+      openCombatUI(enemy, gameState, (result) => {
         isProcessingEvent = false;
         renderer.render();
       });

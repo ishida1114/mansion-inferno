@@ -1,6 +1,7 @@
-// appUI.js - スマホUI（コスト厳密制限版）
+// appUI.js - スマホUI（モデルガン自動クロマキー ＆ 装填コスト制限版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
+import { applyChromaKey } from './ui.js';
 
 export const LOGO_ASSETS = {
   TITLE_LOGO: 'assets/images/akumanologo.png',
@@ -89,7 +90,6 @@ export class AppUI {
 
     appContainer.classList.add('app-overlay');
     
-    // 初期状態：Lv1なら【1】のみ装填
     if (!gameState.equippedCards || gameState.equippedCards.length === 0) {
       gameState.equippedCards = [1];
     }
@@ -171,7 +171,6 @@ export class AppUI {
     `;
   }
 
-  // ★ コスト制限（Lv.1は【1】のみ。選択しようとすると厳密ブロック）
   renderLoadoutView() {
     const pLevel = gameState.player.level;
     const equipped = gameState.equippedCards || [1];
@@ -185,7 +184,7 @@ export class AppUI {
       
       <div style="text-align: center; margin-bottom: 10px; background: #000; padding: 8px; border-radius: 6px; border: 1px solid #330000;">
         ${gameState.player.hasModelGun ? `
-          <img src="assets/images/modelgun.jpg" alt="モデルガン" style="max-width: 100px; max-height: 60px; object-fit: contain; display: block; margin: 0 auto 5px auto; border-radius: 4px;" />
+          <img id="loadout-gun-img" src="assets/images/modelgun.jpg" alt="モデルガン" style="max-width: 100px; max-height: 60px; object-fit: contain; display: block; margin: 0 auto 5px auto; border-radius: 4px;" />
           <span style="color:#00ff66; font-size:0.8em; font-weight:bold;">モデルガン連携中</span>
         ` : `
           <span style="color:#ff4444; font-size:0.8em;">※モデルガン未所持（素手攻撃）</span>
@@ -273,7 +272,13 @@ export class AppUI {
       };
     });
 
-    // ★ カード選択タップイベント（コスト上限オーバー時厳密ブロック）
+    // ★ レンダリングされたモデルガン画像へ自動クロマキー透過適用
+    const gunImg = document.getElementById('loadout-gun-img');
+    if (gunImg) {
+      if (gunImg.complete) applyChromaKey(gunImg);
+      else gunImg.onload = () => applyChromaKey(gunImg);
+    }
+
     const cardItems = document.querySelectorAll('.card-item');
     cardItems.forEach(item => {
       item.onclick = () => {

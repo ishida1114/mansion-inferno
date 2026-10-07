@@ -1,10 +1,9 @@
-// maps/map2F.js - 2階マップ・ザコ敵データ・ドア査問制御
+// maps/map2F.js - 2階固有イベント（モデルガン光る演出＆ラミナ装填アプリ自動起動制御版）
 
-import { showMessageDialog, showConversationDialog, showItemAcquiredModal, openInquisitionUI } from '../ui.js';
+import { showMessageDialog, showConversationDialog, showItemAcquiredModal } from '../ui.js';
 
 export const playerStart2F = { x: 1, y: 1, dir: 1 };
 
-// 2階マップ配列 (0: 通路, 1: 壁, 2: 教え子の部屋, 3: 一般部屋ドア(査問), 8: ボス影山の部屋)
 export const map2F = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -15,9 +14,8 @@ export const map2F = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
-// 2階固有の調べ（SPACE）イベント
 export function handleEvent2F(targetCell, gameState, context) {
-    // 2: 教え子の部屋（モデルガン入手）
+    // 2: 教え子の部屋（★モデルガン光る演出 ➔ アプリ自動起動）
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
@@ -29,8 +27,18 @@ export function handleEvent2F(targetCell, gameState, context) {
                         showItemAcquiredModal(
                             "assets/images/modelgun.jpg", 
                             "モデルガン（Vox Sacra連動）", 
-                            "悪魔辞典アプリとモデルガンが同期！\nラミナカードを装填して聖なる弾丸を撃てるようになった！", 
-                            onComplete
+                            "手渡されたモデルガンを受け取った！", 
+                            () => {
+                                showMessageDialog("【現象が発生！】\nモデルガンが青白く光った！\nポケットの中でスマホが激しく振動し、『悪魔辞典アプリ』が自動的に立ち上がった……！", () => {
+                                    showMessageDialog("【悪魔辞典】\n「手持ちの退魔カード『ラミナ』が共鳴して光っている……。\nモデルガンにラミナを装填しろということだろうか？」", () => {
+                                        // ★ アプリのラミナ装填画面を自動オープン
+                                        if (context && context.openLoadoutApp) {
+                                            context.openLoadoutApp();
+                                        }
+                                        onComplete();
+                                    });
+                                });
+                            }
                         );
                     });
                 }
@@ -42,11 +50,10 @@ export function handleEvent2F(targetCell, gameState, context) {
         }
     }
 
-    // ★ 3: ドアを開ける（住人 vs 悪魔 の査問パート発火）
+    // 3: ドアを開ける（査問パート）
     if (targetCell === 3) {
         return {
             run: (onComplete) => {
-                // ランダムで「本物の人間」か「化けた悪魔」かを選択
                 const isDemon = Math.random() < 0.5;
                 const entity = isDemon ? {
                     name: "2階の不審な住人",
@@ -60,9 +67,11 @@ export function handleEvent2F(targetCell, gameState, context) {
                     weaknesses: []
                 };
 
-                openInquisitionUI(entity, gameState, (result) => {
+                if (context && context.openInquisitionUI) {
+                    context.openInquisitionUI(entity, onComplete);
+                } else {
                     onComplete();
-                });
+                }
             }
         };
     }
@@ -77,7 +86,7 @@ export function handleEvent2F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ 廊下歩行時のランダムエンカウント（査問なし！ 2Fザコ敵 `demon1.png`〜`demon3.png` と直接戦闘）
+// 2階廊下歩行時のランダムエンカウント（2Fザコ悪魔 demon1.png〜demon3.png）
 export function check2FRandomEncounter(gameState, onEncounter) {
     if (Math.random() < 0.20) {
         const demonNum = Math.floor(Math.random() * 3) + 1;

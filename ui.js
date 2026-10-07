@@ -1,4 +1,4 @@
-// ui.js - 会話・ステップ式査問・ショップ・クロマキー処理完全版
+// ui.js - 会話・査問・ショップ・通常戦闘UI・クロマキー処理完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -17,8 +17,8 @@ export function applyChromaKey(imgElement) {
         const data = imgData.data;
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i], g = data[i + 1], b = data[i + 2];
-            // 緑色判定してAlpha(透明度)をゼロ化
-            if (g > 70 && g > r * 1.15 && g > b * 1.15) data[i + 3] = 0;
+            // 緑色成分の強いピクセルを透過
+            if (g > 65 && g > r * 1.1 && g > b * 1.1) data[i + 3] = 0;
         }
         cctx.putImageData(imgData, 0, 0); 
         imgElement.src = canvas.toDataURL();
@@ -74,6 +74,7 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
+// ★ アイテム獲得モーダル（モデルガン等の緑背景も即時透過）
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
     modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.88); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
@@ -173,7 +174,66 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ ドアを開けた時のステップ式査問（インクイジション）システム復元版
+// ★ 廊下歩行時の【通常戦闘UI】（画面中央に敵画像表示・コマンドバトル）
+export function openCombatUI(enemy, gameState, onResult) {
+    const ui = document.createElement("div");
+    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
+
+    let enemyHp = enemy.hp || 30;
+
+    ui.innerHTML = `
+        <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【戦闘発生】</h2>
+        <img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px;">
+        <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold;">${enemy.name}</div>
+        <div id="combat-hp" style="color: #aaa; font-size: 0.9em; margin-bottom: 15px;">敵HP: ${enemyHp}</div>
+
+        <div id="combat-log" style="width: 100%; max-width: 450px; height: 80px; background: rgba(0,0,0,0.8); border: 1px solid #550000; padding: 10px; margin-bottom: 15px; color: #ccc; font-size: 0.9em; line-height: 1.5; white-space: pre-wrap; overflow-y: auto;">悪魔が姿を現した！ どうする？</div>
+
+        <div style="display: flex; gap: 10px; width: 100%; max-width: 450px;">
+            <button id="btn-attack" style="flex: 1; background: #440000; color: #fff; border: 1px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold;">Vox Sacra (射撃)</button>
+            <button id="btn-escape" style="flex: 1; background: #111; color: #aaa; border: 1px solid #555; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px;">逃げる</button>
+        </div>
+    `;
+    document.body.appendChild(ui);
+
+    const enemyImg = document.getElementById("combat-enemy-img");
+    if (enemyImg) {
+        if (enemyImg.complete) applyChromaKey(enemyImg);
+        else enemyImg.onload = () => applyChromaKey(enemyImg);
+    }
+
+    const log = document.getElementById("combat-log");
+    const hpText = document.getElementById("combat-hp");
+
+    document.getElementById("btn-attack").onclick = () => {
+        const equippedPower = gameState.equippedCards.reduce((a, b) => a + b, 0);
+        const damage = equippedPower > 0 ? equippedPower * 10 : 5;
+        enemyHp = Math.max(0, enemyHp - damage);
+        hpText.innerText = `敵HP: ${enemyHp}`;
+
+        if (enemyHp <= 0) {
+            log.innerText = `Vox Sacra（聖なる声）が悪魔を貫いた！\n${enemy.name} を撃退した！`;
+            setTimeout(() => {
+                ui.remove();
+                gameState.player.money += 150;
+                showMessageDialog(`【勝利】\n${enemy.name} を倒した！（💰150 獲得）`, () => {
+                    if (onResult) onResult("win");
+                });
+            }, 800);
+        } else {
+            log.innerText = `Vox Sacraの射撃！ 悪魔に ${damage} ダメージ！\n悪魔の反撃！ 主人公は 5 ダメージを受けた！`;
+            gameState.player.hp = Math.max(1, gameState.player.hp - 5);
+        }
+    };
+
+    document.getElementById("btn-escape").onclick = () => {
+        ui.remove();
+        showMessageDialog("【逃走成功】\n間一髪で悪魔から逃げ切った！", () => {
+            if (onResult) onResult("escape");
+        });
+    };
+}
+
 export function openInquisitionUI(entity, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -202,14 +262,13 @@ export function openInquisitionUI(entity, gameState, onResult) {
     `;
     document.body.appendChild(ui);
 
-    // 画像の緑背景透過を即時実行
     const entityImg = document.getElementById("inq-entity-img");
     if (entityImg) {
         if (entityImg.complete) applyChromaKey(entityImg);
         else entityImg.onload = () => applyChromaKey(entityImg);
     }
 
-    let step = 1; // 1: 1枚目選択, 2: 2枚目選択, 3: 最終決断
+    let step = 1;
     let selected = [];
     const cardsDiv = document.getElementById("inq-cards");
     const cardsList = gameState.cards || ["1Card.png"];
@@ -245,12 +304,10 @@ export function openInquisitionUI(entity, gameState, onResult) {
     const protectBtn = document.getElementById("btn-protect");
     const log = document.getElementById("inq-log");
 
-    // 提示ボタンの処理（ステップ進行）
     showBtn.onclick = () => {
         if (step === 1) {
             if (!selected[0]) { alert("1枚目のカードを選択してください。"); return; }
             
-            // 1枚目提示の反応
             if (entity.type === "human") {
                 log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${entity.name}】\n「え…？ なんですかその紙切れは？」\n（人間らしく困惑している。もう1枚提示して確認しよう）`;
             } else {
@@ -268,7 +325,6 @@ export function openInquisitionUI(entity, gameState, onResult) {
         } else if (step === 2) {
             if (!selected[1]) { alert("2枚目のカードを選択してください。"); return; }
 
-            // 2枚目提示の反応 ➔ 最終決断へ
             if (entity.type === "human") {
                 log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n「しつこいですね！ 宗教の勧誘なら警察を呼びますよ！」\n（完全に人間特有の嫌悪反応だ。【撃つ】か【保護する】か決めよう）`;
             } else {
@@ -291,11 +347,10 @@ export function openInquisitionUI(entity, gameState, onResult) {
         }
     };
 
-    // 銃で撃つ
     shootBtn.onclick = () => {
         ui.remove();
         if (entity.type === "human") {
-            gameState.player.sin += 30; // 人間誤射ペナルティ
+            gameState.player.sin += 30;
             showMessageDialog(`【人間誤射！】\n怯えていた無抵抗の人間を撃ち抜いてしまった……！\n（罪(SIN)が 30 増加した！ 現在の罪:${gameState.player.sin}）`, () => {
                 onResult("finish");
             });
@@ -306,7 +361,6 @@ export function openInquisitionUI(entity, gameState, onResult) {
         }
     };
 
-    // 保護する
     protectBtn.onclick = () => {
         ui.remove();
         if (entity.type === "human") {
