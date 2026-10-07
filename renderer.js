@@ -1,4 +1,4 @@
-// renderer.js - 擬似3Dダンジョン描画（アクションヒント最適化版）
+// renderer.js - 擬似3D透視投影描画（壁めり込み・ズレ完全解消版）
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -40,18 +40,19 @@ export function initRenderer(onReady) {
     }
 }
 
+// 消失点(300, 200)に基づく完全パースポリゴンクリップ
 const leftClips = { 
-    1: [{x:0, y:100}, {x:150, y:150}, {x:150, y:250}, {x:0, y:300}], 
-    2: [{x:150, y:150}, {x:225, y:175}, {x:225, y:225}, {x:150, y:250}], 
-    3: [{x:225, y:175}, {x:262, y:187}, {x:262, y:213}, {x:225, y:225}], 
-    4: [{x:262, y:187}, {x:281, y:193}, {x:281, y:207}, {x:262, y:213}] 
+    1: [{x:0, y:0}, {x:150, y:100}, {x:150, y:300}, {x:0, y:400}], 
+    2: [{x:150, y:100}, {x:225, y:150}, {x:225, y:250}, {x:150, y:300}], 
+    3: [{x:225, y:150}, {x:262, y:175}, {x:262, y:225}, {x:225, y:250}], 
+    4: [{x:262, y:175}, {x:281, y:187}, {x:281, y:213}, {x:262, y:225}] 
 };
 
 const rightClips = { 
-    1: [{x:450, y:150}, {x:600, y:100}, {x:600, y:300}, {x:450, y:250}], 
-    2: [{x:375, y:175}, {x:450, y:150}, {x:450, y:250}, {x:375, y:225}], 
-    3: [{x:338, y:187}, {x:375, y:175}, {x:375, y:225}, {x:338, y:213}], 
-    4: [{x:319, y:193}, {x:338, y:187}, {x:338, y:213}, {x:319, y:207}] 
+    1: [{x:450, y:100}, {x:600, y:0}, {x:600, y:400}, {x:450, y:300}], 
+    2: [{x:375, y:150}, {x:450, y:100}, {x:450, y:300}, {x:375, y:250}], 
+    3: [{x:338, y:175}, {x:375, y:150}, {x:375, y:250}, {x:338, y:225}], 
+    4: [{x:319, y:187}, {x:338, y:175}, {x:338, y:225}, {x:319, y:213}] 
 };
 
 const frontBounds = { 
@@ -59,21 +60,6 @@ const frontBounds = {
     2: { x: 225, y: 150, w: 150, h: 100 }, 
     3: { x: 262, y: 175, w: 76, h: 50 }, 
     4: { x: 281, y: 187, w: 38, h: 26 } 
-};
-
-const sideCornerSlots = { 
-    left: { 
-        1: { x: 0, y: 100, w: 150, h: 200 }, 
-        2: { x: 150, y: 150, w: 75, h: 100 }, 
-        3: { x: 225, y: 175, w: 37, h: 50 }, 
-        4: { x: 262, y: 187, w: 19, h: 26 } 
-    }, 
-    right: { 
-        1: { x: 450, y: 100, w: 150, h: 200 }, 
-        2: { x: 375, y: 150, w: 75, h: 100 }, 
-        3: { x: 338, y: 175, w: 37, h: 50 }, 
-        4: { x: 319, y: 187, w: 19, h: 26 } 
-    } 
 };
 
 export class Renderer {
@@ -107,10 +93,11 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir], lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
         const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir], rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
-        // 左壁
+        // 左側側壁描画（ポリゴンクリップで斜め壁として正確に描画）
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
             const imgKey = "left" + depth;
-            if (images[imgKey] && images[imgKey].complete) {
+            const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
+            if (targetImg && targetImg.complete) {
                 const clip = leftClips[depth];
                 ctx.save(); 
                 ctx.beginPath(); 
@@ -120,24 +107,17 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 ctx.lineTo(clip[3].x, clip[3].y); 
                 ctx.closePath(); 
                 ctx.clip();
-                ctx.drawImage(images[imgKey], 0, 0, canvas.width, canvas.height); 
+                ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
                 applyDepthShadow(ctx, clip, depth); 
                 ctx.restore();
             }
-        } else {
-            const lX_next = player.x + dx[player.dir] * depth + dx[leftDir], lY_next = player.y + dy[player.dir] * depth + dy[leftDir];
-            if (currentMap[lY_next] && currentMap[lY_next][lX_next] !== 0 && images.wall && images.wall.complete) {
-                const slot = sideCornerSlots.left[depth];
-                ctx.drawImage(images.wall, slot.x, slot.y, slot.w, slot.h);
-                ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`; 
-                ctx.fillRect(slot.x, slot.y, slot.w, slot.h);
-            }
         }
 
-        // 右壁
+        // 右側側壁描画
         if (currentMap[rY] && currentMap[rY][rX] !== 0) {
             const imgKey = "right" + depth;
-            if (images[imgKey] && images[imgKey].complete) {
+            const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
+            if (targetImg && targetImg.complete) {
                 const clip = rightClips[depth];
                 ctx.save(); 
                 ctx.beginPath(); 
@@ -147,21 +127,13 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 ctx.lineTo(clip[3].x, clip[3].y); 
                 ctx.closePath(); 
                 ctx.clip();
-                ctx.drawImage(images[imgKey], 0, 0, canvas.width, canvas.height); 
+                ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
                 applyDepthShadow(ctx, clip, depth); 
                 ctx.restore();
             }
-        } else {
-            const rX_next = player.x + dx[player.dir] * depth + dx[rightDir], rY_next = player.y + dy[player.dir] * depth + dy[rightDir];
-            if (currentMap[rY_next] && currentMap[rY_next][rX_next] !== 0 && images.wall && images.wall.complete) {
-                const slot = sideCornerSlots.right[depth];
-                ctx.drawImage(images.wall, slot.x, slot.y, slot.w, slot.h);
-                ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`; 
-                ctx.fillRect(slot.x, slot.y, slot.w, slot.h);
-            }
         }
 
-        // 正面壁・扉
+        // 正面壁・扉描画
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;

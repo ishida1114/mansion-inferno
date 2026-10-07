@@ -1,4 +1,4 @@
-// appUI.js - スマホUI（モデルガン自動クロマキー ＆ 装填コスト制限版）
+// appUI.js - スマホUI（モデルガン未所持時装填ブロック ＆ 強力クロマキー透過）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -90,8 +90,8 @@ export class AppUI {
 
     appContainer.classList.add('app-overlay');
     
-    if (!gameState.equippedCards || gameState.equippedCards.length === 0) {
-      gameState.equippedCards = [1];
+    if (!gameState.equippedCards) {
+      gameState.equippedCards = [];
     }
 
     const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
@@ -173,7 +173,8 @@ export class AppUI {
 
   renderLoadoutView() {
     const pLevel = gameState.player.level;
-    const equipped = gameState.equippedCards || [1];
+    const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
+    const equipped = gameState.equippedCards || [];
     const totalPower = equipped.reduce((a, b) => a + b, 0);
 
     return `
@@ -183,11 +184,11 @@ export class AppUI {
       </div>
       
       <div style="text-align: center; margin-bottom: 10px; background: #000; padding: 8px; border-radius: 6px; border: 1px solid #330000;">
-        ${gameState.player.hasModelGun ? `
+        ${hasGun ? `
           <img id="loadout-gun-img" src="assets/images/modelgun.jpg" alt="モデルガン" style="max-width: 100px; max-height: 60px; object-fit: contain; display: block; margin: 0 auto 5px auto; border-radius: 4px;" />
           <span style="color:#00ff66; font-size:0.8em; font-weight:bold;">モデルガン連携中</span>
         ` : `
-          <span style="color:#ff4444; font-size:0.8em;">※モデルガン未所持（素手攻撃）</span>
+          <span style="color:#ff4444; font-size:0.8em;">※モデルガン未所持（装填不可）</span>
         `}
       </div>
 
@@ -196,8 +197,8 @@ export class AppUI {
       </div>
 
       <div>
-        <div class="loadout-slot equipped-slot">
-          装填中：<strong>【カード ${equipped[0]}】</strong>
+        <div class="loadout-slot ${equipped.length > 0 ? 'equipped-slot' : ''}">
+          装填中：<strong>${equipped.length > 0 ? `【カード ${equipped[0]}】` : '未装填'}</strong>
         </div>
         <div style="color: #00ff66; font-size: 0.8em; margin-bottom: 10px;">射撃威力 (Vox Sacra): ${totalPower}</div>
       </div>
@@ -205,11 +206,11 @@ export class AppUI {
       <div class="sub-title" style="font-size: 0.85em; text-align: left; margin: 10px 0 5px 0; color:#ffdd66;">タップして装填するカードを選択</div>
       <div class="card-list">
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
-          const isAllowed = num <= pLevel;
+          const isAllowed = hasGun && (num <= pLevel);
           return `
             <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
               <img src="assets/images/cards/${num}Card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}card.png'" />
-              <div style="font-size: 0.7em;">【${num}】${isAllowed ? '' : '<br><span style="color:#ff4444;">Lv不足</span>'}</div>
+              <div style="font-size: 0.7em;">【${num}】${isAllowed ? '' : '<br><span style="color:#ff4444;">不可</span>'}</div>
             </div>
           `;
         }).join('')}
@@ -272,16 +273,19 @@ export class AppUI {
       };
     });
 
-    // ★ レンダリングされたモデルガン画像へ自動クロマキー透過適用
+    // モデルガン画像のクロマキー自動透過
     const gunImg = document.getElementById('loadout-gun-img');
-    if (gunImg) {
-      if (gunImg.complete) applyChromaKey(gunImg);
-      else gunImg.onload = () => applyChromaKey(gunImg);
-    }
+    applyChromaKey(gunImg);
 
     const cardItems = document.querySelectorAll('.card-item');
     cardItems.forEach(item => {
       item.onclick = () => {
+        const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
+        if (!hasGun) {
+          alert("モデルガンを所有していないため、ラミナを装填できません。");
+          return;
+        }
+
         const num = parseInt(item.getAttribute('data-card-num'));
         if (isNaN(num)) return;
 

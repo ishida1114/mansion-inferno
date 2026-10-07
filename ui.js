@@ -1,10 +1,10 @@
-// ui.js - 会話・査問・ショップ・通常戦闘UI・クロマキー処理完全版
+// ui.js - 会話・査問・ショップ・本格ステータス計算戦闘UI（完全版）
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ 緑背景（クロマキー）自動透過関数（非同期ロード対応）
+// ★ 強力緑背景（クロマキー）自動透過関数
 export function applyChromaKey(imgElement) {
     if (!imgElement) return;
     if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
@@ -21,7 +21,7 @@ export function applyChromaKey(imgElement) {
             const data = imgData.data;
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i], g = data[i + 1], b = data[i + 2];
-                if (g > 50 && g > r * 1.05 && g > b * 1.05) {
+                if (g > 45 && g > r * 1.02 && g > b * 1.02) {
                     data[i + 3] = 0;
                 }
             }
@@ -192,12 +192,15 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ 通常戦闘画面（主人公HPリアルタイム表示 ＆ 攻撃条件の厳密制御）
+// ★ 本格仕様コマンド戦闘UI（ATK・DEF・AGI回避・弱点倍率反映）
 export function openCombatUI(enemy, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
 
     let enemyHp = enemy.hp || 30;
+    const enemyAtk = enemy.atk || 8;
+    const enemyDef = enemy.def || 0;
+    const enemyWeakness = enemy.weakness || [1];
 
     ui.innerHTML = `
         <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【通常戦闘】</h2>
@@ -226,38 +229,57 @@ export function openCombatUI(enemy, gameState, onResult) {
     const enemyHpText = document.getElementById("enemy-hp-text");
 
     document.getElementById("btn-attack").onclick = () => {
-        const hasGun = gameState.player.hasModelGun;
+        const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
         const equippedCards = gameState.equippedCards || [];
-        const equippedPower = equippedCards.reduce((a, b) => a + b, 0);
 
+        // 1. モデルガン未所持チェック
         if (!hasGun) {
-            log.innerText = "【攻撃不能！】\nモデルガンを持っていない！ 素手では悪魔に一切のダメージを与えられない！";
-        } else if (equippedPower === 0) {
-            log.innerText = "【装填エラー！】\nモデルガンにラミナ（カード）が装填されていない！\n弾が出ず、ダメージを与えられない！";
-        } else {
-            const damage = equippedPower * 10;
-            enemyHp = Math.max(0, enemyHp - damage);
+            log.innerText = "【攻撃不能！】\nモデルガンを持っていない！ 素手では悪魔にダメージを与えられない！";
+        } 
+        // 2. ラミナ未装填チェック
+        else if (equippedCards.length === 0) {
+            log.innerText = "【装填エラー！】\nモデルガンにラミナ（カード）が装填されていない！ 弾が出ない！";
+        } 
+        // 3. 正常攻撃＆弱点特効ダメージ計算
+        else {
+            let baseDamage = equippedCards.reduce((sum, num) => sum + num, 0) * 4;
+            const isWeaknessHit = equippedCards.some(num => enemyWeakness.includes(num));
+            
+            if (isWeaknessHit) {
+                baseDamage *= 2; // 弱点特効2倍！
+            }
+
+            const netDamage = Math.max(1, baseDamage - enemyDef);
+            enemyHp = Math.max(0, enemyHp - netDamage);
             enemyHpText.innerText = `敵HP: ${enemyHp}`;
 
+            log.innerText = `Vox Sacraの射撃！${isWeaknessHit ? '（弱点突効！）' : ''} 悪魔に ${netDamage} ダメージ！`;
+
             if (enemyHp <= 0) {
-                log.innerText = `Vox Sacra（聖なる声）の射撃！ 悪魔に ${damage} ダメージ！\n${enemy.name} を撃退した！`;
+                log.innerText += `\n${enemy.name} を撃退した！`;
                 setTimeout(() => {
                     ui.remove();
                     gameState.player.money += 150;
-                    showMessageDialog(`【勝利】\n${enemy.name} を倒した！（💰150 獲得）`, () => {
+                    gameState.levelUp(1); // 撃破時LvUP
+                    showMessageDialog(`【勝利！】\n${enemy.name} を撃破した！（💰150 獲得 / レベルアップ！）`, () => {
                         if (onResult) onResult("win");
                     });
                 }, 800);
                 return;
-            } else {
-                log.innerText = `Vox Sacraの射撃！ 悪魔に ${damage} ダメージ！`;
             }
         }
 
-        const damageTaken = 10;
-        gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
-        playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
-        log.innerText += `\n悪魔の反撃！ 主人公は ${damageTaken} ダメージを受けた！`;
+        // ★ 4. AGI判定による敵攻撃の回避確率（AGI 1につき4%回避）
+        const dodgeChance = (gameState.player.agi || 5) * 0.04;
+        if (Math.random() < dodgeChance) {
+            log.innerText += `\n素早い身こなし！ 悪魔の攻撃を回避した！`;
+        } else {
+            // ★ 5. DEF判定による軽減ダメージ計算 (敵ATK - 主人公DEF)
+            const damageTaken = Math.max(1, enemyAtk - (gameState.player.def || 0));
+            gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
+            playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
+            log.innerText += `\n悪魔の反撃！ 主人公は ${damageTaken} ダメージを受けた！`;
+        }
 
         if (gameState.player.hp <= 0) {
             setTimeout(() => {
