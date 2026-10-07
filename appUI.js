@@ -1,4 +1,4 @@
-// appUI.js - スマホアプリ「悪魔辞典」UI（ラミナパス大文字化・モデルガン画像追加版）
+// appUI.js - スマホUI（Lv別ラミナ装填制限・カードクリック割り当て対応版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 
@@ -67,6 +67,7 @@ if (!document.getElementById("app-style-element")) {
         .card-list { display: flex; gap: 8px; overflow-x: auto; padding-top: 8px; }
         .card-item { border: 1px solid #555; padding: 4px; cursor: pointer; background: #000; text-align: center; border-radius: 4px; min-width: 50px; }
         .card-item:hover { border-color: #ff3333; }
+        .card-item.disabled { opacity: 0.35; cursor: not-allowed; border-color: #222; }
         .card-item img { max-width: 45px; display: block; margin: 0 auto 4px auto; }
     `;
     document.head.appendChild(appStyle);
@@ -79,9 +80,7 @@ export class AppUI {
 
   closeApp() {
     const container = document.getElementById('app-ui-container');
-    if (container) {
-      container.classList.add('hidden');
-    }
+    if (container) container.classList.add('hidden');
   }
 
   renderApp() {
@@ -89,7 +88,12 @@ export class AppUI {
     if (!appContainer) return;
 
     appContainer.classList.add('app-overlay');
-    gameState.updateEquippedCards();
+    
+    // 現在のレベルに応じた初期セット
+    if (!gameState.equippedCards || gameState.equippedCards.length === 0) {
+      gameState.equippedCards = [Math.min(1, gameState.player.level)];
+    }
+
     const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
 
     appContainer.innerHTML = `
@@ -117,23 +121,14 @@ export class AppUI {
 
   renderSubViewContent() {
     switch (this.currentSubView) {
-      case 'loadout':
-        return this.renderLoadoutView();
-      case 'inventory':
-        return this.renderInventoryView();
-      case 'notes':
-        return this.renderNotesView();
-      case 'familiar':
-        return this.renderFamiliarView();
-      case 'map':
-        return this.renderFullMapView();
-      case 'log':
-        return this.renderLogView();
-      case 'system':
-        return this.renderSystemView();
-      case 'home':
-      default:
-        return this.renderHomeGridView();
+      case 'loadout': return this.renderLoadoutView();
+      case 'inventory': return this.renderInventoryView();
+      case 'notes': return this.renderNotesView();
+      case 'familiar': return this.renderFamiliarView();
+      case 'map': return this.renderFullMapView();
+      case 'log': return this.renderLogView();
+      case 'system': return this.renderSystemView();
+      case 'home': default: return this.renderHomeGridView();
     }
   }
 
@@ -176,9 +171,11 @@ export class AppUI {
     `;
   }
 
-  // 2. ラミナ装填（★モデルガン画像 ＆ カード大文字パス 『1Card.png』 修正版）
+  // ★ 2. ラミナ装填（Lv1ではカード【1】のみ選択可能。Lvを超えるカードは制限）
   renderLoadoutView() {
-    const totalPower = gameState.equippedCards.reduce((a, b) => a + b, 0);
+    const pLevel = gameState.player.level;
+    const equipped = gameState.equippedCards || [1];
+    const totalPower = equipped.reduce((a, b) => a + b, 0);
 
     return `
       <div class="sub-header">
@@ -189,208 +186,115 @@ export class AppUI {
       <div style="text-align: center; margin-bottom: 10px; background: #000; padding: 8px; border-radius: 6px; border: 1px solid #330000;">
         ${gameState.player.hasModelGun ? `
           <img src="assets/images/modelgun.jpg" alt="モデルガン" style="max-width: 100px; max-height: 60px; object-fit: contain; display: block; margin: 0 auto 5px auto; border-radius: 4px;" />
-          <span style="color:#00ff66; font-size:0.8em; font-weight:bold;">モデルガン連携完了</span>
+          <span style="color:#00ff66; font-size:0.8em; font-weight:bold;">モデルガン連携中</span>
         ` : `
-          <span style="color:#ff4444; font-size:0.8em;">※モデルガン未所持（素手攻撃のみ）</span>
+          <span style="color:#ff4444; font-size:0.8em;">※モデルガン未所持（素手攻撃）</span>
         `}
       </div>
 
       <div style="font-size: 0.8em; color: #aaa; margin-bottom: 8px;">
-        Lv.${gameState.player.level}（コスト上限:${gameState.player.level}）
+        主人公Lv <strong>${pLevel}</strong> （総コスト上限: <strong>${pLevel}</strong>）
       </div>
 
       <div>
-        ${gameState.equippedCards.length > 0 ? `
-          ${gameState.equippedCards.map((card, idx) => `
-            <div class="loadout-slot equipped-slot">
-              スロット ${idx + 1}：【カード ${card}】
-            </div>
-          `).join('')}
-          <div style="color: #00ff66; font-size: 0.8em; margin-bottom: 10px;">攻撃力 (Vox Sacra): ${totalPower}</div>
-        ` : '<div class="loadout-slot">未装填</div>'}
+        <div class="loadout-slot equipped-slot">
+          装填中：<strong>【カード ${equipped[0]}】</strong>
+        </div>
+        <div style="color: #00ff66; font-size: 0.8em; margin-bottom: 10px;">攻撃力 (Vox Sacra): ${totalPower}</div>
       </div>
 
-      <div class="sub-title" style="font-size: 0.9em; text-align: left; margin: 10px 0 5px 0;">所持カード一式</div>
+      <div class="sub-title" style="font-size: 0.85em; text-align: left; margin: 10px 0 5px 0; color:#ffdd66;">タップして装填するカードを選択</div>
       <div class="card-list">
-        ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => `
-          <div class="card-item">
-            <!-- ★ 大文字の 1Card.png〜9Card.png を正確に読み込み -->
-            <img src="assets/images/cards/${num}Card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}card.png'" />
-            <div style="font-size: 0.7em;">【${num}】</div>
-          </div>
-        `).join('')}
+        ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
+          // レベル制限判定（カードの数字 > プレイヤーLv の場合は選択不可）
+          const isAllowed = num <= pLevel;
+          return `
+            <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
+              <img src="assets/images/cards/${num}Card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}card.png'" />
+              <div style="font-size: 0.7em;">【${num}】${isAllowed ? '' : '<br><span style="color:#ff4444;">Lv不足</span>'}</div>
+            </div>
+          `;
+        }).join('')}
       </div>
     `;
   }
 
   renderInventoryView() {
     const items = gameState.inventory?.items || [];
-
     return `
-      <div class="sub-header">
-        <span class="back-btn" id="btn-back">◄ 戻る</span>
-        <h3 class="sub-title">所持品</h3>
-      </div>
-
+      <div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">所持品</h3></div>
       <div style="font-size: 0.85em; color: #ffdd66; margin-bottom: 10px;">所持金: ${gameState.player.money} 💰</div>
-
       <div>
         ${items.length > 0 ? items.map((item, idx) => `
           <div class="loadout-slot" style="display: flex; justify-content: space-between; align-items: center; border-style: solid; text-align: left;">
-            <div>
-              <div style="color: #fff; font-weight: bold;">${item.name}</div>
-              <div style="font-size: 0.75em; color: #888;">${item.description || ''}</div>
-            </div>
+            <div><div style="color: #fff; font-weight: bold;">${item.name}</div><div style="font-size: 0.75em; color: #888;">${item.description || ''}</div></div>
             <button class="back-btn" style="color: #ff3333; border: 1px solid #ff3333; padding: 2px 6px;">使用</button>
-          </div>
-        `).join('') : `
-          <div class="loadout-slot">所持アイテムなし</div>
-        `}
+          </div>`).join('') : '<div class="loadout-slot">所持アイテムなし</div>'}
       </div>
     `;
   }
 
   renderNotesView() {
-    return `
-      <div class="sub-header">
-        <span class="back-btn" id="btn-back">◄ 戻る</span>
-        <h3 class="sub-title">悪魔手記</h3>
-      </div>
-      <div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5;">
-        <div style="color: #ffdd66; font-weight: bold;">【エクソシストの遺言】</div>
-        <div>「ボスの魔方陣に合わせて適切な弱点カードを撃ち抜くのだ……」</div>
-      </div>
-    `;
+    return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">悪魔手記</h3></div><div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5;"><div style="color: #ffdd66; font-weight: bold;">【エクソシストの遺言】</div><div>「ボスの魔方陣に合わせて適切な弱点カードを撃ち抜くのだ……」</div></div>`;
   }
 
   renderFamiliarView() {
-    return `
-      <div class="sub-header">
-        <span class="back-btn" id="btn-back">◄ 戻る</span>
-        <h3 class="sub-title">使い魔</h3>
-      </div>
-      <div style="text-align: center; padding: 15px 0;">
-        <div style="font-size: 2.5em;">🐈‍⬛</div>
-        <div style="color: #ffdd66; margin-top: 5px;">黒猫の使い魔</div>
-        <div style="font-size: 0.8em; color: #aaa; margin-top: 8px;">Lv.15に達すると実体化して戦闘に参戦します。</div>
-      </div>
-    `;
+    return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">使い魔</h3></div><div style="text-align: center; padding: 15px 0;"><div style="font-size: 2.5em;">🐈‍⬛</div><div style="color: #ffdd66; margin-top: 5px;">黒猫の使い魔</div><div style="font-size: 0.8em; color: #aaa; margin-top: 8px;">Lv.15に達すると実体化して戦闘に参戦します。</div></div>`;
   }
 
   renderFullMapView() {
     const map = gameState.currentMap || [];
     const player = gameState.player;
-
-    return `
-      <div class="sub-header">
-        <span class="back-btn" id="btn-back">◄ 戻る</span>
-        <h3 class="sub-title">詳細地図 (${gameState.currentFloor}F)</h3>
-      </div>
-      <div style="display: flex; justify-content: center; padding: 10px; background: #000; border-radius: 6px;">
-        <div style="display: grid; grid-template-columns: repeat(${map[0]?.length || 1}, 14px); gap: 2px;">
-          ${map.map((row, rIdx) => 
-            row.map((cell, cIdx) => {
-              const isPlayer = player.x === cIdx && player.y === rIdx;
-              let bg = '#111';
-              if (cell === 1) bg = '#444';
-              else if (cell === 2) bg = '#0088cc';
-              else if (cell === 3) bg = '#aa0000';
-              else if (cell === 4) bg = '#ff9900';
-              if (isPlayer) bg = '#00ff66';
-
-              return `<div style="width:14px; height:14px; background:${bg}; border-radius:2px; text-align:center; font-size:9px; line-height:14px;">${isPlayer ? '▲' : ''}</div>`;
-            }).join('')
-          ).join('')}
-        </div>
-      </div>
-    `;
+    return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">詳細地図 (${gameState.currentFloor}F)</h3></div><div style="display: flex; justify-content: center; padding: 10px; background: #000; border-radius: 6px;"><div style="display: grid; grid-template-columns: repeat(${map[0]?.length || 1}, 14px); gap: 2px;">${map.map((row, rIdx) => row.map((cell, cIdx) => { const isPlayer = player.x === cIdx && player.y === rIdx; let bg = '#111'; if (cell === 1) bg = '#444'; else if (cell === 2) bg = '#0088cc'; else if (cell === 3) bg = '#aa0000'; else if (cell === 4) bg = '#ff9900'; if (isPlayer) bg = '#00ff66'; return `<div style="width:14px; height:14px; background:${bg}; border-radius:2px; text-align:center; font-size:9px; line-height:14px;">${isPlayer ? '▲' : ''}</div>`; }).join('')).join('')}</div></div>`;
   }
 
   renderLogView() {
-    return `
-      <div class="sub-header">
-        <span class="back-btn" id="btn-back">◄ 戻る</span>
-        <h3 class="sub-title">調査ログ</h3>
-      </div>
-      <div class="loadout-slot" style="border-style: solid; text-align: left;">
-        <div style="color: #ff3333; font-weight: bold;">【現在の目的】</div>
-        <div>教え子を救出して最上階の悪魔を撃破する。</div>
-      </div>
-    `;
+    return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">調査ログ</h3></div><div class="loadout-slot" style="border-style: solid; text-align: left;"><div style="color: #ff3333; font-weight: bold;">【現在の目的】</div><div>教え子を救出して最上階の悪魔を撃破する。</div></div>`;
   }
 
   renderSystemView() {
-    return `
-      <div class="sub-header">
-        <span class="back-btn" id="btn-back">◄ 戻る</span>
-        <h3 class="sub-title">システム</h3>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 10px;">
-        <button id="btn-app-save" class="back-btn" style="padding: 10px; background: #220000; border: 1px solid #770000; color:#fff;">進行状況を保存 (SAVE)</button>
-        <button id="btn-app-load" class="back-btn" style="padding: 10px; background: #111; border: 1px solid #333; color:#fff;">データを読み込む (LOAD)</button>
-      </div>
-    `;
+    return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">システム</h3></div><div style="display: flex; flex-direction: column; gap: 10px; padding-top: 10px;"><button id="btn-app-save" class="back-btn" style="padding: 10px; background: #220000; border: 1px solid #770000; color:#fff;">進行状況を保存 (SAVE)</button><button id="btn-app-load" class="back-btn" style="padding: 10px; background: #111; border: 1px solid #333; color:#fff;">データを読み込む (LOAD)</button></div>`;
   }
 
   bindEvents() {
     const closeX = document.getElementById('btn-app-close-x');
-    if (closeX) {
-      closeX.onclick = (e) => {
-        e.stopPropagation();
-        this.closeApp();
-      };
-    }
+    if (closeX) closeX.onclick = (e) => { e.stopPropagation(); this.closeApp(); };
 
     const homeBtn = document.getElementById('app-home-btn');
-    if (homeBtn) {
-      homeBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (this.currentSubView === 'home') {
-          this.closeApp();
-        } else {
-          this.currentSubView = 'home';
-          this.renderApp();
-        }
-      };
-    }
+    if (homeBtn) homeBtn.onclick = (e) => { e.stopPropagation(); if (this.currentSubView === 'home') this.closeApp(); else { this.currentSubView = 'home'; this.renderApp(); } };
 
     const backBtn = document.getElementById('btn-back');
-    if (backBtn) {
-      backBtn.onclick = () => {
-        this.currentSubView = 'home';
-        this.renderApp();
-      };
-    }
+    if (backBtn) backBtn.onclick = () => { this.currentSubView = 'home'; this.renderApp(); };
 
     const icons = document.querySelectorAll('.app-icon');
     icons.forEach(icon => {
       icon.onclick = () => {
         const view = icon.getAttribute('data-view');
-        if (view) {
-          this.currentSubView = view;
+        if (view) { this.currentSubView = view; this.renderApp(); }
+      };
+    });
+
+    // ★ カード選択タップイベント（Lv制限判定）
+    const cardItems = document.querySelectorAll('.card-item');
+    cardItems.forEach(item => {
+      item.onclick = () => {
+        const num = parseInt(item.getAttribute('data-card-num'));
+        if (isNaN(num)) return;
+
+        if (num > gameState.player.level) {
+          alert(`主人公のレベル（Lv.${gameState.player.level}）が不足しているため、カード【${num}】は装填できません。`);
+        } else {
+          gameState.equippedCards = [num];
+          alert(`カード【${num}】をモデルガンに装填しました！`);
           this.renderApp();
         }
       };
     });
 
     const saveBtn = document.getElementById('btn-app-save');
-    if (saveBtn) {
-      saveBtn.onclick = () => {
-        gameState.saveGame();
-        alert('悪魔辞典アプリに進行状況を保存しました。');
-      };
-    }
+    if (saveBtn) saveBtn.onclick = () => { gameState.saveGame(); alert('悪魔辞典アプリに進行状況を保存しました。'); };
 
     const loadBtn = document.getElementById('btn-app-load');
-    if (loadBtn) {
-      loadBtn.onclick = () => {
-        if (gameState.loadGame()) {
-          alert('セーブデータを読み込みました。');
-          this.renderApp();
-        } else {
-          alert('保存されたデータがありません。');
-        }
-      };
-    }
+    if (loadBtn) loadBtn.onclick = () => { if (gameState.loadGame()) { alert('セーブデータを読み込みました。'); this.renderApp(); } else { alert('保存されたデータがありません。'); } };
   }
 }

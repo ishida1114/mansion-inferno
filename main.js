@@ -1,11 +1,11 @@
-// main.js - 移動操作・2Fランダム敵遭遇組み込み版
+// main.js - 移動・イベント制御・エンカウント査問遷移完全連動版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './maps/map2F.js';
-import { showMessageDialog } from './ui.js';
+import { showMessageDialog, openInquisitionUI } from './ui.js';
 
 let appUI;
 let renderer;
@@ -55,38 +55,13 @@ function init() {
     if (isProcessingEvent) return;
 
     switch (e.key) {
-      case 'ArrowUp':
-      case 'w':
-      case 'W':
-        moveForward();
-        break;
-      case 'ArrowDown':
-      case 's':
-      case 'S':
-        moveBackward();
-        break;
-      case 'ArrowLeft':
-      case 'a':
-      case 'A':
-        gameState.player.dir = (gameState.player.dir + 3) % 4;
-        break;
-      case 'ArrowRight':
-      case 'd':
-      case 'D':
-        gameState.player.dir = (gameState.player.dir + 1) % 4;
-        break;
-      case ' ':
-      case 'Spacebar':
-        e.preventDefault();
-        interactFrontCell();
-        break;
-      case 'Escape':
-        toggleAppUI();
-        break;
-      case 'F2':
-        e.preventDefault();
-        toggleDebugUI();
-        break;
+      case 'ArrowUp': case 'w': case 'W': moveForward(); break;
+      case 'ArrowDown': case 's': case 'S': moveBackward(); break;
+      case 'ArrowLeft': case 'a': case 'A': gameState.player.dir = (gameState.player.dir + 3) % 4; break;
+      case 'ArrowRight': case 'd': case 'D': gameState.player.dir = (gameState.player.dir + 1) % 4; break;
+      case ' ': case 'Spacebar': e.preventDefault(); interactFrontCell(); break;
+      case 'Escape': toggleAppUI(); break;
+      case 'F2': e.preventDefault(); toggleDebugUI(); break;
     }
   };
 }
@@ -143,9 +118,7 @@ function interactFrontCell() {
   if (!cellType || cellType === 0 || cellType === 1) return;
 
   const context = {
-    changeFloor: (floor) => {
-      changeFloor(floor);
-    },
+    changeFloor: (floor) => { changeFloor(floor); },
     redraw: () => renderer.render()
   };
 
@@ -218,14 +191,29 @@ function toggleDebugUI() {
   }
 }
 
-// 2階移動時のランダムエンカウントチェック
+// ★ 2階での悪魔遭遇時：ただのテキストで終わらせず、査問画面（openInquisitionUI）を発火！
 function checkEncounterAfterMove() {
   if (gameState.currentFloor === 2) {
     check2FRandomEncounter(gameState, () => {
       isProcessingEvent = true;
-      showMessageDialog("【悪魔遭遇！】\n廊下の闇から悪魔が襲いかかってきた！", () => {
-        isProcessingEvent = false;
-        renderer.render();
+      const enemy = {
+        name: "一般階の悪魔（覗き魔の影）",
+        type: "demon",
+        image: "assets/images/demon/2f-kageyama.mp4",
+        weaknesses: [1, 2]
+      };
+      
+      openInquisitionUI(enemy, gameState, (result) => {
+        if (result === "combat") {
+          showMessageDialog("【戦闘開始】\n正体を見破られた悪魔が襲いかかってきた！（敗走チュートリアル）\n……圧倒的な力に押し潰され、1階へ死に戻った！", () => {
+            gameState.player.hp = gameState.player.maxHp;
+            changeFloor(1);
+            isProcessingEvent = false;
+          });
+        } else {
+          isProcessingEvent = false;
+          renderer.render();
+        }
       });
     });
   }
@@ -240,7 +228,7 @@ function moveForward() {
   if (map && map[nextY] && map[nextY][nextX] === 0) {
     gameState.player.x = nextX;
     gameState.player.y = nextY;
-    checkEncounterAfterMove(); // 歩行時チェック
+    checkEncounterAfterMove();
   }
 }
 
@@ -253,7 +241,7 @@ function moveBackward() {
   if (map && map[nextY] && map[nextY][nextX] === 0) {
     gameState.player.x = nextX;
     gameState.player.y = nextY;
-    checkEncounterAfterMove(); // 歩行時チェック
+    checkEncounterAfterMove();
   }
 }
 

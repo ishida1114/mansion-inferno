@@ -1,4 +1,4 @@
-// renderer.js - 消失点(300, 200) 完全幾何学透視投影 擬似3Dダンジョン描画
+// renderer.js - 擬似3Dダンジョン描画（ミニマップ自機 ▲▼▶◀ 表示完全対応版）
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -41,22 +41,20 @@ export function initRenderer(onReady) {
     }
 }
 
-// 600x400 Canvas 消失点(300, 200)に基づく完全正確な透視投影座標テーブル
 const leftClips = { 
-    1: [{x:0, y:0}, {x:150, y:100}, {x:150, y:300}, {x:0, y:400}], 
-    2: [{x:150, y:100}, {x:225, y:150}, {x:225, y:250}, {x:150, y:300}], 
-    3: [{x:225, y:150}, {x:262, y:175}, {x:262, y:225}, {x:225, y:250}], 
-    4: [{x:262, y:175}, {x:281, y:187}, {x:281, y:213}, {x:262, y:225}] 
+    1: [{x:0, y:100}, {x:150, y:150}, {x:150, y:250}, {x:0, y:300}], 
+    2: [{x:150, y:150}, {x:225, y:175}, {x:225, y:225}, {x:150, y:250}], 
+    3: [{x:225, y:175}, {x:262, y:187}, {x:262, y:213}, {x:225, y:225}], 
+    4: [{x:262, y:187}, {x:281, y:193}, {x:281, y:207}, {x:262, y:213}] 
 };
 
 const rightClips = { 
-    1: [{x:450, y:100}, {x:600, y:0}, {x:600, y:400}, {x:450, y:300}], 
-    2: [{x:375, y:150}, {x:450, y:100}, {x:450, y:300}, {x:375, y:250}], 
-    3: [{x:338, y:175}, {x:375, y:150}, {x:375, y:250}, {x:338, y:225}], 
-    4: [{x:319, y:187}, {x:338, y:175}, {x:338, y:225}, {x:319, y:213}] 
+    1: [{x:450, y:150}, {x:600, y:100}, {x:600, y:300}, {x:450, y:250}], 
+    2: [{x:375, y:175}, {x:450, y:150}, {x:450, y:250}, {x:375, y:225}], 
+    3: [{x:338, y:187}, {x:375, y:175}, {x:375, y:225}, {x:338, y:213}], 
+    4: [{x:319, y:193}, {x:338, y:187}, {x:338, y:213}, {x:319, y:207}] 
 };
 
-// 正面描画枠（比率 1.5 : 1 / ドア画像に最適化）
 const frontBounds = { 
     1: { x: 150, y: 100, w: 300, h: 200 }, 
     2: { x: 225, y: 150, w: 150, h: 100 }, 
@@ -110,7 +108,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir], lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
         const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir], rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
-        // 左壁描画
+        // 左壁
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
             const imgKey = "left" + depth;
             if (images[imgKey] && images[imgKey].complete) {
@@ -137,7 +135,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // 右壁描画
+        // 右壁
         if (currentMap[rY] && currentMap[rY][rX] !== 0) {
             const imgKey = "right" + depth;
             if (images[imgKey] && images[imgKey].complete) {
@@ -164,7 +162,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // 正面壁・ドア描画（枠ぴったりにフィット）
+        // 正面壁・扉
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;
@@ -255,32 +253,36 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 
+// ★ ミニマップ描画（自機を 1マス内に ▲ ▶ ▼ ◀ 1文字で綺麗に表示）
 function drawMiniMap(ctx, player, currentMap) {
     if (!gameState.hasExorcistInherited) return; 
-    const size = 8, margin = 10, mapW = currentMap[0].length * size, mapH = currentMap.length * size;
-    ctx.fillStyle = "rgba(0, 0, 0, 0.65)"; 
+    const size = 10, margin = 10;
+    const mapW = currentMap[0].length * size, mapH = currentMap.length * size;
+    
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)"; 
     ctx.fillRect(margin, margin, mapW + 6, mapH + 6);
-    ctx.strokeStyle = "#444"; 
+    ctx.strokeStyle = "#555"; 
     ctx.lineWidth = 1; 
     ctx.strokeRect(margin, margin, mapW + 6, mapH + 6);
+
     for (let y = 0; y < currentMap.length; y++) {
         for (let x = 0; x < currentMap[y].length; x++) {
             const cell = currentMap[y][x];
             if (cell !== 0) {
-                ctx.fillStyle = cell === 1 ? "#555" : (cell === 8 || cell === 9 ? "#cc0000" : "#8a2be2");
+                ctx.fillStyle = cell === 1 ? "#444" : (cell === 8 || cell === 9 ? "#cc0000" : "#8a2be2");
                 ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
             }
         }
     }
-    const px = margin + 3 + player.x * size + size / 2, py = margin + 3 + player.y * size + size / 2;
-    ctx.fillStyle = "#ff3333"; 
-    ctx.beginPath(); 
-    ctx.arc(px, py, size / 2.5, 0, Math.PI * 2); 
-    ctx.fill();
-    ctx.strokeStyle = "#ff3333"; 
-    ctx.lineWidth = 2; 
-    ctx.beginPath(); 
-    ctx.moveTo(px, py);
-    ctx.lineTo(px + dx[player.dir] * (size + 2), py + dy[player.dir] * (size + 2)); 
-    ctx.stroke();
+
+    // ★ 1マスの中心に ▲▶▼◀ アイコンを赤く描画
+    const px = margin + 3 + player.x * size + size / 2;
+    const py = margin + 3 + player.y * size + size / 2;
+    const arrowChars = ["▲", "▶", "▼", "◀"];
+
+    ctx.fillStyle = "#ff3333";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(arrowChars[player.dir], px, py);
 }

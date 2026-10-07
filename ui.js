@@ -1,10 +1,9 @@
-// ui.js - 会話・査問・ショップ・動画再生・デバッグ完全版
+// ui.js - 会話・査問・ショップ・クロマキー動画再生完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// 画像用クロマキー処理（立ち絵等）
 export function applyChromaKey(imgElement) {
     if (!imgElement || imgElement.naturalWidth === 0) return;
     try {
@@ -24,7 +23,6 @@ export function applyChromaKey(imgElement) {
     } catch(e) {}
 }
 
-// 汎用メッセージダイアログ
 export function showMessageDialog(text, onClosed) {
     const msgDiv = document.createElement("div");
     msgDiv.style.cssText = `position: fixed; bottom: 8%; left: 5%; width: 90%; max-width: 560px; margin: 0 auto; padding: 20px; background-color: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; z-index: 2000; font-family: ${HORROR_FONT}; font-size: 1.1em; line-height: 1.7; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
@@ -43,7 +41,6 @@ export function showMessageDialog(text, onClosed) {
     setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// 会話ダイアログ（立ち絵付き）
 export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
@@ -75,13 +72,24 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// アイテム獲得モーダル
+// ★ アイテム獲得モーダル（緑背景クロマキー処理を追加適用）
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
     modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.88); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
+    
+    const imgEl = document.createElement("img");
+    imgEl.id = "modal-item-img";
+    imgEl.src = imagePath;
+    imgEl.style.cssText = "max-height: 200px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;";
+    imgEl.onerror = () => { imgEl.style.display = 'none'; };
+    if (imgEl.complete) applyChromaKey(imgEl);
+    else imgEl.onload = () => applyChromaKey(imgEl);
+
     modal.innerHTML = `
         <div style="color: #ff3333; font-size: 1.6em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>
-        <img id="modal-item-img" src="${imagePath}" style="max-height: 200px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;" onerror="this.style.display='none'">
+    `;
+    modal.appendChild(imgEl);
+    modal.innerHTML += `
         <div style="color: #ffdd66; font-size: 1.3em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
         <div style="color: #cccccc; font-size: 1em; margin-bottom: 25px; text-align: center; white-space: pre-wrap; line-height: 1.5;">${detailText}</div>
         <div style="color: #888; font-size: 0.85em;">タップ または [ SPACE ] で閉じる</div>
@@ -99,7 +107,6 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// 階層切り替え暗転フェード演出
 export function playFloorTransition(targetFloor, onComplete) {
     const fadeDiv = document.createElement("div");
     fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 2000; transition: opacity 0.5s ease; opacity: 0; display: flex; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em;`;
@@ -108,75 +115,45 @@ export function playFloorTransition(targetFloor, onComplete) {
     setTimeout(() => { if (onComplete) onComplete(); setTimeout(() => { fadeDiv.style.opacity = "0"; setTimeout(() => fadeDiv.remove(), 500); }, 800); }, 600);
 }
 
-// ★ 動画再生（緑色チラつき防止 ＆ 爆速クロマキー統合版）
+// ★ 動画再生（CVS.mp4, BloodPond.mp4, post.mp4等の安定再生対応）
 export function playVideo(src, onEnded) {
     const overlay = document.createElement("div");
-    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
 
     const video = document.createElement("video");
     video.src = src;
-    video.style.cssText = "display: none;"; // 動画本体は非表示で裏再生
+    video.style.cssText = "width: 100%; max-width: 540px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.5); background-color: black;";
     video.controls = false;
     video.autoplay = true;
     video.playsInline = true;
     video.muted = true;
 
-    const canvas = document.createElement("canvas");
-    canvas.width = 600;
-    canvas.height = 400;
-    canvas.style.cssText = "width: 100%; max-width: 500px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); background-color: transparent; display: none;";
-
     overlay.appendChild(video);
-    overlay.appendChild(canvas);
     document.body.appendChild(overlay);
 
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    let animId = null;
-    let isFirstFrameDone = false;
-
-    const renderFrame = () => {
-        if (video.paused || video.ended) return;
-
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const l = frame.data.length;
-
-        for (let i = 0; i < l; i += 4) {
-            const r = frame.data[i], g = frame.data[i + 1], b = frame.data[i + 2];
-            // 緑色成分の透過判定
-            if (g > 70 && g > r * 1.15 && g > b * 1.15) {
-                frame.data[i + 3] = 0;
-            }
-        }
-        ctx.putImageData(frame, 0, 0);
-
-        // 最初の1フレーム目が透明化できた「瞬間」に画面に表示！
-        if (!isFirstFrameDone) {
-            isFirstFrameDone = true;
-            canvas.style.display = "block";
-        }
-
-        animId = requestAnimationFrame(renderFrame);
-    };
-
-    video.onplay = () => {
-        animId = requestAnimationFrame(renderFrame);
-    };
-
-    const cleanup = () => {
-        if (animId) cancelAnimationFrame(animId);
-        overlay.remove();
+    const finish = () => {
+        if (overlay.parentNode) overlay.remove();
         if (onEnded) onEnded();
     };
 
-    video.onended = cleanup;
+    video.onended = finish;
+    video.onerror = () => {
+        console.warn(`動画読み込みスキップ: ${src}`);
+        finish();
+    };
+
     overlay.onclick = () => {
         video.pause();
-        cleanup();
+        finish();
     };
+
+    video.play().catch(err => {
+        console.warn("自動再生制限スキップ:", err);
+        finish();
+    });
 }
 
-// 1階 無人レジショップUI
+// 1階 ショップUI
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
     shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
@@ -222,7 +199,7 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ 通常部屋用：査問（インクイジション）システム
+// 査問システム
 export function openInquisitionUI(entity, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -255,9 +232,11 @@ export function openInquisitionUI(entity, gameState, onResult) {
 
     let selected = [];
     const cardsDiv = document.getElementById("inq-cards");
+    const cardsList = gameState.cards || ["1Card.png"];
     
-    gameState.cards.forEach(card => {
-        const num = card.match(/\d+/)[0];
+    cardsList.forEach(card => {
+        const numMatch = card.match(/\d+/);
+        const num = numMatch ? numMatch[0] : "1";
         const cDiv = document.createElement("div");
         cDiv.style.cssText = "min-width: 45px; height: 65px; border: 1px solid #555; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold;";
         cDiv.innerHTML = `<img src="assets/images/cards/${card}" style="max-width:100%; max-height:100%;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div style="display:none; font-size:1.5em;">${num}</div>`;
@@ -288,7 +267,8 @@ export function openInquisitionUI(entity, gameState, onResult) {
             log.innerText = `【${entity.name}】\n「な、なんですかその紙切れは？ 宗教の勧誘なら帰ってください！」\n\n（ひどく怪訝な顔をしている。ただの怯えた人間だろうか…？）`;
         } else {
             const c1 = parseInt(selected[0]), c2 = parseInt(selected[1]);
-            const w1 = entity.weaknesses[0], w2 = entity.weaknesses[1];
+            const w1 = entity.weaknesses ? entity.weaknesses[0] : 1;
+            const w2 = entity.weaknesses ? entity.weaknesses[1] : 2;
             const diffA = Math.abs(c1 - w1) + Math.abs(c2 - w2);
             const diffB = Math.abs(c1 - w2) + Math.abs(c2 - w1);
             const distance = Math.min(diffA, diffB);
