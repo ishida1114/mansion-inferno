@@ -12,6 +12,7 @@ const imageSources = {
     door: "assets/images/door.png",
     wall: "assets/images/wall.png",
     stairDoor: "assets/images/stair_door.png",
+    entrance: "assets/images/entrance.png", 
     left1: "assets/images/leftwall1.png",
     left2: "assets/images/leftwall2.png",
     left3: "assets/images/leftwall3.png",

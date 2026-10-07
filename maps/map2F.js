@@ -1,5 +1,8 @@
-// maps/map2F.js - 2階マップ（査問対面時の悪魔擬態化完全版）
-import { showMessageDialog, showConversationDialog, showItemAcquiredModal, playFloorTransition } from '../ui.js';
+// maps/map2F.js - 2階マップ（影山ボス戦発火対応完全版）
+import { 
+    showMessageDialog, showConversationDialog, showItemAcquiredModal, 
+    playFloorTransition, playVideo, openBossPuzzleUI 
+} from '../ui.js';
 
 export const playerStart2F = { x: 1, y: 1, dir: 0 };
 
@@ -8,12 +11,13 @@ export const map2F = [
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
     [1, 0, 1, 0, 2, 0, 1, 0, 1], // (4, 2) 教え子の部屋
     [1, 0, 1, 0, 0, 0, 1, 0, 1],
-    [1, 3, 1, 1, 1, 0, 1, 8, 1], // (1, 4) 一般部屋ドア
+    [1, 3, 1, 1, 1, 0, 1, 8, 1], // (7, 4) ボス影山の部屋(8)
     [1, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
 export function handleEvent2F(targetCell, gameState, context) {
+    // 4: 1階へ下りる非常階段扉
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
@@ -25,6 +29,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
+    // 2: 教え子の部屋（モデルガン ＆ 魔除けのお守り DEF +1 入手）
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
@@ -32,7 +37,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                     showConversationDialog("assets/images/human1.png", "【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nこれ……父親の部屋にあったモデルガンと魔除けのお守りなんだ。使って！」", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
-                        gameState.player.def += 1; // お守り補正
+                        gameState.player.def += 1;
                         
                         showItemAcquiredModal(
                             "assets/images/modelgun.jpg", 
@@ -59,7 +64,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         }
     }
 
-    // ★ 3: 一般部屋ドア（対面時は人間と同じ見た目で擬態）
+    // 3: 一般部屋ドア（対面時は人間と同じ見た目で擬態）
     if (targetCell === 3) {
         return {
             run: (onComplete) => {
@@ -76,7 +81,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // 擬態用イラストのランダム選択
                 const humanImages = ["assets/images/human1.png", "assets/images/human2.png", "assets/images/human3.png"];
                 const randFace = humanImages[Math.floor(Math.random() * humanImages.length)];
 
@@ -91,8 +95,8 @@ export function handleEvent2F(targetCell, gameState, context) {
                 const entity = isDemon ? {
                     name: randDemon.name,
                     type: "demon",
-                    faceImage: randFace, // ★ 対面時は人間の見た目で擬態！
-                    realImage: randDemon.realImage, // 正体が暴かれたら悪魔画像へ
+                    faceImage: randFace,
+                    realImage: randDemon.realImage,
                     image: randDemon.realImage,
                     weaknesses: randDemon.weaknesses
                 } : {
@@ -117,9 +121,33 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
+    // ★ 8: 最奥 影山の部屋（登場演出 ➔ パズルUI発火）
     if (targetCell === 8) {
         return {
-            run: (onComplete) => showMessageDialog("【2F 影山の部屋】\n部屋の奥から禍々しい視線を感じる……！（ボス戦準備中）", onComplete)
+            run: (onComplete) => {
+                if (gameState.flags.cleared2F) {
+                    showMessageDialog("【2F 影山の部屋】\n部屋の中は静まり返っている……。", onComplete);
+                    return;
+                }
+
+                // 影山登場動画再生 ➔ パズル戦UI起動
+                playVideo("assets/videos/2f-kageyama.mp4", () => {
+                    openBossPuzzleUI(gameState, (result) => {
+                        if (result === "win") {
+                            gameState.flags.cleared2F = true;
+                            gameState.hasKey2F = true;
+                            
+                            showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァッ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 3階非常階段の鍵を獲得！）", () => {
+                                gameState.player.money += 500;
+                                gameState.gainExp(200);
+                                onComplete();
+                            });
+                        } else {
+                            onComplete();
+                        }
+                    });
+                });
+            }
         };
     }
 

@@ -67,10 +67,14 @@ export function handleEvent1F(targetCell, gameState, context) {
         return { run: (onComplete) => startPostEvent(onComplete) };
     }
 
-    // 6: エントランス扉（屋外封鎖）
+    // ★ 6: エントランス扉（entrance.pngを表示）
     if (targetCell === 6) {
         return { 
-            run: (onComplete) => showMessageDialog("【エントランス扉】\nガラスの向こうには漆黒の霧が立ち込めている……。\n不思議な力で強く封じられていて、扉はびくともしない。", onComplete) 
+            run: (onComplete) => showConversationDialog(
+                "assets/images/entrance.png", 
+                "【1F エントランス】\n不気味な静寂に包まれたマンションの入口……。\n外への扉は固く閉ざされ、異様な気配が漂っている。", 
+                onComplete
+            )
         };
     }
 
