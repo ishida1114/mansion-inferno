@@ -1,4 +1,4 @@
-// appUI.js - スマホアプリ「悪魔辞典」UI（仕様書CSS＆クラス名完全適用版）
+// appUI.js - スマホアプリ「悪魔辞典」UI（ロゴ拡大・日本語表記・閉じるボタン追加完全版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 
@@ -7,7 +7,7 @@ export const LOGO_ASSETS = {
   APP_LOGO: 'assets/images/DictionariumDaemonum.webp'
 };
 
-// --- 仕様書定義：ホラー風フォントとアプリUI用スタイルの自動注入 ---
+// --- ホラー風フォントとアプリUI用スタイルの自動注入 ---
 if (!document.getElementById("app-style-element")) {
     const fontLink = document.createElement("link");
     fontLink.href = "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;800&display=swap";
@@ -23,18 +23,23 @@ if (!document.getElementById("app-style-element")) {
             z-index: 3000; display: flex; justify-content: center; align-items: center;
         }
         .smartphone {
-            width: 320px; height: 92%; background-color: #0d0d12;
-            border: 3px solid #1a1a24; border-radius: 20px;
+            width: 330px; height: 92%; background-color: #0d0d12;
+            border: 3px solid #2a1a1a; border-radius: 20px;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), 0 0 15px rgba(100, 0, 0, 0.5);
             display: flex; flex-direction: column; overflow: hidden;
             font-family: 'Shippori Mincho', serif; color: #ddd; position: relative;
         }
         .app-header {
-            background: linear-gradient(180deg, #220000, #000); padding: 8px 12px;
-            font-size: 0.8em; display: flex; justify-content: space-between;
+            background: linear-gradient(180deg, #220000, #000); padding: 8px 10px;
+            font-size: 0.78em; display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid #550000; color: #aaa;
         }
         .app-header span { font-weight: bold; color: #ffdd66; }
+        .app-close-x {
+            color: #ff4444; font-weight: bold; cursor: pointer; padding: 0 4px; font-size: 1.1em;
+        }
+        .app-close-x:hover { color: #fff; }
+        
         .app-content { flex: 1; padding: 15px; overflow-y: auto; position: relative; }
         .app-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
         .app-icon {
@@ -44,11 +49,12 @@ if (!document.getElementById("app-style-element")) {
         .app-icon:hover { background-color: #2a0000; border-color: #ff3333; }
         .app-icon-emoji { font-size: 1.8em; margin-bottom: 6px; }
         .app-icon-title { font-size: 0.85em; color: #ccc; }
+        
         .app-footer {
             height: 40px; border-top: 1px solid #333; display: flex;
             justify-content: center; align-items: center; background-color: #050505;
         }
-        .app-home-btn { width: 50px; height: 5px; background-color: #555; border-radius: 3px; cursor: pointer; }
+        .app-home-btn { width: 50px; height: 6px; background-color: #555; border-radius: 3px; cursor: pointer; }
         .app-home-btn:hover { background-color: #aaa; }
         
         /* サブ画面用スタイル */
@@ -63,19 +69,6 @@ if (!document.getElementById("app-style-element")) {
         .card-item { border: 1px solid #555; padding: 4px; cursor: pointer; background: #000; text-align: center; border-radius: 4px; min-width: 50px; }
         .card-item:hover { border-color: #ff3333; }
         .card-item img { max-width: 45px; display: block; margin: 0 auto 4px auto; }
-
-        /* デバッグUI用 */
-        .debug-modal {
-            position: absolute; top: 10%; left: 10%; width: 80%; height: 80%;
-            background: rgba(0, 20, 0, 0.95); border: 2px solid #00ff00;
-            z-index: 4000; color: #00ff00; padding: 15px; font-family: monospace;
-            display: flex; flex-direction: column; gap: 12px; border-radius: 8px;
-        }
-        .debug-btn {
-            background: #003300; color: #00ff00; border: 1px solid #00ff00;
-            padding: 8px; cursor: pointer; font-size: 1em; text-align: left;
-        }
-        .debug-btn:hover { background: #006600; }
     `;
     document.head.appendChild(appStyle);
 }
@@ -83,26 +76,32 @@ if (!document.getElementById("app-style-element")) {
 export class AppUI {
   constructor() {
     this.currentSubView = 'home';
+    this.onCloseCallback = null;
+  }
+
+  // 閉じるコールバックの登録
+  setOnCloseCallback(cb) {
+    this.onCloseCallback = cb;
   }
 
   renderApp() {
     const appContainer = document.getElementById('app-ui-container');
     if (!appContainer) return;
 
-    // 親コンテナに仕様書定義のクラスを付与
     appContainer.className = 'app-overlay';
-
     gameState.updateEquippedCards();
+
     const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
 
-    // 仕様書のHTML構造・クラス名に完全統一
+    // ★ ステータスバー（罪・使い魔の日本語表記化 ＆ 閉じる[✕]ボタン追加）
     appContainer.innerHTML = `
       <div class="smartphone">
         <div class="app-header">
           <span>[Lv.${gameState.player.level}]</span>
-          <span>HP: ${gameState.player.hp}/${gameState.player.maxHp}</span>
-          <span>SIN: ${gameState.player.sin}</span>
-          <span>FAMILIAR: ${familiarPercent}%</span>
+          <span>HP:${gameState.player.hp}/${gameState.player.maxHp}</span>
+          <span>罪:${gameState.player.sin}</span>
+          <span>使い魔:${familiarPercent}%</span>
+          <span class="app-close-x" id="btn-app-close-x" title="アプリを閉じる">✕</span>
         </div>
 
         <div class="app-content">
@@ -110,7 +109,7 @@ export class AppUI {
         </div>
 
         <div class="app-footer">
-          <div class="app-home-btn" id="app-home-btn"></div>
+          <div class="app-home-btn" id="app-home-btn" title="ホーム / 閉じる"></div>
         </div>
       </div>
     `;
@@ -140,12 +139,12 @@ export class AppUI {
     }
   }
 
-  // 1. ホームグリッド（仕様書CSSクラス: app-grid, app-icon, app-icon-emoji, app-icon-title）
+  // 1. ホーム画面（★ロゴ画像を大きく綺麗に拡大表示: width: 140px）
   renderHomeGridView() {
     return `
-      <div style="text-align: center; margin-bottom: 12px;">
-        <img src="${LOGO_ASSETS.APP_LOGO}" alt="App Logo" style="width: 40px; height: 40px; object-fit: contain;" />
-        <div style="font-size: 0.9em; color: #ff3333; margin-top: 4px; font-weight: bold;">悪魔辞典</div>
+      <div style="text-align: center; margin-bottom: 15px; padding-top: 5px;">
+        <img src="${LOGO_ASSETS.APP_LOGO}" alt="悪魔辞典" style="width: 140px; max-height: 80px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.4));" />
+        <div style="font-size: 0.95em; color: #ff3333; margin-top: 6px; font-weight: bold; letter-spacing: 1px;">悪魔辞典</div>
       </div>
 
       <div class="app-grid">
@@ -181,7 +180,7 @@ export class AppUI {
     `;
   }
 
-  // 2. ラミナ装填（仕様書CSSクラス: sub-header, back-btn, sub-title, loadout-slot, equipped-slot, card-list, card-item）
+  // 2. ラミナ装填
   renderLoadoutView() {
     const totalPower = gameState.equippedCards.reduce((a, b) => a + b, 0);
 
@@ -218,7 +217,7 @@ export class AppUI {
     `;
   }
 
-  // 3. 所持品（仕様書CSSクラス完全合致）
+  // 3. 所持品
   renderInventoryView() {
     const items = gameState.inventory?.items || [];
 
@@ -334,11 +333,24 @@ export class AppUI {
   }
 
   bindEvents() {
+    // ✕ ボタン（アプリを閉じる）
+    const closeX = document.getElementById('btn-app-close-x');
+    if (closeX) {
+      closeX.onclick = () => {
+        if (this.onCloseCallback) this.onCloseCallback();
+      };
+    }
+
+    // フッターホームバー（ホーム画面へ戻る、ホーム画面にいる時は閉じる）
     const homeBtn = document.getElementById('app-home-btn');
     if (homeBtn) {
       homeBtn.onclick = () => {
-        this.currentSubView = 'home';
-        this.renderApp();
+        if (this.currentSubView === 'home') {
+          if (this.onCloseCallback) this.onCloseCallback();
+        } else {
+          this.currentSubView = 'home';
+          this.renderApp();
+        }
       };
     }
 
