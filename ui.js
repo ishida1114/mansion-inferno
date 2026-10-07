@@ -1,10 +1,10 @@
-// ui.js - 会話・査問・ショップ・通常戦闘UI（緑背景完全透過＆攻撃条件厳密化版）
+// ui.js - 会話・査問・ショップ・通常戦闘UI・クロマキー処理完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ JPGノイズにも対応した強力な緑背景（クロマキー）自動透過関数
+// ★ 緑背景（クロマキー）自動透過処理
 export function applyChromaKey(imgElement) {
     if (!imgElement || imgElement.naturalWidth === 0) return;
     try {
@@ -17,8 +17,8 @@ export function applyChromaKey(imgElement) {
         const data = imgData.data;
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i], g = data[i + 1], b = data[i + 2];
-            // 緑（G）成分が赤・青より強い領域を強力に透過処理
-            if (g > 50 && g > r * 1.05 && g > b * 1.05) {
+            // 緑色成分（G）が強いピクセルを透過
+            if (g > 55 && g > r * 1.05 && g > b * 1.05) {
                 data[i + 3] = 0;
             }
         }
@@ -109,7 +109,7 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// 階段移動の暗転フェード演出
+// 階段暗転演出
 export function playFloorTransition(targetFloor, onComplete) {
     const fadeDiv = document.createElement("div");
     fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 4000; transition: opacity 0.5s ease; opacity: 0; display: flex; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em;`;
@@ -197,7 +197,6 @@ export function openCombatUI(enemy, gameState, onResult) {
         <img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px;">
         <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold;">${enemy.name}</div>
         
-        <!-- 主人公HPと敵HPの並列表示 -->
         <div style="display: flex; gap: 20px; font-size: 1.05em; margin: 10px 0 15px 0; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 6px; border: 1px solid #333;">
             <span id="player-hp-text" style="color: #00ff66; font-weight: bold;">主人公HP: ${gameState.player.hp} /${gameState.player.maxHp}</span>
             <span id="enemy-hp-text" style="color: #ff4444; font-weight: bold;">敵HP: ${enemyHp}</span>
@@ -227,19 +226,16 @@ export function openCombatUI(enemy, gameState, onResult) {
         const equippedCards = gameState.equippedCards || [];
         const equippedPower = equippedCards.reduce((a, b) => a + b, 0);
 
-        let attackSuccess = false;
-
-        // ★ 1. モデルガン未所持チェック（素手攻撃禁止）
+        // 1. モデルガン未所持チェック（素手攻撃禁止）
         if (!hasGun) {
             log.innerText = "【攻撃不能！】\nモデルガンを持っていない！ 素手では悪魔に一切のダメージを与えられない！";
         }
-        // ★ 2. ラミナ未装填チェック（弾が出ない）
+        // 2. ラミナ未装填チェック（弾が出ない）
         else if (equippedPower === 0) {
             log.innerText = "【装填エラー！】\nモデルガンにラミナ（カード）が装填されていない！\n弾が出ず、ダメージを与えられない！";
         } 
-        // ★ 3. 正常な射撃成功
+        // 3. 正常な射撃成功
         else {
-            attackSuccess = true;
             const damage = equippedPower * 10;
             enemyHp = Math.max(0, enemyHp - damage);
             enemyHpText.innerText = `敵HP: ${enemyHp}`;
@@ -300,11 +296,4 @@ export function openInquisitionUI(entity, gameState, onResult) {
 
         <div style="display: flex; gap: 15px; margin-bottom: 10px;">
             <div id="slot1" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #888; font-size: 0.75em; background: #111;">1枚目</div>
-            <div id="slot2" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #888; font-size: 0.75em; background: #111;">2枚目</div>
-        </div>
-
-        <div style="width: 100%; max-width: 500px; display: flex; gap: 5px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid #333;" id="inq-cards"></div>
-
-        <div style="display: flex; gap: 10px; margin-top: 12px; width: 100%; max-width: 500px;">
-            <button id="btn-show" style="flex: 1; background: #220000; color: #ffdd66; border: 1px solid #ff3333; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">1枚目を提示する</button>
-            <button id="btn-shoot" style="display: none; flex: 1; background: #440000; color: #fff; border: 1px solid #ff0000; padding: 10px; font-family: inherit; cursor
+            <div id="slot2" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center;
