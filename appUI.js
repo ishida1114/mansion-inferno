@@ -1,4 +1,4 @@
-// appUI.js - スマホアプリ「悪魔辞典」UI（仕様書_5準拠 完全版）
+// appUI.js - スマホアプリ「悪魔辞典」UI（構文エラー完全修正版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 
@@ -24,7 +24,7 @@ export class AppUI {
 
     appContainer.innerHTML = `
       <div class="smartphone">
-        <!-- 仕様書_5準拠 上部ステータスバー -->
+        <!-- 上部ステータスバー -->
         <div class="app-header">
           <span>[Lv.${gameState.player.level}]</span>
           <span>HP: ${gameState.player.hp}/${gameState.player.maxHp}</span>
@@ -111,7 +111,7 @@ export class AppUI {
     `;
   }
 
-  // 2. 🔫 ラミナ装填画面（モデルガン用コスト装填）
+  // 2. 🔫 ラミナ装填画面
   renderLoadoutView() {
     const totalPower = gameState.equippedCards.reduce((a, b) => a + b, 0);
 
@@ -155,7 +155,7 @@ export class AppUI {
     `;
   }
 
-  // 3. 🎒 所持品画面（回復アイテム・傘）
+  // 3. 🎒 所持品画面（修正箇所）
   renderInventoryView() {
     const items = gameState.inventory?.items || [];
 
@@ -176,7 +176,7 @@ export class AppUI {
             </div>
             <button class="use-item-btn" data-index="${idx}" style="background: #440000; color: #fff; border: 1px solid #ff3333; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">使用</button>
           </div>
-        `).join('')} : `
+        `).join('') : `
           <div style="text-align: center; color: #666; margin-top: 30px; font-size: 0.85em;">
             所持アイテムはありません。<br>1階のコンビニで購入可能です。
           </div>
@@ -202,7 +202,7 @@ export class AppUI {
     `;
   }
 
-  // 5. 👁️ 使い魔画面（黒猫）
+  // 5. 👁️ 使い魔画面
   renderFamiliarView() {
     const hasCat = gameState.flags.hasCat;
     return `
@@ -222,7 +222,7 @@ export class AppUI {
     `;
   }
 
-  // 6. 🗺️ 詳細地図画面（全画面2Dマップ）
+  // 6. 🗺️ 詳細地図画面
   renderFullMapView() {
     const map = gameState.currentMap || [];
     const player = gameState.player;
@@ -238,11 +238,11 @@ export class AppUI {
             row.map((cell, cIdx) => {
               const isPlayer = player.x === cIdx && player.y === rIdx;
               let bg = '#111';
-              if (cell === 1) bg = '#444'; // 壁
-              else if (cell === 2) bg = '#0088cc'; // コンビニ/部屋
-              else if (cell === 3) bg = '#aa0000'; // 血の池
-              else if (cell === 4) bg = '#ff9900'; // 非常階段
-              if (isPlayer) bg = '#00ff66'; // プレイヤー現在地
+              if (cell === 1) bg = '#444';
+              else if (cell === 2) bg = '#0088cc';
+              else if (cell === 3) bg = '#aa0000';
+              else if (cell === 4) bg = '#ff9900';
+              if (isPlayer) bg = '#00ff66';
 
               return `<div style="width:18px; height:18px; background:${bg}; border-radius:2px; text-align:center; font-size:10px; line-height:18px;">${isPlayer ? '▲' : ''}</div>`;
             }).join('')
@@ -276,7 +276,7 @@ export class AppUI {
     `;
   }
 
-  // 8. 💾 システム（セーブ/ロード）画面
+  // 8. 💾 システム画面
   renderSystemView() {
     return `
       <div class="sub-header">
@@ -290,9 +290,7 @@ export class AppUI {
     `;
   }
 
-  // イベント登録
   bindEvents() {
-    // ホームボタン（画面最下部のバー）
     const homeBtn = document.getElementById('app-home-btn');
     if (homeBtn) {
       homeBtn.onclick = () => {
@@ -301,7 +299,6 @@ export class AppUI {
       };
     }
 
-    // 戻るボタン
     const backBtn = document.getElementById('btn-back');
     if (backBtn) {
       backBtn.onclick = () => {
@@ -310,7 +307,6 @@ export class AppUI {
       };
     }
 
-    // アイコンタップ処理
     const icons = document.querySelectorAll('.app-icon');
     icons.forEach(icon => {
       icon.onclick = () => {
@@ -322,7 +318,6 @@ export class AppUI {
       };
     });
 
-    // セーブ・ロードボタン処理
     const saveBtn = document.getElementById('btn-app-save');
     if (saveBtn) {
       saveBtn.onclick = () => {
