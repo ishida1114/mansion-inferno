@@ -1,11 +1,11 @@
-// main.js - 移動・イベント制御・エンカウント査問遷移完全連動版
+// main.js - 廊下移動時は査問なしで直接戦闘へ遷移（完全修正版）
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './maps/map2F.js';
-import { showMessageDialog, openInquisitionUI } from './ui.js';
+import { showMessageDialog } from './ui.js';
 
 let appUI;
 let renderer;
@@ -146,7 +146,7 @@ function changeFloor(floor) {
     gameState.player.x = playerStart2F.x;
     gameState.player.y = playerStart2F.y;
     gameState.player.dir = playerStart2F.dir;
-    showMessageDialog("【2階 非常階段前】\n2階へ到達した。廊下に人ならざる者の禍々しい気が満ちている……", () => {
+    showMessageDialog("【2階 非常階段前】\n2階へ到達した。不気味な足音が暗闇から聞こえる……", () => {
       renderer.render();
     });
   } else if (floor === 1) {
@@ -191,29 +191,14 @@ function toggleDebugUI() {
   }
 }
 
-// ★ 2階での悪魔遭遇時：ただのテキストで終わらせず、査問画面（openInquisitionUI）を発火！
+// ★ 2階の歩行時エンカウント：査問なしでザコ悪魔（demon1.png〜demon3.png）と直接戦闘！
 function checkEncounterAfterMove() {
   if (gameState.currentFloor === 2) {
-    check2FRandomEncounter(gameState, () => {
+    check2FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
-      const enemy = {
-        name: "一般階の悪魔（覗き魔の影）",
-        type: "demon",
-        image: "assets/images/demon/2f-kageyama.mp4",
-        weaknesses: [1, 2]
-      };
-      
-      openInquisitionUI(enemy, gameState, (result) => {
-        if (result === "combat") {
-          showMessageDialog("【戦闘開始】\n正体を見破られた悪魔が襲いかかってきた！（敗走チュートリアル）\n……圧倒的な力に押し潰され、1階へ死に戻った！", () => {
-            gameState.player.hp = gameState.player.maxHp;
-            changeFloor(1);
-            isProcessingEvent = false;
-          });
-        } else {
-          isProcessingEvent = false;
-          renderer.render();
-        }
+      showMessageDialog(`【悪魔遭遇！】\n暗闇から ${enemy.name} が襲いかかってきた！\n（※コマンド戦闘開始）`, () => {
+        isProcessingEvent = false;
+        renderer.render();
       });
     });
   }

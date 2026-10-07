@@ -1,4 +1,4 @@
-// appUI.js - スマホUI（Lv別ラミナ装填制限・カードクリック割り当て対応版）
+// appUI.js - スマホUI（コスト厳密制限版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 
@@ -89,9 +89,9 @@ export class AppUI {
 
     appContainer.classList.add('app-overlay');
     
-    // 現在のレベルに応じた初期セット
+    // 初期状態：Lv1なら【1】のみ装填
     if (!gameState.equippedCards || gameState.equippedCards.length === 0) {
-      gameState.equippedCards = [Math.min(1, gameState.player.level)];
+      gameState.equippedCards = [1];
     }
 
     const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
@@ -171,7 +171,7 @@ export class AppUI {
     `;
   }
 
-  // ★ 2. ラミナ装填（Lv1ではカード【1】のみ選択可能。Lvを超えるカードは制限）
+  // ★ コスト制限（Lv.1は【1】のみ。選択しようとすると厳密ブロック）
   renderLoadoutView() {
     const pLevel = gameState.player.level;
     const equipped = gameState.equippedCards || [1];
@@ -193,20 +193,19 @@ export class AppUI {
       </div>
 
       <div style="font-size: 0.8em; color: #aaa; margin-bottom: 8px;">
-        主人公Lv <strong>${pLevel}</strong> （総コスト上限: <strong>${pLevel}</strong>）
+        主人公Lv <strong>${pLevel}</strong> （装填上限コスト: <strong>${pLevel}</strong>）
       </div>
 
       <div>
         <div class="loadout-slot equipped-slot">
           装填中：<strong>【カード ${equipped[0]}】</strong>
         </div>
-        <div style="color: #00ff66; font-size: 0.8em; margin-bottom: 10px;">攻撃力 (Vox Sacra): ${totalPower}</div>
+        <div style="color: #00ff66; font-size: 0.8em; margin-bottom: 10px;">射撃威力 (Vox Sacra): ${totalPower}</div>
       </div>
 
       <div class="sub-title" style="font-size: 0.85em; text-align: left; margin: 10px 0 5px 0; color:#ffdd66;">タップして装填するカードを選択</div>
       <div class="card-list">
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
-          // レベル制限判定（カードの数字 > プレイヤーLv の場合は選択不可）
           const isAllowed = num <= pLevel;
           return `
             <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
@@ -274,7 +273,7 @@ export class AppUI {
       };
     });
 
-    // ★ カード選択タップイベント（Lv制限判定）
+    // ★ カード選択タップイベント（コスト上限オーバー時厳密ブロック）
     const cardItems = document.querySelectorAll('.card-item');
     cardItems.forEach(item => {
       item.onclick = () => {
@@ -282,7 +281,7 @@ export class AppUI {
         if (isNaN(num)) return;
 
         if (num > gameState.player.level) {
-          alert(`主人公のレベル（Lv.${gameState.player.level}）が不足しているため、カード【${num}】は装填できません。`);
+          alert(`主人公のレベル（Lv.${gameState.player.level}）を超えるカード【${num}】は装填できません！`);
         } else {
           gameState.equippedCards = [num];
           alert(`カード【${num}】をモデルガンに装填しました！`);
