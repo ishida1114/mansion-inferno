@@ -1,4 +1,4 @@
-// appUI.js - スマホUI（全カード選択対応 ＆ 起動時トップ固定完全版）
+// appUI.js - スマホUI（blackcat.jpg適用 ＆ クロマキー透過連動完全版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -66,7 +66,6 @@ if (!document.getElementById("app-style-element")) {
         .loadout-slot { background: #111; border: 2px dashed #440000; padding: 10px; text-align: center; margin-bottom: 8px; color: #666; border-radius: 6px; font-size: 0.85em; }
         .equipped-slot { border: 2px solid #ffdd66; color: #ffdd66; background: #221a00; }
         
-        /* ★ 1〜9の全カードがしっかりグリッド表示されるレイアウト */
         .card-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 8px; }
         .card-item { border: 1px solid #555; padding: 6px; cursor: pointer; background: #000; text-align: center; border-radius: 6px; }
         .card-item:hover { border-color: #ff3333; }
@@ -84,7 +83,7 @@ export class AppUI {
   closeApp() {
     const container = document.getElementById('app-ui-container');
     if (container) container.classList.add('hidden');
-    this.currentSubView = 'home'; // ★ 閉じた後は次回トップ固定
+    this.currentSubView = 'home';
   }
 
   renderApp() {
@@ -174,7 +173,6 @@ export class AppUI {
     `;
   }
 
-  // ★ 全カード【1〜9】が選択できるラミナ装填画面
   renderLoadoutView() {
     const pLevel = gameState.player.level;
     const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
@@ -241,8 +239,17 @@ export class AppUI {
     return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">悪魔手記</h3></div><div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5;"><div style="color: #ffdd66; font-weight: bold;">【エクソシストの遺言】</div><div>「ボスの魔方陣に合わせて適切な弱点カードを撃ち抜くのだ……」</div></div>`;
   }
 
+  // ★ blackcat.jpg 適用＆透過連動
   renderFamiliarView() {
-    return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">使い魔</h3></div><div style="text-align: center; padding: 15px 0;"><div style="font-size: 2.5em;">🐈‍⬛</div><div style="color: #ffdd66; margin-top: 5px;">黒猫の使い魔</div><div style="font-size: 0.8em; color: #aaa; margin-top: 8px;">Lv.15に達すると実体化して戦闘に参戦します。</div></div>`;
+    const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
+    return `
+      <div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">使い魔</h3></div>
+      <div style="text-align: center; padding: 10px 0;">
+        <img id="familiar-cat-img" src="assets/images/blackcat.jpg" style="max-height: 140px; border-radius: 8px; margin-bottom: 8px;" onerror="this.style.display='none'">
+        <div style="color: #ffdd66; font-weight:bold;">黒猫の使い魔</div>
+        <div style="font-size: 0.8em; color: #aaa; margin-top: 8px; line-height:1.5;">Lv.15に達すると実体化して戦闘に参戦します。<br>(現在の親密度: ${familiarPercent}%)</div>
+      </div>
+    `;
   }
 
   renderFullMapView() {
@@ -279,6 +286,9 @@ export class AppUI {
 
     const gunImg = document.getElementById('loadout-gun-img');
     applyChromaKey(gunImg);
+
+    const catImg = document.getElementById('familiar-cat-img');
+    applyChromaKey(catImg);
 
     const cardItems = document.querySelectorAll('.card-item');
     cardItems.forEach(item => {

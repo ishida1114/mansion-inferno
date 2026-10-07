@@ -4,13 +4,14 @@ import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ クロマキー自動透過処理
+// ★ 強力クロマキー（緑背景）自動透過処理
 export function applyChromaKey(imgElement) {
     if (!imgElement) return;
     if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
 
     const process = () => {
-        if (!imgElement.naturalWidth) return;
+        if (!imgElement.naturalWidth || imgElement.naturalWidth === 0) return;
+        if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
         try {
             const canvas = document.createElement("canvas");
             canvas.width = imgElement.naturalWidth; 
@@ -21,7 +22,8 @@ export function applyChromaKey(imgElement) {
             const data = imgData.data;
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i], g = data[i + 1], b = data[i + 2];
-                if (g > 45 && g > r * 1.02 && g > b * 1.02) {
+                // JPG画像の圧縮ノイズを含む緑色領域を透過化
+                if (g > 40 && g > r * 1.02 && g > b * 1.02) {
                     data[i + 3] = 0;
                 }
             }
@@ -117,7 +119,6 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// 階段移動時の足音テキスト＋1.5秒タメ演出
 export function playFloorTransition(targetFloor, onComplete) {
     const fadeDiv = document.createElement("div");
     fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 4000; transition: opacity 0.5s ease; opacity: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em; gap: 15px;`;
@@ -137,29 +138,7 @@ export function playFloorTransition(targetFloor, onComplete) {
     }, 1500);
 }
 
-export function playVideo(src, onEnded) {
-    const overlay = document.createElement("div");
-    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
-
-    const video = document.createElement("video");
-    video.src = src;
-    video.style.cssText = "width: 100%; max-width: 540px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.5); background-color: black;";
-    video.controls = false; video.autoplay = true; video.playsInline = true; video.muted = true;
-
-    overlay.appendChild(video);
-    document.body.appendChild(overlay);
-
-    const finish = () => {
-        if (overlay.parentNode) overlay.remove();
-        if (onEnded) onEnded();
-    };
-
-    video.onended = finish;
-    video.onerror = () => finish();
-    overlay.onclick = () => { video.pause(); finish(); };
-    video.play().catch(err => finish());
-}
-
+// ★ ショップUI（防具オート装備 ＆ 二重買い防止）
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
     shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
@@ -169,7 +148,7 @@ export function openShopUI(onClosed) {
         <div style="position: relative; z-index: 10; width: 100%; max-width: 540px; height: 90%; background: rgba(10, 5, 5, 0.92); border: 2px solid #770000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
             <div style="padding: 12px 15px; border-bottom: 2px solid #550000; background: linear-gradient(180deg, #2a0000, #0a0000); display: flex; justify-content: space-between; align-items: center;">
                 <div><h2 style="color: #ff3333; margin: 0; font-size: 1.5em;">悪魔の無人レジ</h2></div>
-                <div style="font-size: 1.05em; color: #ffdd66; font-weight: bold;">💰 <span id="shop-money">${gameState.player?.money || 0}</span> <span style="color:#ff4444; font-size:0.8em;">(罪:${gameState.player?.sin || 0})</span></div>
+                <div style="font-size: 1.05em; color: #ffdd66; font-weight: bold;">💰 <span id="shop-money">${gameState.player?.money || 0}</span> <span style="color:#00ff66; font-size:0.8em; margin-left:8px;">(DEF:+${gameState.player?.def || 0})</span></div>
             </div>
             <div id="shop-content" style="flex: 1; overflow-y: auto; padding: 12px; box-sizing: border-box;"></div>
             <div style="padding: 10px; text-align: center; border-top: 1px solid #440000; background: #050505;"><button id="closeBtn" style="background: transparent; color: #aaa; border: 1px solid #555; padding: 8px 25px; cursor: pointer; border-radius: 4px;">立ち去る</button></div>
@@ -179,22 +158,41 @@ export function openShopUI(onClosed) {
 
     let html = "";
     Object.values(itemDefinitions).forEach(item => {
+        const isEquippedArmor = item.type === "armor" && gameState.equippedArmor === item.id;
         html += `
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(20, 10, 10, 0.85); padding: 10px 12px; margin-bottom: 8px; border: 1px solid #441111; border-radius: 6px;">
                 <div style="flex: 1;"><div style="color: #ffdd66; font-weight: bold;">${item.name}</div><div style="font-size: 0.8em; color: #bbb;">${item.description || ''}</div></div>
-                <div style="text-align: right;"><div style="color: #ffdd66; font-weight: bold; margin-bottom: 4px;">💰 ${item.price}</div><button class="buy-item-btn" data-id="${item.id}" data-price="${item.price}" style="background: linear-gradient(180deg, #440000, #110000); color: #fff; border: 1px solid #ff3333; padding: 5px 10px; cursor: pointer; border-radius: 4px;">購入</button></div>
+                <div style="text-align: right;"><div style="color: #ffdd66; font-weight: bold; margin-bottom: 4px;">💰 ${item.price}</div>
+                <button class="buy-item-btn" data-id="${item.id}" data-price="${item.price}" ${isEquippedArmor ? 'disabled style="background:#333; color:#aaa; border:1px solid #555;"' : 'style="background: linear-gradient(180deg, #440000, #110000); color: #fff; border: 1px solid #ff3333; padding: 5px 10px; cursor: pointer; border-radius: 4px;"'}>
+                    ${isEquippedArmor ? '装備中' : '購入'}
+                </button></div>
             </div>`;
     });
     document.getElementById("shop-content").innerHTML = html;
 
     document.querySelectorAll(".buy-item-btn").forEach(btn => {
         btn.onclick = () => {
+            const itemId = btn.getAttribute("data-id");
             const price = parseInt(btn.getAttribute("data-price"));
+            const item = itemDefinitions[itemId];
+
             if (gameState.player.money >= price) {
                 gameState.player.money -= price; 
                 document.getElementById("shop-money").innerText = gameState.player.money;
-                btn.style.background = "#006600"; btn.innerText = "完了！"; 
-                setTimeout(() => { btn.style.background = ""; btn.innerText = "購入"; }, 500);
+
+                // 防具(Armor)購入時のオート装備＆DEF反映
+                if (item && item.type === "armor") {
+                    gameState.equippedArmor = item.id;
+                    gameState.player.def = Math.max(gameState.player.def, item.def || 1);
+                    btn.disabled = true;
+                    btn.style.background = "#333";
+                    btn.style.color = "#aaa";
+                    btn.style.border = "1px solid #555";
+                    btn.innerText = "装備中";
+                } else {
+                    btn.style.background = "#006600"; btn.innerText = "完了！"; 
+                    setTimeout(() => { btn.style.background = ""; btn.innerText = "購入"; }, 500);
+                }
             } else {
                 btn.innerText = "資金不足"; 
                 setTimeout(() => { btn.innerText = "購入"; }, 800);
@@ -204,7 +202,6 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ ステップ進行・可視化されたターン制戦闘UI
 export function openCombatUI(enemy, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -242,7 +239,6 @@ export function openCombatUI(enemy, gameState, onResult) {
     const attackBtn = document.getElementById("btn-attack");
     const escapeBtn = document.getElementById("btn-escape");
 
-    // ★ 射撃ターンの可視化＆ステップ処理
     attackBtn.onclick = () => {
         const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
         const equippedCards = gameState.equippedCards || [];
@@ -278,7 +274,7 @@ export function openCombatUI(enemy, gameState, onResult) {
                 setTimeout(() => {
                     ui.remove();
                     gameState.player.money += 150;
-                    const isLvUp = gameState.gainExp(50); // ★ 50 EXP獲得（2体で1LvUP）
+                    const isLvUp = gameState.gainExp(50);
                     showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰150 獲得 / 50 EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}`, () => {
                         if (onResult) onResult("win");
                     });
@@ -286,7 +282,6 @@ export function openCombatUI(enemy, gameState, onResult) {
                 return;
             }
 
-            // 敵の反撃ターン（1秒後に処理）
             setTimeout(() => {
                 const dodgeChance = (gameState.player.agi || 5) * 0.04;
                 if (Math.random() < dodgeChance) {
@@ -317,7 +312,6 @@ export function openCombatUI(enemy, gameState, onResult) {
         }, 800);
     };
 
-    // ★ 確率逃走（AGI依存）＆ 段階ログ
     escapeBtn.onclick = () => {
         attackBtn.disabled = true;
         escapeBtn.disabled = true;
@@ -475,7 +469,6 @@ export function openInquisitionUI(entity, gameState, onResult) {
                 onResult("kill_human");
             });
         } else {
-            // ★ 査問成功時のボーナス（💰250 ＆ 100 EXP＝即1LvUP）
             gameState.player.money += 250;
             const isLvUp = gameState.gainExp(100);
             showMessageDialog(`【見破り成功！ 悪魔撃退】\n正体を完全に見破られた悪魔は悲鳴を上げて消滅した！\n（高額ボーナス: 💰250 獲得 / 100 EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}`, () => {
@@ -497,24 +490,4 @@ export function openInquisitionUI(entity, gameState, onResult) {
             });
         }
     };
-}
-
-export function openDebugMenu(onAction) {
-    if (document.getElementById("debug-modal")) { document.getElementById("debug-modal").remove(); return; }
-    const debugDiv = document.createElement("div"); 
-    debugDiv.id = "debug-modal"; 
-    debugDiv.className = "debug-modal";
-    debugDiv.innerHTML = `<h3 style="margin:0; border-bottom:1px solid #00ff00; padding-bottom:5px;">[DEBUG MENU]</h3><button class="debug-btn" id="dbg-all-clear">① 一括イベントクリア</button><button class="debug-btn" id="dbg-warp-2f">② 2階ワープ</button><button class="debug-btn" id="dbg-warp-1f">③ 1階ワープ</button><button class="debug-btn" id="dbg-lv15">④ Lv15</button><button class="debug-btn" id="dbg-money">⑤ お金+1000</button><button class="debug-btn" id="dbg-close" style="background:#550000; color:#fff; border-color:#ff0000;">閉じる [F2]</button>`;
-    document.body.appendChild(debugDiv);
-
-    document.getElementById("dbg-all-clear").onclick = () => {
-        gameState.hasExorcistInherited = true; gameState.hasKey2F = true; gameState.hasModelGun = true; gameState.hasMetGrandma = true;
-        gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
-        alert("全解放！"); debugDiv.remove(); if (onAction) onAction();
-    };
-    document.getElementById("dbg-warp-2f").onclick = () => { gameState.hasKey2F = true; debugDiv.remove(); if (onAction) onAction("warp2F"); };
-    document.getElementById("dbg-warp-1f").onclick = () => { debugDiv.remove(); if (onAction) onAction("warp1F"); };
-    document.getElementById("dbg-lv15").onclick = () => { gameState.player.level = 15; alert("Lv15！"); debugDiv.remove(); };
-    document.getElementById("dbg-money").onclick = () => { gameState.player.money += 1000; alert("お金+1000！"); debugDiv.remove(); };
-    document.getElementById("dbg-close").onclick = () => debugDiv.remove();
 }

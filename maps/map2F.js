@@ -1,4 +1,4 @@
-// maps/map2F.js - 2階マップ（お守り DEF +1 入手＆イベント制御）
+// maps/map2F.js - 2階マップ（査問バリエーションランダム化完全版）
 import { showMessageDialog, showConversationDialog, showItemAcquiredModal, playFloorTransition } from '../ui.js';
 
 export const playerStart2F = { x: 1, y: 1, dir: 0 };
@@ -26,7 +26,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // ★ 2: 教え子の部屋（モデルガン ＆ お守り DEF +1 入手）
+    // 2: 教え子の部屋（モデルガン ＆ 魔除けのお守り DEF +1 入手）
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
@@ -34,7 +34,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                     showConversationDialog("assets/images/human1.png", "【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nこれ……父親の部屋にあったモデルガンと魔除けのお守りなんだ。使って！」", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
-                        gameState.player.def += 1; // ★ お守り補正 DEF +1
+                        gameState.player.def += 1;
                         
                         showItemAcquiredModal(
                             "assets/images/modelgun.jpg", 
@@ -61,7 +61,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         }
     }
 
-    // 3: 一般部屋ドア（査問）
+    // ★ 3: 一般部屋ドア（人間/悪魔のランダムバリエーション査問）
     if (targetCell === 3) {
         return {
             run: (onComplete) => {
@@ -78,16 +78,32 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
+                // 人間住民のランダム生成
+                const humanList = [
+                    { name: "怯える男性住民", image: "assets/images/human1.png" },
+                    { name: "困惑する女性住民", image: "assets/images/human2.png" },
+                    { name: "震えている住人", image: "assets/images/human3.png" }
+                ];
+                const randHuman = humanList[Math.floor(Math.random() * humanList.length)];
+
+                // 悪魔のランダム生成
+                const demonList = [
+                    { name: "2階の不審な住人", image: "assets/images/demon/demon1.png", weaknesses: [1, 3] },
+                    { name: "気妙な笑顔の住人", image: "assets/images/demon/demon2.png", weaknesses: [2, 4] },
+                    { name: "言葉遣いがおかしい住民", image: "assets/images/demon/demon3.png", weaknesses: [5, 7] }
+                ];
+                const randDemon = demonList[Math.floor(Math.random() * demonList.length)];
+
                 const isDemon = Math.random() < 0.5;
                 const entity = isDemon ? {
-                    name: "2階の不審な住人",
+                    name: randDemon.name,
                     type: "demon",
-                    image: "assets/images/demon/demon1.png",
-                    weaknesses: [1, 3]
+                    image: randDemon.image,
+                    weaknesses: randDemon.weaknesses
                 } : {
-                    name: "怯えるマンション住民",
+                    name: randHuman.name,
                     type: "human",
-                    image: "assets/images/human1.png",
+                    image: randHuman.image,
                     weaknesses: []
                 };
 
