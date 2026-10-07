@@ -14,7 +14,6 @@ export const map2F = [
 ];
 
 export function handleEvent2F(targetCell, gameState, context) {
-    // 4: 1階へ下りる非常階段扉
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
@@ -26,7 +25,6 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // 2: 教え子の部屋（モデルガン ＆ 魔除けのお守り DEF +1 入手）
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
@@ -34,7 +32,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                     showConversationDialog("assets/images/human1.png", "【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nこれ……父親の部屋にあったモデルガンと魔除けのお守りなんだ。使って！」", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
-                        gameState.player.def += 1;
+                        gameState.player.def += 1; // お守り補正
                         
                         showItemAcquiredModal(
                             "assets/images/modelgun.jpg", 
@@ -121,7 +119,6 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // 8: ボス影山の部屋
     if (targetCell === 8) {
         return {
             run: (onComplete) => showMessageDialog("【2F 影山の部屋】\n部屋の奥から禍々しい視線を感じる……！（ボス戦準備中）", onComplete)

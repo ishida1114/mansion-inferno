@@ -1,4 +1,4 @@
-// ui.js - 会話・査問・ショップ・ターン演出付き戦闘UI・クロマキー完全版
+// ui.js - 会話・査問・ショップ・戦闘UI・クロマキー完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -138,7 +138,30 @@ export function playFloorTransition(targetFloor, onComplete) {
     }, 1500);
 }
 
-// ★ ショップUI（防具オート装備 ＆ 二重買い防止）
+// ★ エラー原因修正：抜け落ちていた playVideo 関数を復活！
+export function playVideo(src, onEnded) {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
+
+    const video = document.createElement("video");
+    video.src = src;
+    video.style.cssText = "width: 100%; max-width: 540px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.5); background-color: black;";
+    video.controls = false; video.autoplay = true; video.playsInline = true; video.muted = true;
+
+    overlay.appendChild(video);
+    document.body.appendChild(overlay);
+
+    const finish = () => {
+        if (overlay.parentNode) overlay.remove();
+        if (onEnded) onEnded();
+    };
+
+    video.onended = finish;
+    video.onerror = () => finish();
+    overlay.onclick = () => { video.pause(); finish(); };
+    video.play().catch(err => finish());
+}
+
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
     shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
@@ -180,7 +203,6 @@ export function openShopUI(onClosed) {
                 gameState.player.money -= price; 
                 document.getElementById("shop-money").innerText = gameState.player.money;
 
-                // 防具(Armor)購入時のオート装備＆DEF反映
                 if (item && item.type === "armor") {
                     gameState.equippedArmor = item.id;
                     gameState.player.def = Math.max(gameState.player.def, item.def || 1);

@@ -1,4 +1,4 @@
-// appUI.js - スマホUI（blackcat.jpg適用 ＆ クロマキー透過連動完全版）
+// appUI.js - スマホUI（画像ファイル指定修正 ＆ クロマキー透過連動完全版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -303,11 +303,11 @@ export class AppUI {
         if (isNaN(num)) return;
 
         if (num > gameState.player.level) {
-          alert(`主人公のレベル（Lv.${gameState.player.level}）を超えるカード【${num}】は装填できません！`);
+            alert(`主人公のレベル（Lv.${gameState.player.level}）を超えるカード【${num}】は装填できません！`);
         } else {
-          gameState.equippedCards = [num];
-          alert(`カード【${num}】をモデルガンに装填しました！`);
-          this.renderApp();
+            gameState.equippedCards = [num];
+            alert(`カード【${num}】をモデルガンに装填しました！`);
+            this.renderApp();
         }
       };
     });
