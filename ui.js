@@ -1,16 +1,15 @@
-// ui.js - 会話・査問・ショップ・戦闘UI・影山パズル完全版
+// ui.js - 会話・査問・ショップ・影山パズルレイアウト修復完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
+// ★ モデルガン緑背景(純緑 RGB:0,255,0)を確定透過するクロマキー関数
 export function applyChromaKey(imgElement) {
     if (!imgElement) return;
-    if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
 
     const process = () => {
         if (!imgElement.naturalWidth || imgElement.naturalWidth === 0) return;
-        if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
         try {
             const canvas = document.createElement("canvas");
             canvas.width = imgElement.naturalWidth; 
@@ -19,14 +18,15 @@ export function applyChromaKey(imgElement) {
             cctx.drawImage(imgElement, 0, 0);
             const imgData = cctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imgData.data;
+            
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i], g = data[i + 1], b = data[i + 2];
-                if (g > 40 && g > r * 1.02 && g > b * 1.02) {
+                // 鮮やかな緑（GがRとBより明らかに大きい）領域を確実に透過
+                if (g > 50 && g > r * 1.1 && g > b * 1.1) {
                     data[i + 3] = 0;
                 }
             }
             cctx.putImageData(imgData, 0, 0);
-            if (imgElement.dataset) imgElement.dataset.chromaKeyed = "true";
             imgElement.src = canvas.toDataURL();
         } catch(e) {}
     };
@@ -60,12 +60,11 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
     const imgDiv = document.createElement("img");
-    imgDiv.style.cssText = "max-height: 220px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
+    imgDiv.style.cssText = "max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
     
     imgDiv.onerror = () => imgDiv.style.display = 'none';
-    imgDiv.onload = () => applyChromaKey(imgDiv);
     imgDiv.src = imageSrc;
-    if (imgDiv.complete) applyChromaKey(imgDiv);
+    applyChromaKey(imgDiv);
 
     const msgDiv = document.createElement("div");
     msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
@@ -87,26 +86,29 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
+// ★ アイテム獲得モーダルのモデルガン緑背景透過を100%保証
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.88); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.90); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
     
     const imgEl = document.createElement("img");
     imgEl.id = "modal-item-img";
-    imgEl.style.cssText = "max-height: 200px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;";
+    imgEl.style.cssText = "max-height: 180px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;";
     imgEl.onerror = () => { imgEl.style.display = 'none'; };
-    imgEl.onload = () => applyChromaKey(imgEl);
+    
     imgEl.src = imagePath;
-    if (imgEl.complete) applyChromaKey(imgEl);
+    document.body.appendChild(modal); // 先にDOM追加
 
-    modal.innerHTML = `<div style="color: #ff3333; font-size: 1.6em; margin-bottom: 15px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
+    modal.innerHTML = `<div style="color: #ff3333; font-size: 1.5em; margin-bottom: 12px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
     modal.appendChild(imgEl);
     modal.innerHTML += `
-        <div style="color: #ffdd66; font-size: 1.3em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
-        <div style="color: #cccccc; font-size: 1em; margin-bottom: 25px; text-align: center; white-space: pre-wrap; line-height: 1.5;">${detailText}</div>
-        <div style="color: #888; font-size: 0.85em;">タップ または [ SPACE ] で閉じる</div>
+        <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
+        <div style="color: #cccccc; font-size: 0.95em; margin-bottom: 20px; text-align: center; white-space: pre-wrap; line-height: 1.5;">${detailText}</div>
+        <div style="color: #888; font-size: 0.8em;">タップ または [ SPACE ] で閉じる</div>
     `;
-    document.body.appendChild(modal);
+
+    // ロード完了時に即時透過適用
+    applyChromaKey(imgEl);
 
     const closeHandler = (e) => {
         if (e.type === "click" || e.key === " " || e.key === "Enter") {
@@ -507,7 +509,13 @@ export function openInquisitionUI(entity, gameState, onResult) {
         ui.remove();
         if (entity.type === "human") {
             gameState.player.money += 200;
-            showMessageDialog(`【人間を保護した】\n「ありがとうございます……！ これ、お礼です！」\n無事に1階のコンビニへ避難させた。（💰200 を獲得！）`, () => {
+            
+            // ★ ヒント文章の付与 ＆ 悪魔手記への自動記録
+            const hintText = "「助けてくれてありがとうございます……！ これはお礼です！\nあ、そういえば2F奥の影山ですが……あいつの陣を破るには『4マスの合計をピッタリ10』にしないといけないらしいです！ 腕には小さい数字から順にカードを置いてみてください！」";
+            if (!gameState.bossHints) gameState.bossHints = [];
+            gameState.bossHints.push("【2F住人の証言】影山の魔方陣は4マスの合計を「10」にする。腕(左右)には小さい数字のカードから順に配置する。");
+
+            showMessageDialog(`【人間を保護した】\n${hintText}\n（💰200 を獲得！ / スマホの悪魔手記にヒントが保存された！）`, () => {
                 onResult("finish");
             });
         } else {
@@ -518,37 +526,44 @@ export function openInquisitionUI(entity, gameState, onResult) {
     };
 }
 
-// ★ 2Fボス影山「悪魔陣解読パズル（合計10）」＆「magic-circle.mp4」演出
+// ★ 2Fボス影山「悪魔陣解読パズル」レイアウト修復 ＆ 2重起動完全防止版
 export function openBossPuzzleUI(gameState, onResult) {
+    // すでに開いているパズルUIがあれば削除（2重起動防止）
+    const oldUI = document.getElementById("boss-puzzle-modal");
+    if (oldUI) oldUI.remove();
+
     const ui = document.createElement("div");
-    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
+    ui.id = "boss-puzzle-modal";
+    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.96); z-index: 3500; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 12px 10px; font-family: ${HORROR_FONT}; box-sizing: border-box; overflow-y: auto;`;
 
     let slots = { slot1: null, slot2: null, slot3: null, slot4: null };
     let activeSlotKey = "slot1";
 
     ui.innerHTML = `
-        <h2 style="color: #ff3333; margin: 0 0 5px 0; text-shadow: 0 0 10px red;">【フロアボス戦】覗き魔・影山</h2>
-        <div style="color: #bbb; font-size: 0.85em; margin-bottom: 10px;">悪魔陣の4マスにカードを配置し、陣を破壊せよ！</div>
+        <h2 style="color: #ff3333; margin: 5px 0 2px 0; text-shadow: 0 0 10px red; font-size: 1.3em;">【フロアボス戦】覗き魔・影山</h2>
+        <div style="color: #bbb; font-size: 0.75em; margin-bottom: 8px;">陣の4マスをタップし、セットするカードを選べ！</div>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 65px); grid-template-rows: repeat(3, 85px); gap: 6px; margin-bottom: 12px; background: rgba(20,0,0,0.8); padding: 10px; border: 2px solid #550000; border-radius: 8px;">
-            <div style="background: #111; border: 1px solid #333;"></div>
-            <div id="slot1" class="boss-slot" style="background: #200; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.75em;">①顔<br>(上)</div>
-            <div style="background: #111; border: 1px solid #333;"></div>
+        <!-- 3x3 魔法陣配置 -->
+        <div style="display: grid; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 70px); gap: 5px; margin-bottom: 8px; background: rgba(20,0,0,0.85); padding: 8px; border: 2px solid #550000; border-radius: 8px;">
+            <div style="background: #111; border: 1px solid #222;"></div>
+            <div id="slot1" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">①顔<br>(上)</div>
+            <div style="background: #111; border: 1px solid #222;"></div>
 
-            <div id="slot2" class="boss-slot" style="background: #200; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.75em;">②左腕</div>
-            <div style="background: #111; border: 1px solid #333; display:flex; justify-content:center; align-items:center; color:#ff3333; font-weight:bold;">影山</div>
-            <div id="slot3" class="boss-slot" style="background: #200; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.75em;">③右腕</div>
+            <div id="slot2" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">②左腕</div>
+            <div style="background: #150000; border: 1px solid #440000; display:flex; justify-content:center; align-items:center; color:#ff3333; font-weight:bold; font-size:0.9em;">影山</div>
+            <div id="slot3" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">③右腕</div>
 
-            <div style="background: #111; border: 1px solid #333;"></div>
-            <div id="slot4" class="boss-slot" style="background: #200; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.75em;">④足元<br>(下)</div>
-            <div style="background: #111; border: 1px solid #333;"></div>
+            <div style="background: #111; border: 1px solid #222;"></div>
+            <div id="slot4" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">④足元<br>(下)</div>
+            <div style="background: #111; border: 1px solid #222;"></div>
         </div>
 
-        <div style="color: #aaa; font-size: 0.8em; margin-bottom: 8px;">選択中のマス: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
+        <div style="color: #aaa; font-size: 0.8em; margin-bottom: 6px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
 
-        <div style="width: 100%; max-width: 480px; display: flex; gap: 5px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid #333;" id="boss-cards"></div>
+        <!-- 手持ちカード（タップしやすい3x3グリッド） -->
+        <div style="width: 100%; max-width: 320px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; background: rgba(0,0,0,0.8); border: 1px solid #444; border-radius: 6px;" id="boss-cards"></div>
 
-        <button id="btn-fire-vox" style="margin-top: 15px; width: 100%; max-width: 320px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.1em;">Vox Sacra 発射！</button>
+        <button id="btn-fire-vox" style="margin-top: 10px; width: 100%; max-width: 320px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.05em; box-shadow: 0 0 10px red;">Vox Sacra 発射！</button>
     `;
     document.body.appendChild(ui);
 
@@ -569,13 +584,13 @@ export function openBossPuzzleUI(gameState, onResult) {
     const cardsDiv = document.getElementById("boss-cards");
     [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(num => {
         const cDiv = document.createElement("div");
-        cDiv.style.cssText = "min-width: 42px; height: 58px; border: 1px solid #555; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold;";
-        cDiv.innerHTML = `<img src="assets/images/cards/${num}Card.png" style="max-width:100%; max-height:100%;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div style="display:none; font-size:1.1em;">${num}</div>`;
+        cDiv.style.cssText = "height: 48px; border: 1px solid #555; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold; border-radius: 4px;";
+        cDiv.innerHTML = `<img src="assets/images/cards/${num}Card.png" style="max-height: 40px; max-width: 30px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div style="display:none; font-size:1.1em;">${num}</div>`;
         
         cDiv.onclick = () => {
             slots[activeSlotKey] = num;
             const targetEl = document.getElementById(activeSlotKey);
-            targetEl.innerHTML = `<div style="font-size:1.5em; font-weight:bold; color:#00ff66;">${num}</div>`;
+            targetEl.innerHTML = `<div style="font-size:1.4em; font-weight:bold; color:#00ff66;">${num}</div>`;
         };
         cardsDiv.appendChild(cDiv);
     });
@@ -588,14 +603,12 @@ export function openBossPuzzleUI(gameState, onResult) {
 
         ui.remove();
 
-        // 判定ロジック: ①顔=2, ④足=3, ②/③腕=1と4 (合計10)
         const isFaceCorrect = slots.slot1 === 2;
         const isFootCorrect = slots.slot4 === 3;
         const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
         const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
         if (isPerfect) {
-            // ★ 正解時：magic-circle.mp4 アニメーション動画再生！
             playVideo("assets/videos/magic-circle.mp4", () => {
                 const playerLevel = gameState.player.level;
 

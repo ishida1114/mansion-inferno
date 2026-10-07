@@ -1,6 +1,6 @@
-// appUI.js - スマホUI（画像ファイル指定修正 ＆ クロマキー透過連動完全版）
+// appUI.js - スマホUI（悪魔手記ヒント連携完全版）
 import { gameState } from './gameState.js';
-import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
+import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
 
 export const LOGO_ASSETS = {
@@ -235,11 +235,25 @@ export class AppUI {
     `;
   }
 
+  // ★ 獲得したヒントがリアルタイムで記録・閲覧できる「悪魔手記」
   renderNotesView() {
-    return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">悪魔手記</h3></div><div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5;"><div style="color: #ffdd66; font-weight: bold;">【エクソシストの遺言】</div><div>「ボスの魔方陣に合わせて適切な弱点カードを撃ち抜くのだ……」</div></div>`;
+    const hints = gameState.bossHints || [];
+    return `
+      <div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">悪魔手記</h3></div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5; margin-bottom: 4px;">
+          <div style="color: #ffdd66; font-weight: bold;">【エクソシストの遺言】</div>
+          <div>「ボスの魔方陣に合わせて適切な弱点カードを撃ち抜くのだ……」</div>
+        </div>
+        ${hints.length > 0 ? hints.map(hint => `
+          <div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5; color: #dddddd; border-color: #770000; background: #1a0505;">
+            ${hint}
+          </div>
+        `).join('') : '<div class="loadout-slot" style="color:#666;">（まだ攻略ヒントを入手していません）</div>'}
+      </div>
+    `;
   }
 
-  // ★ blackcat.jpg 適用＆透過連動
   renderFamiliarView() {
     const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
     return `

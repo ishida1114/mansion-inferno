@@ -1,4 +1,4 @@
-// items.js - アイテム定義データ（完全統合版）
+// items.js - アイテム定義データ（重複排除完全版）
 
 // --- 消費アイテム（コンビニ購入） ---
 export const CONSUMABLE_ITEMS = {
@@ -67,40 +67,29 @@ export const ARMOR_ITEMS = {
     name: '配達員のジャケット',
     type: 'armor',
     price: 300,
-    def: 2, // ★ お守り(DEF 1)の上位
-    description: '1F全滅1回分で購入可能。被ダメージを抑える作業着。(DEF +2)'
+    def: 2,
+    description: '被ダメージを抑える作業着。(DEF +2)'
   },
   proof_vest: {
     id: 'proof_vest',
     name: '防刃チョッキ',
     type: 'armor',
     price: 800,
-    def: 3, // ★ 配達員ジャケットの上位
-    description: '2F稼ぎ1.5周分。物理攻撃を大きく軽減する。(DEF +3)'
+    def: 3,
+    description: '物理攻撃を大きく軽減する。(DEF +3)'
   },
   leather_jacket: {
     id: 'leather_jacket',
     name: 'お守りレザージャケット',
     type: 'armor',
     price: 2000,
-    def: 4, // ★ 最高峰の防具
+    def: 4,
     description: 'お札が縫い付けられた漆黒のジャケット。(DEF +4)'
   }
 };
 
-// ui.js や他モジュールが参照する一括エクスポート定義
+// 重複のない一括エクスポート
 export const itemDefinitions = {
   ...CONSUMABLE_ITEMS,
   ...ARMOR_ITEMS
 };
-
-// 互換性確保用エイリアス
-itemDefinitions.ENERGY_DRINK = CONSUMABLE_ITEMS.energy_drink;
-itemDefinitions.BENTO = CONSUMABLE_ITEMS.bento;
-itemDefinitions.BLUE_UMBRELLA = CONSUMABLE_ITEMS.blue_umbrella;
-itemDefinitions.YELLOW_UMBRELLA = CONSUMABLE_ITEMS.yellow_umbrella;
-itemDefinitions.CLEAR_UMBRELLA = CONSUMABLE_ITEMS.clear_umbrella;
-itemDefinitions.RED_UMBRELLA = CONSUMABLE_ITEMS.red_umbrella;
-itemDefinitions.DELIVERY_JACKET = ARMOR_ITEMS.delivery_jacket;
-itemDefinitions.PROOF_VEST = ARMOR_ITEMS.proof_vest;
-itemDefinitions.LEATHER_JACKET = ARMOR_ITEMS.leather_jacket;
