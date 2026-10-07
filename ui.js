@@ -1,10 +1,10 @@
-// ui.js - 会話・査問・ショップ・戦闘UI・クロマキー処理完全版
+// ui.js - 会話・査問・ショップ・ターン演出付き戦闘UI・クロマキー完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ JPGノイズ対応 緑背景（クロマキー）自動透過関数
+// ★ クロマキー自動透過処理
 export function applyChromaKey(imgElement) {
     if (!imgElement) return;
     if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
@@ -117,7 +117,7 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// ★ 階段移動の足音テキスト＆タメ（1.5秒）演出
+// 階段移動時の足音テキスト＋1.5秒タメ演出
 export function playFloorTransition(targetFloor, onComplete) {
     const fadeDiv = document.createElement("div");
     fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 4000; transition: opacity 0.5s ease; opacity: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em; gap: 15px;`;
@@ -134,7 +134,7 @@ export function playFloorTransition(targetFloor, onComplete) {
             fadeDiv.style.opacity = "0"; 
             setTimeout(() => fadeDiv.remove(), 500); 
         }, 800); 
-    }, 1500); // 1.5秒のタメ
+    }, 1500);
 }
 
 export function playVideo(src, onEnded) {
@@ -204,7 +204,7 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ 通常戦闘UI（乱数ダメージ・AGI確率逃走・タメ演出反映）
+// ★ ステップ進行・可視化されたターン制戦闘UI
 export function openCombatUI(enemy, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -242,23 +242,30 @@ export function openCombatUI(enemy, gameState, onResult) {
     const attackBtn = document.getElementById("btn-attack");
     const escapeBtn = document.getElementById("btn-escape");
 
+    // ★ 射撃ターンの可視化＆ステップ処理
     attackBtn.onclick = () => {
         const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
         const equippedCards = gameState.equippedCards || [];
 
         if (!hasGun) {
             log.innerText = "【攻撃不能！】\nモデルガンを持っていない！ 素手では悪魔にダメージを与えられない！";
-        } else if (equippedCards.length === 0) {
+            return;
+        } 
+        if (equippedCards.length === 0) {
             log.innerText = "【装填エラー！】\nモデルガンにラミナ（カード）が装填されていない！ 弾が出ない！";
-        } else {
+            return;
+        }
+
+        attackBtn.disabled = true;
+        escapeBtn.disabled = true;
+
+        log.innerText = "Vox Sacra（聖なる声）を放った……！";
+
+        setTimeout(() => {
             let baseDamage = equippedCards.reduce((sum, num) => sum + num, 0) * 4;
             const isWeaknessHit = equippedCards.some(num => enemyWeakness.includes(num));
-            
-            if (isWeaknessHit) {
-                baseDamage *= 2; // 弱点倍率
-            }
+            if (isWeaknessHit) baseDamage *= 2;
 
-            // ★ 若干の乱数補正（±20%）
             const randomFactor = 0.85 + Math.random() * 0.3;
             const netDamage = Math.max(1, Math.floor((baseDamage - enemyDef) * randomFactor));
 
@@ -268,66 +275,31 @@ export function openCombatUI(enemy, gameState, onResult) {
             log.innerText = `Vox Sacraの射撃！${isWeaknessHit ? '（弱点特効！）' : ''} 悪魔に ${netDamage} ダメージ！`;
 
             if (enemyHp <= 0) {
-                log.innerText += `\n${enemy.name} を撃退した！`;
                 setTimeout(() => {
                     ui.remove();
                     gameState.player.money += 150;
-                    gameState.levelUp(1);
-                    showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰150 獲得 / レベルアップ！）`, () => {
+                    const isLvUp = gameState.gainExp(50); // ★ 50 EXP獲得（2体で1LvUP）
+                    showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰150 獲得 / 50 EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}`, () => {
                         if (onResult) onResult("win");
                     });
-                }, 800);
+                }, 1000);
                 return;
             }
-        }
 
-        // 敵の反撃ターン
-        const dodgeChance = (gameState.player.agi || 5) * 0.04;
-        if (Math.random() < dodgeChance) {
-            log.innerText += `\n素早い身こなし！ 悪魔の攻撃を回避した！`;
-        } else {
-            // 被ダメージ計算（DEF反映 ＋ 乱数補正）
-            const baseEnemyAtk = enemyAtk - (gameState.player.def || 0);
-            const enemyRand = 0.85 + Math.random() * 0.3;
-            const damageTaken = Math.max(1, Math.floor(baseEnemyAtk * enemyRand));
-
-            gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
-            playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
-            log.innerText += `\n悪魔の反撃！ 主人公は ${damageTaken} ダメージを受けた！`;
-        }
-
-        if (gameState.player.hp <= 0) {
+            // 敵の反撃ターン（1秒後に処理）
             setTimeout(() => {
-                ui.remove();
-                showMessageDialog("【体力が尽きた……】\n意識を失い、1階のコンビニへ連れ戻された……。", () => {
-                    gameState.player.hp = gameState.player.maxHp;
-                    if (onResult) onResult("defeat");
-                });
-            }, 1000);
-        }
-    };
+                const dodgeChance = (gameState.player.agi || 5) * 0.04;
+                if (Math.random() < dodgeChance) {
+                    log.innerText += `\n素早い身こなし！ 悪魔の攻撃を回避した！`;
+                } else {
+                    const baseEnemyAtk = enemyAtk - (gameState.player.def || 0);
+                    const enemyRand = 0.85 + Math.random() * 0.3;
+                    const damageTaken = Math.max(1, Math.floor(baseEnemyAtk * enemyRand));
 
-    // ★ 確率逃走（AGI依存）＋ タメ演出（1秒）
-    escapeBtn.onclick = () => {
-        attackBtn.disabled = true;
-        escapeBtn.disabled = true;
-        log.innerText = "必死に背を向けて走り出した……！";
-
-        setTimeout(() => {
-            const escapeRate = 0.55 + ((gameState.player.agi || 5) * 0.04); // AGIに応じた逃走成功率
-            if (Math.random() < escapeRate) {
-                ui.remove();
-                showMessageDialog("【逃走成功】\n暗闇の中、なんとか悪魔を振り切った！", () => {
-                    if (onResult) onResult("escape");
-                });
-            } else {
-                attackBtn.disabled = false;
-                escapeBtn.disabled = false;
-                
-                const damageTaken = Math.max(1, Math.floor((enemyAtk - (gameState.player.def || 0)) * 1.2));
-                gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
-                playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
-                log.innerText = `【逃走失敗！】\n背後から悪魔に追いつかれ、強烈な一撃を受けた！（${damageTaken} ダメージ！）`;
+                    gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
+                    playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
+                    log.innerText += `\n悪魔の反撃！ 主人公は ${damageTaken} ダメージを受けた！`;
+                }
 
                 if (gameState.player.hp <= 0) {
                     setTimeout(() => {
@@ -337,7 +309,49 @@ export function openCombatUI(enemy, gameState, onResult) {
                             if (onResult) onResult("defeat");
                         });
                     }, 1000);
+                } else {
+                    attackBtn.disabled = false;
+                    escapeBtn.disabled = false;
                 }
+            }, 1000);
+        }, 800);
+    };
+
+    // ★ 確率逃走（AGI依存）＆ 段階ログ
+    escapeBtn.onclick = () => {
+        attackBtn.disabled = true;
+        escapeBtn.disabled = true;
+        log.innerText = "必死に背を向けて走り出した……！";
+
+        setTimeout(() => {
+            const escapeRate = 0.55 + ((gameState.player.agi || 5) * 0.04);
+            if (Math.random() < escapeRate) {
+                ui.remove();
+                showMessageDialog("【逃走成功】\n暗闇の中、なんとか悪魔を振り切った！", () => {
+                    if (onResult) onResult("escape");
+                });
+            } else {
+                log.innerText = "【逃走失敗！】\nしかし、悪魔に回り込まれた！";
+
+                setTimeout(() => {
+                    const damageTaken = Math.max(1, Math.floor((enemyAtk - (gameState.player.def || 0)) * 1.2));
+                    gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
+                    playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
+                    log.innerText += `\n背後から追撃！ 主人公は ${damageTaken} ダメージを受けた！`;
+
+                    if (gameState.player.hp <= 0) {
+                        setTimeout(() => {
+                            ui.remove();
+                            showMessageDialog("【体力が尽きた……】\n意識を失い、1階のコンビニへ連れ戻された……。", () => {
+                                gameState.player.hp = gameState.player.maxHp;
+                                if (onResult) onResult("defeat");
+                            });
+                        }, 1000);
+                    } else {
+                        attackBtn.disabled = false;
+                        escapeBtn.disabled = false;
+                    }
+                }, 1000);
             }
         }, 1000);
     };
@@ -461,10 +475,10 @@ export function openInquisitionUI(entity, gameState, onResult) {
                 onResult("kill_human");
             });
         } else {
-            // ★ 査問成功時のボーナス報酬（💰250）
+            // ★ 査問成功時のボーナス（💰250 ＆ 100 EXP＝即1LvUP）
             gameState.player.money += 250;
-            gameState.levelUp(1);
-            showMessageDialog(`【見破り成功！ 悪魔撃退】\n正体を完全に見破られた悪魔は悲鳴を上げて消滅した！\n（ボーナス報酬: 💰250 獲得 / レベルアップ！）`, () => {
+            const isLvUp = gameState.gainExp(100);
+            showMessageDialog(`【見破り成功！ 悪魔撃退】\n正体を完全に見破られた悪魔は悲鳴を上げて消滅した！\n（高額ボーナス: 💰250 獲得 / 100 EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}`, () => {
                 onResult("combat_win");
             });
         }

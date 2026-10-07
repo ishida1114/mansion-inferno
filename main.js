@@ -1,4 +1,4 @@
-// main.js - 移動操作・イベント・敗北時1F帰還・インクイジション連携完全版
+// main.js - アプリ起動時トップ固定 ＆ 敗北時帰還対応版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -170,7 +170,7 @@ function changeFloor(floor) {
   }
 }
 
-// ★ アプリUI切り替え（立ち上げ時は常にトップ画面から始まるように制御）
+// ★ アプリを開く時は必ずトップ画面（ホーム）を表示
 function toggleAppUI() {
   if (!gameState.hasExorcistInherited) {
     showMessageDialog("【スマホ】\nまだ『悪魔辞典アプリ』を入手していない……。", () => {});
@@ -181,7 +181,7 @@ function toggleAppUI() {
   if (container) {
     const isHidden = container.classList.contains('hidden');
     if (isHidden) {
-      appUI.currentSubView = 'home'; // ★ 常にトップ画面（ホーム）を開く
+      appUI.currentSubView = 'home'; // ★ 常にトップ画面を開く
       appUI.renderApp();
       container.classList.remove('hidden');
     } else {
@@ -211,7 +211,7 @@ function checkEncounterAfterMove() {
       isProcessingEvent = true;
       openCombatUI(enemy, gameState, (result) => {
         if (result === "defeat") {
-          changeFloor(1); // 敗北時は1階コンビニへテレポート
+          changeFloor(1); // 敗北時は1階コンビニへ帰還
         }
         isProcessingEvent = false;
         renderer.render();

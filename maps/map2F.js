@@ -1,4 +1,4 @@
-// maps/map2F.js - 2階マップデータおよびイベント制御
+// maps/map2F.js - 2階マップ（お守り DEF +1 入手＆イベント制御）
 import { showMessageDialog, showConversationDialog, showItemAcquiredModal, playFloorTransition } from '../ui.js';
 
 export const playerStart2F = { x: 1, y: 1, dir: 0 };
@@ -26,20 +26,20 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // ★ 2: 教え子の部屋（モデルガン ＋ 作業用ジャケット DEF +1 入手）
+    // ★ 2: 教え子の部屋（モデルガン ＆ お守り DEF +1 入手）
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
                 run: (onComplete) => {
-                    showConversationDialog("assets/images/human1.png", "【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nこれ……父親の部屋にあったモデルガンと防刃ジャケットなんだ。使って！」", () => {
+                    showConversationDialog("assets/images/human1.png", "【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nこれ……父親の部屋にあったモデルガンと魔除けのお守りなんだ。使って！」", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
-                        gameState.player.def += 1; // ★ 防具DEF +1 補正！
+                        gameState.player.def += 1; // ★ お守り補正 DEF +1
                         
                         showItemAcquiredModal(
                             "assets/images/modelgun.jpg", 
-                            "モデルガン ＆ 防刃ジャケット", 
-                            "『モデルガン（Vox Sacra連動）』と『防刃ジャケット（DEF +1）』を受け取った！", 
+                            "モデルガン ＆ 魔除けのお守り", 
+                            "『モデルガン（Vox Sacra連動）』と『魔除けのお守り（DEF +1）』を受け取った！", 
                             () => {
                                 showMessageDialog("【現象が発生！】\nモデルガンが青白く光った！\nポケットの中でスマホが激しく振動し、『悪魔辞典アプリ』が自動的に立ち上がった……！", () => {
                                     showMessageDialog("【悪魔辞典】\n「手持ちの退魔カード『ラミナ』が共鳴して光っている……。\nモデルガンにラミナを装填しろということだろうか？」", () => {

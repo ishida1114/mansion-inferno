@@ -1,4 +1,4 @@
-// appUI.js - スマホUI（アプリ起動時トップ画面固定 ＆ 強力クロマキー透過）
+// appUI.js - スマホUI（全カード選択対応 ＆ 起動時トップ固定完全版）
 import { gameState } from './gameState.js';
 import { CONSUMABLE_ITEMS, ARMOR_ITEMS } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -65,8 +65,10 @@ if (!document.getElementById("app-style-element")) {
         
         .loadout-slot { background: #111; border: 2px dashed #440000; padding: 10px; text-align: center; margin-bottom: 8px; color: #666; border-radius: 6px; font-size: 0.85em; }
         .equipped-slot { border: 2px solid #ffdd66; color: #ffdd66; background: #221a00; }
-        .card-list { display: flex; gap: 8px; overflow-x: auto; padding-top: 8px; }
-        .card-item { border: 1px solid #555; padding: 4px; cursor: pointer; background: #000; text-align: center; border-radius: 4px; min-width: 50px; }
+        
+        /* ★ 1〜9の全カードがしっかりグリッド表示されるレイアウト */
+        .card-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 8px; }
+        .card-item { border: 1px solid #555; padding: 6px; cursor: pointer; background: #000; text-align: center; border-radius: 6px; }
         .card-item:hover { border-color: #ff3333; }
         .card-item.disabled { opacity: 0.35; cursor: not-allowed; border-color: #222; }
         .card-item img { max-width: 45px; display: block; margin: 0 auto 4px auto; }
@@ -82,8 +84,7 @@ export class AppUI {
   closeApp() {
     const container = document.getElementById('app-ui-container');
     if (container) container.classList.add('hidden');
-    // 次回起動時のためにトップ画面にリセット
-    this.currentSubView = 'home';
+    this.currentSubView = 'home'; // ★ 閉じた後は次回トップ固定
   }
 
   renderApp() {
@@ -173,6 +174,7 @@ export class AppUI {
     `;
   }
 
+  // ★ 全カード【1〜9】が選択できるラミナ装填画面
   renderLoadoutView() {
     const pLevel = gameState.player.level;
     const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
@@ -194,15 +196,15 @@ export class AppUI {
         `}
       </div>
 
-      <div style="font-size: 0.8em; color: #aaa; margin-bottom: 8px;">
-        主人公Lv <strong>${pLevel}</strong> （装填上限コスト: <strong>${pLevel}</strong>）
+      <div style="font-size: 0.8em; color: #aaa; margin-bottom: 8px; text-align: center;">
+        Lv.<strong>${pLevel}</strong> （EXP: ${gameState.player.exp}/${gameState.player.maxExp}） | 上限コスト: <strong>${pLevel}</strong>
       </div>
 
       <div>
         <div class="loadout-slot ${equipped.length > 0 ? 'equipped-slot' : ''}">
           装填中：<strong>${equipped.length > 0 ? `【カード ${equipped[0]}】` : '未装填'}</strong>
         </div>
-        <div style="color: #00ff66; font-size: 0.8em; margin-bottom: 10px;">射撃威力 (Vox Sacra): ${totalPower}</div>
+        <div style="color: #00ff66; font-size: 0.8em; margin-bottom: 10px; text-align: center;">基本威力 (Vox Sacra): ${totalPower}</div>
       </div>
 
       <div class="sub-title" style="font-size: 0.85em; text-align: left; margin: 10px 0 5px 0; color:#ffdd66;">タップして装填するカードを選択</div>
@@ -212,7 +214,7 @@ export class AppUI {
           return `
             <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
               <img src="assets/images/cards/${num}Card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}card.png'" />
-              <div style="font-size: 0.7em;">【${num}】${isAllowed ? '' : '<br><span style="color:#ff4444;">不可</span>'}</div>
+              <div style="font-size: 0.7em; font-weight:bold;">【${num}】${isAllowed ? '' : '<br><span style="color:#ff4444;">ロック</span>'}</div>
             </div>
           `;
         }).join('')}
@@ -224,7 +226,7 @@ export class AppUI {
     const items = gameState.inventory?.items || [];
     return `
       <div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">所持品</h3></div>
-      <div style="font-size: 0.85em; color: #ffdd66; margin-bottom: 10px;">所持金: ${gameState.player.money} 💰 (DEF:+${gameState.player.def})</div>
+      <div style="font-size: 0.85em; color: #ffdd66; margin-bottom: 10px;">所持金: ${gameState.player.money} 💰 | 防御力(DEF): +${gameState.player.def}</div>
       <div>
         ${items.length > 0 ? items.map((item, idx) => `
           <div class="loadout-slot" style="display: flex; justify-content: space-between; align-items: center; border-style: solid; text-align: left;">

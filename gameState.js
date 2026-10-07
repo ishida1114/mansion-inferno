@@ -1,15 +1,16 @@
-// gameState.js - プレイヤー状態・位置座標・3Dマップ・セーブ・ラミナ装填コスト計算（完全版）
+// gameState.js - プレイヤーステータス・経験値・カード装填一元管理
 
 export const gameState = {
-  // プレイヤー基本ステータスおよび3Dダンジョン位置座標
   player: {
     x: 7,          // X座標（1F初期位置: 7）
     y: 1,          // Y座標（1F初期位置: 1）
     dir: 0,        // 向き (0:北, 1:東, 2:南, 3:西)
     level: 1,
+    exp: 0,        // 現在の経験値
+    maxExp: 100,   // 次のレベルまでの必要経験値（1体=50EXP）
     hp: 20,
     maxHp: 20,
-    def: 0,        // 装備防具＋自動上昇DEFの合計
+    def: 0,        // 防具＋成長による防御力
     agi: 5,        // 素早さ（逃走率・回避率に影響）
     sin: 0,        // 罪ゲージ（人間の誤射で+30）
     money: 0,      // 所持金（💰）
@@ -66,6 +67,18 @@ export const gameState = {
     this.equippedCards = newEquipped;
   },
 
+  // ★ 経験値獲得処理（100でレベルアップ）
+  gainExp(amount) {
+    this.player.exp += amount;
+    let leveledUp = false;
+    if (this.player.exp >= this.player.maxExp) {
+      this.player.exp -= this.player.maxExp;
+      this.levelUp(1);
+      leveledUp = true;
+    }
+    return leveledUp;
+  },
+
   // レベルアップ処理（自動上昇）
   levelUp(amount = 1) {
     this.player.level += amount;
@@ -84,13 +97,14 @@ export const gameState = {
     this.updateEquippedCards();
   },
 
-  // ゲーム状態リセット
   resetGame() {
     this.currentFloor = 1;
     this.player.x = 7;
     this.player.y = 1;
     this.player.dir = 0;
     this.player.level = 1;
+    this.player.exp = 0;
+    this.player.maxExp = 100;
     this.player.hp = 20;
     this.player.maxHp = 20;
     this.player.def = 0;
