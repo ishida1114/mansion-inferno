@@ -1,4 +1,4 @@
-// renderer.js - 画像アセットベース擬似3Dダンジョン描画（アスペクト比完全復元版）
+// renderer.js - 擬似3Dダンジョンレンダラー（非常階段ドア＆アスペクト比調整完全版）
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -41,7 +41,7 @@ export function initRenderer(onReady) {
     }
 }
 
-// 600x400 Canvas用 遠近法台形スロット
+// 600x400 Canvas規格に合わせた視界台形スロット
 const leftClips = { 
     1: [{x:0, y:0}, {x:150, y:75}, {x:150, y:325}, {x:0, y:400}], 
     2: [{x:150, y:75}, {x:220, y:135}, {x:220, y:265}, {x:150, y:325}], 
@@ -56,7 +56,7 @@ const rightClips = {
     4: [{x:325, y:180}, {x:345, y:165}, {x:345, y:235}, {x:325, y:220}] 
 };
 
-// 正面描画バウンディング（比率復元：150, 75, 幅300, 高さ250）
+// 正面描画枠（横幅300, 高さ250）
 const frontBounds = { 
     1: { x: 150, y: 75, w: 300, h: 250 }, 
     2: { x: 220, y: 135, w: 160, h: 130 }, 
@@ -164,12 +164,17 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // 正面壁・ドア
+        // 正面壁・ドア描画（cellType === 4 で stair_door.png を優先使用）
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;
-            if (cellType === 4 && images.stairDoor && images.stairDoor.complete) targetImg = images.stairDoor;
-            else if ((cellType === 2 || cellType === 3 || cellType === 7 || cellType === 8 || cellType === 9) && images.door && images.door.complete) targetImg = images.door;
+
+            if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
+                targetImg = images.stairDoor;
+            } else if ([2, 3, 7, 8, 9].includes(cellType) && images.door && images.door.complete) {
+                targetImg = images.door;
+            }
+
             if (targetImg && targetImg.complete) {
                 ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
                 ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`; 
