@@ -1,4 +1,4 @@
-// ui.js - 汎用UIエンジン（ボス固有ロジック完全分離版）
+// ui.js - 会話ダイアログ動画対応＆死亡時即時1階切り替え完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -27,22 +27,34 @@ export function showMessageDialog(text, onClosed) {
     setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
+// ★ 動画(.mp4)にも対応した会話ダイアログ
 export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
-    const imgDiv = document.createElement("img");
-    imgDiv.style.cssText = "max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
     
-    imgDiv.onerror = () => imgDiv.style.display = 'none';
-    imgDiv.src = imageSrc;
-    applyChromaKey(imgDiv);
+    const isVideo = imageSrc && imageSrc.endsWith(".mp4");
+    const mediaEl = isVideo ? document.createElement("video") : document.createElement("img");
+    
+    mediaEl.style.cssText = "max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start; object-fit: contain;";
+    
+    if (isVideo) {
+        mediaEl.src = imageSrc;
+        mediaEl.autoplay = true;
+        mediaEl.loop = true;
+        mediaEl.muted = true;
+        mediaEl.playsInline = true;
+    } else {
+        mediaEl.onerror = () => mediaEl.style.display = 'none';
+        mediaEl.src = imageSrc;
+    }
+    applyChromaKey(mediaEl);
 
     const msgDiv = document.createElement("div");
     msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
     msgDiv.innerText = text;
     msgDiv.innerHTML += `<div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
 
-    overlay.appendChild(imgDiv); 
+    overlay.appendChild(mediaEl); 
     overlay.appendChild(msgDiv); 
     document.body.appendChild(overlay);
 
@@ -277,13 +289,16 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const attackBtn = document.getElementById("btn-attack");
     const escapeBtn = document.getElementById("btn-escape");
 
+    // ★ 死亡直後に即座に1Fへマップ描画切り替えを行う（重複誤発火防止）
     const triggerDeathSequence = () => {
         ui.remove();
         const respawnMsg = gameState.handlePlayerDeath();
+        
+        if (context && context.changeFloor) {
+            context.changeFloor(1);
+        }
+        
         showMessageDialog(respawnMsg, () => {
-            if (context && context.changeFloor) {
-                context.changeFloor(1);
-            }
             if (onResult) onResult("defeat");
         });
     };
@@ -540,7 +555,7 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         if (entity.type === "human") {
             gameState.player.money += 200;
             
-            const hintText = "「助けてくれてありがとうございます……！ これはお礼です！\nあ、そういえば2F奥の影山ですが……あいつの陣を破るには『4マスの合計をピッピッタリ10』にしないといけないらしいです！ 腕には小さい数字から順にカードを置いてみてください！」";
+            const hintText = "「助けてくれてありがとうございます……！ これはお礼です！\nあ、そういえば2F奥の影山ですが……あいつの陣を破るには『4マスの合計をピッタリ10』にしないといけないらしいです！ 腕には小さい数字から順にカードを置いてみてください！」";
             if (!gameState.bossHints) gameState.bossHints = [];
             gameState.bossHints.push("【2F住人の証言】影山の魔方陣は4マスの合計を「10」にする。腕(左右)には小さい数字のカードから順に配置する。");
 
@@ -555,7 +570,6 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     };
 }
 
-// ★ 完全汎用ボス戦パズルUIコンポーネント（渡された config に従って描画・重複配置チェック）
 export function openBossPuzzleUI(puzzleConfig, gameState, onResult, context) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
