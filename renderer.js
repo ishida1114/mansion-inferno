@@ -1,4 +1,4 @@
-// renderer.js - 擬似3D透視投影描画（エレベーター画像対応＆全機能保持完全版）
+// renderer.js - 擬似3D透視投影描画（エントランス/エレベーター画像判定完全分離版）
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -12,7 +12,7 @@ const imageSources = {
     door: "assets/images/door.png",
     wall: "assets/images/wall.png",
     stairDoor: "assets/images/stair_door.png",
-    elevator: "assets/images/elevator.png", // ★ エレベーター画像を追加
+    elevator: "assets/images/elevator.png",
     entrance: "assets/images/entrance.png", 
     left1: "assets/images/leftwall1.png",
     left2: "assets/images/leftwall2.png",
@@ -95,7 +95,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir], lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
         const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir], rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
-        // 左側側壁描画（ポリゴンクリップで斜め壁として正確に描画）
+        // 左側側壁描画
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
             const imgKey = "left" + depth;
             const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
@@ -135,7 +135,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // 正面壁・扉・エレベーター描画
+        // 正面壁・扉・エントランス・エレベーター描画
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;
@@ -143,10 +143,13 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
                 // 非常階段扉
                 targetImg = images.stairDoor;
-            } else if ((cellType === 5 || cellType === 6) && images.elevator && images.elevator.complete) {
-                // ★ エレベーター扉（セルタイプ5・6に対応）
+            } else if (cellType === 6 && images.entrance && images.entrance.complete) {
+                // ★ セル6: エントランス専用画像（entrance.png）
+                targetImg = images.entrance;
+            } else if (cellType === 7 && images.elevator && images.elevator.complete) {
+                // ★ セル7: エレベーター専用画像（elevator.png）
                 targetImg = images.elevator;
-            } else if ([2, 3, 7, 8, 9].includes(cellType) && images.door && images.door.complete) {
+            } else if ([2, 3, 5, 8, 9].includes(cellType) && images.door && images.door.complete) {
                 // 通常扉
                 targetImg = images.door;
             }
@@ -178,7 +181,7 @@ function drawActionHint(ctx, canvas, player, currentMap) {
         let label = "[ SPACE ] 調べる";
         if (target === 4) {
             label = gameState.currentFloor === 2 ? "[ SPACE ] 1階へ下りる" : "[ SPACE ] 2階へ登る";
-        } else if (target === 5 || target === 6) {
+        } else if (target === 7) {
             label = "[ SPACE ] エレベーターに乗る";
         } else if (target === 2 && gameState.currentFloor === 1) {
             label = "[ SPACE ] コンビニに入る";
