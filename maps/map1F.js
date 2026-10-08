@@ -1,4 +1,4 @@
-// maps/map1F.js - 1階マップデータ（エレベーターをエントランス横へ配置）
+// maps/map1F.js - 1階マップデータ（全イベント＆演出100%保持・エレベーター対応完全版）
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -15,10 +15,11 @@ export const map1F = [
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-    [1, 1, 1, 1, 1, 1, 7, 6, 1, 1, 1, 1, 1, 1, 1]  // ★ (6, 6) にエレベーター(7)を配置
+    [1, 1, 1, 1, 1, 1, 7, 6, 1, 1, 1, 1, 1, 1, 1]   // (6, 6) にエレベーター(7)
 ];
 
 export function handleEvent1F(targetCell, gameState, context) {
+    // 4: 非常階段
     if (targetCell === 4) {
         if (!gameState.hasKey2F) {
             return { 
@@ -56,6 +57,7 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
+    // 2: コンビニ（会話分岐＆ショップ）
     if (targetCell === 2) {
         if (!gameState.hasMetGrandma) {
             return { run: (onComplete) => startGrandmaEvent(gameState, onComplete) };
@@ -66,6 +68,7 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
+    // 3: 血の池
     if (targetCell === 3) {
         if (!gameState.hasExorcistInherited) {
             return { run: (onComplete) => startExorcistSequence(gameState, context.redraw, onComplete) };
@@ -76,10 +79,12 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
+    // 5: 集合ポスト
     if (targetCell === 5) {
         return { run: (onComplete) => startPostEvent(gameState, onComplete) };
     }
 
+    // 6: エントランス
     if (targetCell === 6) {
         return { 
             run: (onComplete) => showConversationDialog(
@@ -123,7 +128,7 @@ function startGrandmaEvent(gameState, onComplete) {
 function startExorcistSequence(gameState, redraw, onComplete) {
     showMessageDialog("【血の池】\nマンションの中庭に血の池が湧き、底から無数の人ならざる者がこの世に出ようともがいている……", () => {
         playVideo("assets/videos/BloodPond.mp4", () => playVideo("assets/videos/exorcist.mp4", () => {
-            showMessageDialog("【瀕死のエクソシスト】\n「そ、そこのひと…」\n「悪魔にやられました、ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……そして使い魔と2階非常階段の鍵を……あなたに託します……」", () => {
+            showMessageDialog("【瀕死のエクソシスト】\n「そ、そこのひと…」\n「悪魔にやられました、ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……自由に使ってください……」", () => {
                 showItemAcquiredModal("assets/images/cards/1Card.png", "退魔の札『ラミナ』一式", "『悪魔辞典アプリ』『使い魔（Lv.15から）』『2F非常階段の鍵』\nそして『1〜9番のラミナ全9枚』を受け継いだ！", () => {
                     showMessageDialog("【衝撃の光景】\n話し終えた直後、無数の黒い腕が池から伸び、神父が引きずり込まれた……。あまりのことに驚いて、身体が硬直し、見ていることしかできなかった…。", () => {
                         gameState.hasExorcistInherited = true; 

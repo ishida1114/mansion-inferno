@@ -1,4 +1,4 @@
-// ui.js - 構文エラー修正＆全UI機能統合完全版
+// ui.js - 汎用UIエンジン（特定ボス名完全排除・全ボス共通使い回し対応版）
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -118,19 +118,38 @@ export function playFloorTransition(targetFloor, onComplete) {
     }, 1500);
 }
 
-export function playVideo(src, onEnded) {
+// ★ 全画面汎用動画プレイヤー（特定ボス名一切なし・完全汎用仕様）
+export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する") {
+    const oldOverlay = document.getElementById("video-player-overlay");
+    if (oldOverlay) oldOverlay.remove();
+
     const overlay = document.createElement("div");
-    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.98); z-index: 3500; display: flex; justify-content: center; align-items: center; padding: 0; box-sizing: border-box;";
+    overlay.id = "video-player-overlay";
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 3500; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box;";
 
     const video = document.createElement("video");
     video.src = src;
-    video.style.cssText = "max-width: 100%; max-height: 100%; background-color: black; object-fit: contain;";
+    video.style.cssText = "max-width: 100%; max-height: 100%; object-fit: contain; background-color: #000;";
     video.controls = false; 
     video.autoplay = true; 
     video.playsInline = true; 
     video.muted = true; 
 
     overlay.appendChild(video);
+
+    // 自動再生ブロック時に表示される汎用再生ボタン
+    const playBtn = document.createElement("button");
+    playBtn.id = "video-start-btn";
+    playBtn.style.cssText = "position: absolute; padding: 16px 32px; font-size: 1.3em; color: #ffdd66; background: linear-gradient(180deg, #880000, #330000); border: 2px solid #ff3333; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 0 25px red; display: none; z-index: 3600; font-family: " + HORROR_FONT + ";";
+    playBtn.innerText = buttonLabel; // ★ 動的ラベル（デフォルト: ▶ 映像を再生する）
+    overlay.appendChild(playBtn);
+
+    const skipNotice = document.createElement("div");
+    skipNotice.id = "video-skip-notice";
+    skipNotice.style.cssText = "position: absolute; bottom: 5%; color: #888; font-size: 0.85em; pointer-events: none; font-family: " + HORROR_FONT + "; display: none;";
+    skipNotice.innerText = "▼ 画面タップでスキップ";
+    overlay.appendChild(skipNotice);
+
     document.body.appendChild(overlay);
 
     let finished = false;
@@ -143,32 +162,47 @@ export function playVideo(src, onEnded) {
     };
 
     video.onended = finish;
-    
-    let isPlaying = false;
-    video.addEventListener('playing', () => { isPlaying = true; });
+    video.onerror = (e) => {
+        console.error("Video load error:", src, e);
+        finish();
+    };
 
-    overlay.onclick = () => {
-        if (!isPlaying) {
-            video.play().then(() => {
-                const fb = document.getElementById("vid-fallback");
-                if (fb) fb.style.display = "none";
-            }).catch(() => {
-                finish();
-            });
-        } else {
+    let isPlaying = false;
+    video.onplaying = () => {
+        isPlaying = true;
+        playBtn.style.display = "none";
+        skipNotice.style.display = "block";
+    };
+
+    overlay.onclick = (e) => {
+        if (e.target === playBtn) return;
+        if (isPlaying) {
+            video.pause();
             finish();
         }
     };
 
-    const playPromise = video.play();
-    if (playPromise !== undefined) {
-        playPromise.catch(err => {
-            console.warn("Autoplay blocked:", err);
-            const fb = document.createElement("div");
-            fb.id = "vid-fallback";
-            fb.style.cssText = "position:absolute; bottom:15%; color:#fff; font-size:1.2em; background:rgba(200,0,0,0.9); padding:12px 24px; border-radius:6px; border:2px solid #ff3333; z-index: 3600; font-weight:bold; cursor:pointer;";
-            fb.innerText = "▶ 画面をタップして動画を再生";
-            overlay.appendChild(fb);
+    playBtn.onclick = (e) => {
+        e.stopPropagation();
+        video.play().then(() => {
+            isPlaying = true;
+            playBtn.style.display = "none";
+            skipNotice.style.display = "block";
+        }).catch(err => {
+            console.error("Manual play failed:", err);
+            finish();
+        });
+    };
+
+    const promise = video.play();
+    if (promise !== undefined) {
+        promise.then(() => {
+            isPlaying = true;
+            skipNotice.style.display = "block";
+        }).catch(err => {
+            console.warn("Autoplay blocked by browser policy:", err);
+            isPlaying = false;
+            playBtn.style.display = "block";
         });
     }
 }
