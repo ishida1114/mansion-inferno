@@ -9,7 +9,7 @@
 <body>
   <div id="game-container">
 
-    <!-- 3Dダンジョン Canvas (本来の標準解像度 600x400) -->
+    <!-- 3Dダンジョン Canvas (600x400) -->
     <canvas id="game-canvas" width="600" height="400"></canvas>
 
     <!-- タイトル画面 -->
@@ -70,7 +70,7 @@
 
   </div>
 
-  <!-- ★ 緑背景(RGB:0,255,0)を100%自動で消去・透過するSVGフィルター -->
+  <!-- 緑背景(RGB:0,255,0)透過SVGフィルター -->
   <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
     <filter id="chroma-green-filter" color-interpolation-filters="sRGB">
       <feColorMatrix type="matrix" values="

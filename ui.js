@@ -1,4 +1,4 @@
-// ui.js - 戦闘UIの.mp4動画敵再生対応・SVGクロマキー・ショップ統合完全版
+// ui.js - パズルカード重複排除・査問新ルール・影山画像固定完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -11,7 +11,7 @@ export function applyChromaKey(element) {
 
 export function showMessageDialog(text, onClosed) {
     const msgDiv = document.createElement("div");
-    msgDiv.style.cssText = `position: fixed; bottom: 8%; left: 5%; width: 90%; max-width: 560px; margin: 0 auto; padding: 20px; background-color: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; z-index: 2000; font-family: ${HORROR_FONT}; font-size: 1.1em; line-height: 1.7; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
+    msgDiv.style.cssText = `position: fixed; bottom: 8%; left: 5%; width: 90%; max-width: 560px; margin: 0 auto; padding: 20px; background-color: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; z-index: 2000; font-family: \${HORROR_FONT}; font-size: 1.1em; line-height: 1.7; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
     msgDiv.innerText = text;
     msgDiv.innerHTML += `<div style="margin-top: 12px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
     document.body.appendChild(msgDiv);
@@ -38,7 +38,7 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     applyChromaKey(imgDiv);
 
     const msgDiv = document.createElement("div");
-    msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
+    msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: \${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
     msgDiv.innerText = text;
     msgDiv.innerHTML += `<div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
 
@@ -59,7 +59,7 @@ export function showConversationDialog(imageSrc, text, onClosed) {
 
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.90); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.90); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: \${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
     
     const imgEl = document.createElement("img");
     imgEl.id = "modal-item-img";
@@ -72,8 +72,8 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     modal.innerHTML = `<div style="color: #ff3333; font-size: 1.5em; margin-bottom: 12px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
     modal.appendChild(imgEl);
     modal.innerHTML += `
-        <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
-        <div style="color: #cccccc; font-size: 0.95em; margin-bottom: 20px; text-align: center; white-space: pre-wrap; line-height: 1.5;">${detailText}</div>
+        <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">\${itemTitle}</div>
+        <div style="color: #cccccc; font-size: 0.95em; margin-bottom: 20px; text-align: center; white-space: pre-wrap; line-height: 1.5;">\${detailText}</div>
         <div style="color: #888; font-size: 0.8em;">タップ または [ SPACE ] で閉じる</div>
     `;
     document.body.appendChild(modal);
@@ -91,12 +91,12 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
 
 export function playFloorTransition(targetFloor, onComplete) {
     const fadeDiv = document.createElement("div");
-    fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 4000; transition: opacity 0.5s ease; opacity: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em; gap: 15px;`;
+    fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 4000; transition: opacity 0.5s ease; opacity: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #ff3333; font-family: \${HORROR_FONT}; font-size: 1.6em; gap: 15px;`;
     document.body.appendChild(fadeDiv);
 
     setTimeout(() => { 
         fadeDiv.style.opacity = "1"; 
-        fadeDiv.innerHTML = `<div>ザッ…… ザッ……</div><div style="font-size: 0.8em; color: #aaa;">${targetFloor}階へ移動中...</div>`; 
+        fadeDiv.innerHTML = `<div>ザッ…… ザッ……</div><div style="font-size: 0.8em; color: #aaa;">\${targetFloor}階へ移動中...</div>`; 
     }, 10);
 
     setTimeout(() => { 
@@ -135,12 +135,12 @@ export function playVideo(src, onEnded) {
 
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
-    shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
+    shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: \${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
     
     const updateShopHeader = () => {
         document.getElementById("shop-money").innerText = gameState.player.money;
         document.getElementById("shop-sin").innerText = gameState.player.sin;
-        document.getElementById("purify-cost-text").innerText = `現在コスト: 💰 ${gameState.getPurifyCost()}`;
+        document.getElementById("purify-cost-text").innerText = `現在コスト: 💰 \${gameState.getPurifyCost()}`;
     };
 
     shopDiv.innerHTML = `
@@ -150,15 +150,15 @@ export function openShopUI(onClosed) {
             <div style="padding: 12px 15px; border-bottom: 2px solid #550000; background: linear-gradient(180deg, #2a0000, #0a0000); display: flex; justify-content: space-between; align-items: center;">
                 <div><h2 style="color: #ff3333; margin: 0; font-size: 1.4em;">悪魔の無人レジ</h2></div>
                 <div style="font-size: 0.95em; color: #ffdd66; font-weight: bold;">
-                    💰 <span id="shop-money">${gameState.player.money}</span>
-                    <span style="color:#ff4444; margin-left:8px;">(Sin: <span id="shop-sin">${gameState.player.sin}</span>)</span>
+                    💰 <span id="shop-money">\${gameState.player.money}</span>
+                    <span style="color:#ff4444; margin-left:8px;">(Sin: <span id="shop-sin">\${gameState.player.sin}</span>)</span>
                 </div>
             </div>
 
             <div id="sin-purify-bar" style="background: rgba(40,0,0,0.9); padding: 10px 15px; border-bottom: 1px solid #660000; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div style="color: #ffaaaa; font-weight: bold; font-size: 0.9em;">【罪(Sin)の浄化】</div>
-                    <div id="purify-cost-text" style="color: #aaa; font-size: 0.78em;">現在コスト: 💰 ${gameState.getPurifyCost()}</div>
+                    <div id="purify-cost-text" style="color: #aaa; font-size: 0.78em;">現在コスト: 💰 \${gameState.getPurifyCost()}</div>
                 </div>
                 <button id="btn-purify-sin" style="background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 1px solid #ff3333; padding: 6px 12px; font-family: inherit; cursor: pointer; border-radius: 4px; font-size: 0.85em; font-weight: bold;">
                     罪を消す
@@ -179,7 +179,7 @@ export function openShopUI(onClosed) {
         }
         const cost = gameState.getPurifyCost();
         if (gameState.player.money < cost) {
-            alert(`浄化費用（💰${cost}）が足りません！`);
+            alert(`浄化費用（💰\${cost}）が足りません！`);
             return;
         }
 
@@ -194,10 +194,10 @@ export function openShopUI(onClosed) {
         const isEquippedArmor = item.type === "armor" && gameState.equippedArmor === item.id;
         html += `
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(20, 10, 10, 0.85); padding: 10px 12px; margin-bottom: 8px; border: 1px solid #441111; border-radius: 6px;">
-                <div style="flex: 1;"><div style="color: #ffdd66; font-weight: bold;">${item.name}</div><div style="font-size: 0.8em; color: #bbb;">${item.description || ''}</div></div>
-                <div style="text-align: right;"><div style="color: #ffdd66; font-weight: bold; margin-bottom: 4px;">💰 ${item.price}</div>
-                <button class="buy-item-btn" data-id="${item.id}" data-price="${item.price}" ${isEquippedArmor ? 'disabled style="background:#333; color:#aaa; border:1px solid #555;"' : 'style="background: linear-gradient(180deg, #440000, #110000); color: #fff; border: 1px solid #ff3333; padding: 5px 10px; cursor: pointer; border-radius: 4px;"'}>
-                    ${isEquippedArmor ? '装備中' : '購入'}
+                <div style="flex: 1;"><div style="color: #ffdd66; font-weight: bold;">\${item.name}</div><div style="font-size: 0.8em; color: #bbb;">\${item.description || ''}</div></div>
+                <div style="text-align: right;"><div style="color: #ffdd66; font-weight: bold; margin-bottom: 4px;">💰 \${item.price}</div>
+                <button class="buy-item-btn" data-id="\${item.id}" data-price="${item.price}" ${isEquippedArmor ? 'disabled style="background:#333; color:#aaa; border:1px solid #555;"' : 'style="background: linear-gradient(180deg, #440000, #110000); color: #fff; border: 1px solid #ff3333; padding: 5px 10px; cursor: pointer; border-radius: 4px;"'}>
+                    \${isEquippedArmor ? '装備中' : '購入'}
                 </button></div>
             </div>`;
     });
@@ -238,30 +238,24 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ 戦闘UI（.mp4動画敵再生・自動再生保証・SVGクロマキー完全対応）
 export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
-    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
+    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: \${HORROR_FONT}; box-sizing: border-box;`;
 
     let enemyHp = enemy.hp || 30;
     const enemyAtk = enemy.atk || 8;
     const enemyDef = enemy.def || 0;
     const enemyWeakness = enemy.weakness || [1];
 
-    // ★ 動画(.mp4)か画像かの自動分岐
-    const isVideo = enemy.image && enemy.image.endsWith(".mp4");
-    const visualHTML = isVideo 
-        ? `<video id="combat-enemy-img" src="${enemy.image}" autoplay loop muted playsinline style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;"></video>`
-        : `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;">`;
+    const visualHTML = `<img id="combat-enemy-img" src="\${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;">`;
 
     ui.innerHTML = `
-        <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>
-        ${visualHTML}
-        <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold;">${enemy.name}</div>
+        <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>${visualHTML}
+        <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold;">\${enemy.name}</div>
         
         <div style="display: flex; gap: 20px; font-size: 1.05em; margin: 10px 0 15px 0; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 6px; border: 1px solid #333;">
-            <span id="player-hp-text" style="color: #00ff66; font-weight: bold;">主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}</span>
-            <span id="enemy-hp-text" style="color: #ff4444; font-weight: bold;">敵HP: ${enemyHp}</span>
+            <span id="player-hp-text" style="color: #00ff66; font-weight: bold;">主人公HP: ${gameState.player.hp} /${gameState.player.maxHp}</span>
+            <span id="enemy-hp-text" style="color: #ff4444; font-weight: bold;">敵HP: \${enemyHp}</span>
         </div>
 
         <div id="combat-log" style="width: 100%; max-width: 450px; height: 85px; background: rgba(0,0,0,0.8); border: 1px solid #550000; padding: 10px; margin-bottom: 15px; color: #ccc; font-size: 0.9em; line-height: 1.5; white-space: pre-wrap; overflow-y: auto;">悪魔が目の前に立ち塞がった！ どうする？</div>
@@ -273,11 +267,8 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     `;
     document.body.appendChild(ui);
 
-    const enemyEl = document.getElementById("combat-enemy-img");
-    if (isVideo && enemyEl) {
-        enemyEl.play().catch(() => {});
-    }
-    applyChromaKey(enemyEl);
+    const enemyImg = document.getElementById("combat-enemy-img");
+    applyChromaKey(enemyImg);
 
     const log = document.getElementById("combat-log");
     const playerHpText = document.getElementById("player-hp-text");
@@ -323,7 +314,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             const netDamage = Math.max(1, Math.floor((baseDamage - enemyDef) * randomFactor));
 
             enemyHp = Math.max(0, enemyHp - netDamage);
-            enemyHpText.innerText = `敵HP: ${enemyHp}`;
+            enemyHpText.innerText = `敵HP: \${enemyHp}`;
 
             log.innerText = `Vox Sacraの射撃！${isWeaknessHit ? '（弱点特効！）' : ''} 悪魔に ${netDamage} ダメージ！`;
 
@@ -349,8 +340,8 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     const damageTaken = Math.max(1, Math.floor(baseEnemyAtk * enemyRand));
 
                     gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
-                    playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
-                    log.innerText += `\n悪魔の反撃！ 主人公は ${damageTaken} ダメージを受けた！`;
+                    playerHpText.innerText = `主人公HP: ${gameState.player.hp} /${gameState.player.maxHp}`;
+                    log.innerText += `\n悪魔の反撃！ 主人公は \${damageTaken} ダメージを受けた！`;
                 }
 
                 if (gameState.player.hp <= 0) {
@@ -381,8 +372,8 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 setTimeout(() => {
                     const damageTaken = Math.max(1, Math.floor((enemyAtk - (gameState.player.def || 0)) * 1.2));
                     gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
-                    playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
-                    log.innerText += `\n背後から追撃！ 主人公は ${damageTaken} ダメージを受けた！`;
+                    playerHpText.innerText = `主人公HP: ${gameState.player.hp} /${gameState.player.maxHp}`;
+                    log.innerText += `\n背後から追撃！ 主人公は \${damageTaken} ダメージを受けた！`;
 
                     if (gameState.player.hp <= 0) {
                         setTimeout(triggerDeathSequence, 1000);
@@ -396,16 +387,17 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     };
 }
 
-export function openInquisitionUI(entity, gameState, onResult) {
+// ★ 査問UI（一撃撃破／弱点不一致時50%HPで戦闘開始ルール対応）
+export function openInquisitionUI(entity, gameState, onResult, context) {
     const ui = document.createElement("div");
-    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
+    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: \${HORROR_FONT}; box-sizing: border-box;`;
     
-    let visualHTML = `<img id="inq-entity-img" src="${entity.faceImage || entity.image}" style="max-height: 180px; border-radius: 8px;" onerror="this.style.display='none'">`;
+    let visualHTML = `<img id="inq-entity-img" src="\${entity.faceImage || entity.image}" style="max-height: 180px; border-radius: 8px;" onerror="this.style.display='none'">`;
 
     ui.innerHTML = `
         <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 8px red;">【査問】住人との対面</h2>
-        ${visualHTML}
-        <div style="color: #ddd; font-size: 1.1em; margin-top: 5px; font-weight: bold;">${entity.name}</div>
+        \${visualHTML}
+        <div style="color: #ddd; font-size: 1.1em; margin-top: 5px; font-weight: bold;">\${entity.name}</div>
         
         <div id="inq-log" style="width: 100%; max-width: 500px; height: 110px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin: 12px 0; color: #ccc; font-size: 0.9em; line-height: 1.5; overflow-y: auto; white-space: pre-wrap;">（住人と対面した。ラミナカードを提示して相手の表情や仕草を伺おう……）</div>
 
@@ -437,7 +429,7 @@ export function openInquisitionUI(entity, gameState, onResult) {
         const num = numMatch ? numMatch[0] : "1";
         const cDiv = document.createElement("div");
         cDiv.style.cssText = "min-width: 45px; height: 60px; border: 1px solid #555; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold;";
-        cDiv.innerHTML = `<img src="assets/images/cards/${num}card.png" style="max-width:100%; max-height:100%;" onerror="this.src='assets/images/cards/${num}Card.png';"><div style="display:none; font-size:1.2em;">${num}</div>`;
+        cDiv.innerHTML = `<img src="assets/images/cards/${num}card.png" style="max-width:100\%; max-height:100\%;" onerror="this.src='assets/images/cards/${num}Card.png';"><div style="display:none; font-size:1.2em;">\${num}</div>`;
         
         cDiv.onclick = () => {
             if (step === 1) {
@@ -454,8 +446,8 @@ export function openInquisitionUI(entity, gameState, onResult) {
     });
 
     function updateSlots() {
-        document.getElementById("slot1").innerHTML = selected[0] ? `<div style="font-size:1.6em; color:#ffdd66;">${selected[0]}</div>` : "1枚目";
-        document.getElementById("slot2").innerHTML = selected[1] ? `<div style="font-size:1.6em; color:#ffdd66;">${selected[1]}</div>` : "2枚目";
+        document.getElementById("slot1").innerHTML = selected[0] ? `<div style="font-size:1.6em; color:#ffdd66;">\${selected[0]}</div>` : "1枚目";
+        document.getElementById("slot2").innerHTML = selected[1] ? `<div style="font-size:1.6em; color:#ffdd66;">\${selected[1]}</div>` : "2枚目";
     }
 
     const showBtn = document.getElementById("btn-show");
@@ -515,15 +507,34 @@ export function openInquisitionUI(entity, gameState, onResult) {
         ui.remove();
         if (entity.type === "human") {
             gameState.player.sin += 30;
-            showMessageDialog(`【人間誤射！】\n怯えていた無抵抗の人間を撃ち抜いてしまった……！\n（罪(SIN)が 30 増加した！ 現在の罪:${gameState.player.sin}）`, () => {
+            showMessageDialog(`【人間誤射！】\n怯えていた無抵抗の人間を撃ち抜いてしまった……！\n（罪(SIN)が 30 増加した！ 現在の罪:\${gameState.player.sin}）`, () => {
                 onResult("kill_human");
             });
         } else {
-            gameState.player.money += 250;
-            const isLvUp = gameState.gainExp(100);
-            showMessageDialog(`【見破り成功！ 悪魔撃退】\n正体を完全に見破られた悪魔は悲鳴を上げて消滅した！\n（高額ボーナス: 💰250 獲得 / 100 EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}`, () => {
-                onResult("combat_win");
-            });
+            // ★ 見破り結果判定（提示カードに真の弱点が含まれているか）
+            const isWeaknessHit = selected.some(num => parseInt(num) === entity.weakness);
+
+            if (isWeaknessHit) {
+                // 完全見破り：戦闘なしで一撃討滅！
+                gameState.player.money += 250;
+                const isLvUp = gameState.gainExp(100);
+                showMessageDialog(`【完全見破り成功！】\n悪魔の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰250 獲得 / 100 EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}`, () => {
+                    onResult("combat_win");
+                });
+            } else {
+                // 弱点不一致見破り：相手HP50%（半分）の状態で戦闘開始！
+                showMessageDialog(`【見破り成功！ しかし弱点不一致】\n悪魔の正体を暴いたが、弱点属性を打ち抜けなかった！\n先制ダメージを与え、敵HP50%状態で戦闘に入る！`, () => {
+                    const demonEnemy = {
+                        name: entity.name,
+                        image: entity.realImage,
+                        hp: 15, // 50% HP
+                        atk: 10,
+                        def: 1,
+                        weakness: [entity.weakness]
+                    };
+                    openCombatUI(demonEnemy, gameState, (res) => onResult(res === "win" ? "combat_win" : res), context);
+                });
+            }
         }
     };
 
@@ -536,7 +547,7 @@ export function openInquisitionUI(entity, gameState, onResult) {
             if (!gameState.bossHints) gameState.bossHints = [];
             gameState.bossHints.push("【2F住人の証言】影山の魔方陣は4マスの合計を「10」にする。腕(左右)には小さい数字のカードから順に配置する。");
 
-            showMessageDialog(`【人間を保護した】\n${hintText}\n（💰200 を獲得！ / スマホの悪魔手記にヒントが保存された！）`, () => {
+            showMessageDialog(`【人間を保護した】\n\${hintText}\n（💰200 を獲得！ / スマホの悪魔手記にヒントが保存された！）`, () => {
                 onResult("finish");
             });
         } else {
@@ -547,21 +558,21 @@ export function openInquisitionUI(entity, gameState, onResult) {
     };
 }
 
-// ★ ボス戦パズルUI（通常戦闘移行時も影山動画 2f-kageyama.mp4 を正しくセット）
+// ★ ボス戦パズルUI（同じカードの重複配置を完全不可に修正・影山2f-kageyama2.jpg固定）
 export function openBossPuzzleUI(gameState, onResult, context) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
 
     const ui = document.createElement("div");
     ui.id = "boss-puzzle-modal";
-    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.96); z-index: 3500; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 10px; font-family: ${HORROR_FONT}; box-sizing: border-box; overflow-y: auto;`;
+    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.96); z-index: 3500; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 10px; font-family: \${HORROR_FONT}; box-sizing: border-box; overflow-y: auto;`;
 
     let slots = { slot1: null, slot2: null, slot3: null, slot4: null };
     let activeSlotKey = "slot1";
 
     ui.innerHTML = `
         <h2 style="color: #ff3333; margin: 4px 0; text-shadow: 0 0 10px red; font-size: 1.35em;">【フロアボス戦】覗き魔・影山</h2>
-        <div style="color: #bbb; font-size: 0.8em; margin-bottom: 6px;">陣の4マスをタップし、下の特大カードを選べ！</div>
+        <div style="color: #bbb; font-size: 0.8em; margin-bottom: 6px;">陣の4マスをタップし、下の特大カードを選べ！（※重複使用不可）</div>
 
         <div style="display: grid; grid-template-columns: repeat(3, 62px); grid-template-rows: repeat(3, 75px); gap: 6px; margin-bottom: 8px; background: rgba(20,0,0,0.85); padding: 8px; border: 2px solid #550000; border-radius: 8px;">
             <div style="background: #111; border: 1px solid #222;"></div>
@@ -601,22 +612,39 @@ export function openBossPuzzleUI(gameState, onResult, context) {
 
     const cardNames = ["", "Ⅰ 聖水", "Ⅱ 鏡", "Ⅲ 浄化塩", "Ⅳ 十字架", "Ⅴ 聖書", "Ⅵ 聖炎", "Ⅶ 鐘", "Ⅷ 聖香", "Ⅸ 銀杭"];
 
-    const cardsDiv = document.getElementById("boss-cards");
-    [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(num => {
-        const cDiv = document.createElement("div");
-        cDiv.style.cssText = "height: 95px; border: 2px solid #770000; background: #111; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #ffdd66; font-weight: bold; border-radius: 6px; padding: 4px; box-sizing: border-box;";
-        cDiv.innerHTML = `
-            <img src="assets/images/cards/${num}card.png" style="max-height: 52px; max-width: 52px; object-fit: contain; margin-bottom: 3px;" onerror="this.src='assets/images/cards/${num}Card.png'; this.onerror=function(){ this.style.display='none'; };">
-            <div style="font-size:0.85em; color:#ffdd66; white-space:nowrap; font-weight:bold;">${cardNames[num]}</div>
-        `;
-        
-        cDiv.onclick = () => {
-            slots[activeSlotKey] = num;
-            const targetEl = document.getElementById(activeSlotKey);
-            targetEl.innerHTML = `<div style="font-size:1.6em; font-weight:bold; color:#00ff66;">${num}</div>`;
-        };
-        cardsDiv.appendChild(cDiv);
-    });
+    const renderCardGrid = () => {
+        const cardsDiv = document.getElementById("boss-cards");
+        cardsDiv.innerHTML = "";
+
+        [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(num => {
+            const isUsed = Object.values(slots).includes(num);
+            const cDiv = document.createElement("div");
+            cDiv.style.cssText = `height: 95px; border: 2px solid ${isUsed ? '#333' : '#770000'}; background: ${isUsed ? '#050505' : '#111'}; opacity: ${isUsed ? '0.4' : '1'}; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: ${isUsed ? 'not-allowed' : 'pointer'}; color: #ffdd66; font-weight: bold; border-radius: 6px; padding: 4px; box-sizing: border-box;`;
+            
+            cDiv.innerHTML = `
+                <img src="assets/images/cards/${num}card.png" style="max-height: 52px; max-width: 52px; object-fit: contain; margin-bottom: 3px;" onerror="this.src='assets/images/cards/${num}Card.png'; this.onerror=function(){ this.style.display='none'; };">
+                <div style="font-size:0.85em; color:${isUsed ? '#666' : '#ffdd66'}; white-space:nowrap; font-weight:bold;">${isUsed ? '使用中' : cardNames[num]}</div>
+            `;
+            
+            cDiv.onclick = () => {
+                // ★ 重複配置の防止ロジック
+                // 他のマスに既に置いてある場合は、前のマスの配置を自動解除して付け替える
+                Object.keys(slots).forEach(k => {
+                    if (slots[k] === num) {
+                        slots[k] = null;
+                        document.getElementById(k).innerHTML = slotLabels[k];
+                    }
+                });
+
+                slots[activeSlotKey] = num;
+                document.getElementById(activeSlotKey).innerHTML = `<div style="font-size:1.6em; font-weight:bold; color:#00ff66;">\${num}</div>`;
+                renderCardGrid(); // カードグリッドのUIを再描画して使用中表示を更新
+            };
+            cardsDiv.appendChild(cDiv);
+        });
+    };
+
+    renderCardGrid();
 
     document.getElementById("btn-fire-vox").onclick = () => {
         if (!slots.slot1 || !slots.slot2 || !slots.slot3 || !slots.slot4) {
@@ -631,10 +659,10 @@ export function openBossPuzzleUI(gameState, onResult, context) {
         const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
         const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
-        // ★ 影山専用敵データ（画像プロパティに影山動画 2f-kageyama.mp4 を指定！）
+        // ★ 影山専用グラフィック（画像 2f-kageyama2.jpg 固定）
         const kageyamaEnemy = { 
             name: "覗き魔・影山", 
-            image: "assets/videos/2f-kageyama.mp4", 
+            image: "assets/images/demon/2f-kageyama2.jpg", 
             hp: 60, 
             atk: 12, 
             def: 2 
@@ -649,7 +677,7 @@ export function openBossPuzzleUI(gameState, onResult, context) {
                         onResult("win");
                     });
                 } else if (playerLevel === 4) {
-                    showMessageDialog("【完全解読成功！】\n魔方陣が作動！ 影山に壊滅的な大ダメージ（80%）を与えた！\n瀕死の影山との残弾戦に入る！", () => {
+                    showMessageDialog("【完全解読成功！】\n魔方陣が作動！ 影山に壊壊的な大ダメージ（80%）を与えた！\n瀕死の影山との残弾戦に入る！", () => {
                         kageyamaEnemy.name = "覗き魔・影山 (瀕死)";
                         kageyamaEnemy.hp = 24;
                         openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res), context);
@@ -665,7 +693,7 @@ export function openBossPuzzleUI(gameState, onResult, context) {
             let matchCount = (isFaceCorrect ? 1 : 0) + (isFootCorrect ? 1 : 0) + (isArmsCorrect ? 2 : 0);
             kageyamaEnemy.hp = Math.max(30, 120 - (matchCount * 22));
 
-            showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: ${matchCount}/4）\n影山が怒り狂って襲いかかってきた！`, () => {
+            showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: \${matchCount}/4）\n影山が怒り狂って襲いかかってきた！`, () => {
                 openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res), context);
             });
         }

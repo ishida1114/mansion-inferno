@@ -1,4 +1,4 @@
-// appUI.js - スマホUI（テンプレート文字列バグ修正＆SVGフィルター連動完全版）
+// appUI.js - 所持品表示バグ修正・アイテム使用機能実装・全テンプレート修正版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -233,17 +233,23 @@ export class AppUI {
     `;
   }
 
+  // ★ 所持品テンプレート表記バグ修正（バッククォート囲み追加）
   renderInventoryView() {
     const items = gameState.inventory?.items || [];
+
     return `
       <div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">所持品</h3></div>
       <div style="font-size: 0.85em; color: #ffdd66; margin-bottom: 10px;">所持金: ${gameState.player.money} 💰 | 防御力(DEF): +${gameState.player.def}</div>
       <div>
-        ${items.length > 0 ? items.map((item, idx) => `
-          <div class="loadout-slot" style="display: flex; justify-content: space-between; align-items: center; border-style: solid; text-align: left;">
-            <div><div style="color: #fff; font-weight: bold;">\${item.name}</div><div style="font-size: 0.75em; color: #888;">\${item.description || ''}</div></div>
-            <button class="back-btn" style="color: #ff3333; border: 1px solid #ff3333; padding: 2px 6px;">使用</button>
-          </div>`).join('') : '<div class="loadout-slot">所持アイテムなし</div>'}
+        ${items.length > 0 ? items.map((item, index) => `
+          <div class="loadout-slot" style="display: flex; justify-content: space-between; align-items: center; border-style: solid; text-align: left; background: #1a0808; border-color: #551111;">
+            <div>
+              <div style="color: #ffdd66; font-weight: bold; font-size: 0.95em;">\${item.name}</div>
+              <div style="font-size: 0.75em; color: #bbb;">\${item.description || ''}</div>
+            </div>
+            <button class="use-item-btn" data-index="\${index}" style="color: #00ff66; border: 1px solid #00ff66; background: rgba(0,40,0,0.8); padding: 4px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; font-family: inherit;">使用</button>
+          </div>
+        `).join('') : '<div class="loadout-slot">所持アイテムなし</div>'}
       </div>
     `;
   }
@@ -311,6 +317,29 @@ export class AppUI {
             this.renderApp();
         };
     }
+
+    // ★ 所持品「使用」ボタンの動作処理
+    const useBtns = document.querySelectorAll('.use-item-btn');
+    useBtns.forEach(btn => {
+      btn.onclick = () => {
+        const itemIdx = parseInt(btn.getAttribute('data-index'));
+        if (!isNaN(itemIdx) && gameState.inventory?.items[itemIdx]) {
+          const item = gameState.inventory.items[itemIdx];
+          let msg = "";
+          if (typeof item.use === "function") {
+            msg = item.use(gameState);
+          } else if (item.heal) {
+            gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + item.heal);
+            msg = `${item.name} を使用した！ HPが ${item.heal} 回復した！`;
+          } else {
+            msg = `${item.name} を使用した！`;
+          }
+          gameState.inventory.items.splice(itemIdx, 1);
+          alert(msg);
+          this.renderApp();
+        }
+      };
+    });
 
     const icons = document.querySelectorAll('.app-icon');
     icons.forEach(icon => {

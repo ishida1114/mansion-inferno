@@ -1,4 +1,4 @@
-// gameState.js - ステータス・Sin浄化コスト改定版
+// gameState.js - ステータス・所持金0時無傷・Sinコスト改定対応
 
 export const gameState = {
   player: {
@@ -100,20 +100,21 @@ export const gameState = {
     this.updateEquippedCards();
   },
 
+  // ★ 死亡時処理（所持金ゼロなら没収0円で復帰）
   handlePlayerDeath() {
     const lostRate = Math.random() * 0.5;
     const lostMoney = Math.floor(this.player.money * lostRate);
     
     this.player.money -= lostMoney;
     this.lastLostMoney = lostMoney;
-    this.player.hp = this.player.maxHp;
+    this.player.hp = this.player.maxHp; // 体力全回復
 
     let respawnMsg = "";
     let respawnCoord = { x: 7, y: 1 };
 
     if (this.lastTransitMethod === 'elevator') {
       respawnMsg = `【意識が浮上する……】\n「チーン……」という電子音でハッと目を覚ました。\n悪魔に弾き飛ばされ、自動で1階のエレベーター前まで送り返されたようだ……。`;
-      respawnCoord = { x: 6, y: 6 }; // エントランス横エレベーター前
+      respawnCoord = { x: 6, y: 6 };
     } else {
       respawnMsg = `【意識が浮上する……】\n重い衝撃とともに目を覚ました……。\n意識を失う寸前、必死で1階の非常階段前まで転がり落ちてきたようだ。`;
       respawnCoord = { x: 7, y: 1 };
@@ -146,11 +147,10 @@ export const gameState = {
     };
   },
 
-  // ★ 改定コスト計算: 1 Sin ＝ 2 💰（Sin 15 ＝ 💰30）
   getPurifyCost() {
     const sin = this.player.sin;
     if (sin <= 0) return 0;
-    return sin * 2;
+    return sin * 2; // 1 Sin = 2 💰
   },
 
   purifySin() {
