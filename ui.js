@@ -1,10 +1,9 @@
-// ui.js - SVGクロマキー・動画敵描画対応・影山グラフィック固定完全版
+// ui.js - 戦闘UIの.mp4動画敵再生対応・SVGクロマキー・ショップ統合完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ ブラウザ制限を100%回避するSVGカラーマトリックスフィルター適用
 export function applyChromaKey(element) {
     if (!element) return;
     element.style.filter = "url(#chroma-green-filter)";
@@ -111,11 +110,11 @@ export function playFloorTransition(targetFloor, onComplete) {
 
 export function playVideo(src, onEnded) {
     const overlay = document.createElement("div");
-    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 0; box-sizing: border-box;";
 
     const video = document.createElement("video");
     video.src = src;
-    video.style.cssText = "width: 100%; max-width: 540px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.5); background-color: black;";
+    video.style.cssText = "max-width: 100%; max-height: 100%; border: 1px solid #550000; box-shadow: 0 0 20px rgba(0, 0, 0, 0.8); background-color: black; object-fit: contain;";
     video.controls = false; video.autoplay = true; video.playsInline = true; video.muted = true;
     
     applyChromaKey(video);
@@ -223,6 +222,10 @@ export function openShopUI(onClosed) {
                     btn.style.border = "1px solid #555";
                     btn.innerText = "装備中";
                 } else {
+                    if (!gameState.inventory) gameState.inventory = { items: [] };
+                    if (!gameState.inventory.items) gameState.inventory.items = [];
+                    gameState.inventory.items.push({ ...item });
+
                     btn.style.background = "#006600"; btn.innerText = "完了！"; 
                     setTimeout(() => { btn.style.background = ""; btn.innerText = "購入"; }, 500);
                 }
@@ -235,8 +238,8 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ 戦闘UI（.mp4動画敵描画 ＆ クロマキー完全対応）
-export function openCombatUI(enemy, gameState, onResult) {
+// ★ 戦闘UI（.mp4動画敵再生・自動再生保証・SVGクロマキー完全対応）
+export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
 
@@ -245,11 +248,11 @@ export function openCombatUI(enemy, gameState, onResult) {
     const enemyDef = enemy.def || 0;
     const enemyWeakness = enemy.weakness || [1];
 
-    // ★ 画像と動画(.mp4)の自動分岐
+    // ★ 動画(.mp4)か画像かの自動分岐
     const isVideo = enemy.image && enemy.image.endsWith(".mp4");
     const visualHTML = isVideo 
-        ? `<video id="combat-enemy-img" src="${enemy.image}" autoplay loop muted playsinline style="max-height: 200px; border-radius: 8px; margin-bottom: 10px;"></video>`
-        : `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px;">`;
+        ? `<video id="combat-enemy-img" src="${enemy.image}" autoplay loop muted playsinline style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;"></video>`
+        : `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;">`;
 
     ui.innerHTML = `
         <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>
@@ -270,8 +273,11 @@ export function openCombatUI(enemy, gameState, onResult) {
     `;
     document.body.appendChild(ui);
 
-    const enemyImg = document.getElementById("combat-enemy-img");
-    applyChromaKey(enemyImg);
+    const enemyEl = document.getElementById("combat-enemy-img");
+    if (isVideo && enemyEl) {
+        enemyEl.play().catch(() => {});
+    }
+    applyChromaKey(enemyEl);
 
     const log = document.getElementById("combat-log");
     const playerHpText = document.getElementById("player-hp-text");
@@ -283,6 +289,9 @@ export function openCombatUI(enemy, gameState, onResult) {
         ui.remove();
         const respawnMsg = gameState.handlePlayerDeath();
         showMessageDialog(respawnMsg, () => {
+            if (context && context.changeFloor) {
+                context.changeFloor(1);
+            }
             if (onResult) onResult("defeat");
         });
     };
@@ -538,8 +547,8 @@ export function openInquisitionUI(entity, gameState, onResult) {
     };
 }
 
-// ★ ボス戦パズルUI（特大カード表示 ＆ 影山動画敵データ完全固定）
-export function openBossPuzzleUI(gameState, onResult) {
+// ★ ボス戦パズルUI（通常戦闘移行時も影山動画 2f-kageyama.mp4 を正しくセット）
+export function openBossPuzzleUI(gameState, onResult, context) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
 
@@ -570,7 +579,6 @@ export function openBossPuzzleUI(gameState, onResult) {
 
         <div style="color: #aaa; font-size: 0.82em; margin-bottom: 6px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
 
-        <!-- ★ 見やすい特大ラミナカード表示領域 -->
         <div style="width: 100%; max-width: 360px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; background: rgba(0,0,0,0.85); border: 2px solid #550000; border-radius: 8px;" id="boss-cards"></div>
 
         <button id="btn-fire-vox" style="margin-top: 10px; width: 100%; max-width: 340px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.15em; box-shadow: 0 0 15px red;">Vox Sacra 発射！</button>
@@ -623,10 +631,10 @@ export function openBossPuzzleUI(gameState, onResult) {
         const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
         const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
-        // ★ 影山専用のデータ（画像プロパティに影山動画 2f-kageyama.mp4 を指定）
+        // ★ 影山専用敵データ（画像プロパティに影山動画 2f-kageyama.mp4 を指定！）
         const kageyamaEnemy = { 
             name: "覗き魔・影山", 
-            image: "assets/videos/2f-kageyama.mp4", // ★ 影山の動く動画を指定！
+            image: "assets/videos/2f-kageyama.mp4", 
             hp: 60, 
             atk: 12, 
             def: 2 
@@ -644,12 +652,12 @@ export function openBossPuzzleUI(gameState, onResult) {
                     showMessageDialog("【完全解読成功！】\n魔方陣が作動！ 影山に壊滅的な大ダメージ（80%）を与えた！\n瀕死の影山との残弾戦に入る！", () => {
                         kageyamaEnemy.name = "覗き魔・影山 (瀕死)";
                         kageyamaEnemy.hp = 24;
-                        openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res));
+                        openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res), context);
                     });
                 } else {
                     showMessageDialog("【完全解読成功！】\n魔方陣が作動！ しかし主人公の霊力が足りず仕留めきれない！\n影山に50%ダメージを与え、通常戦闘へ移行！", () => {
                         kageyamaEnemy.hp = 60;
-                        openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res));
+                        openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res), context);
                     });
                 }
             });
@@ -658,7 +666,7 @@ export function openBossPuzzleUI(gameState, onResult) {
             kageyamaEnemy.hp = Math.max(30, 120 - (matchCount * 22));
 
             showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: ${matchCount}/4）\n影山が怒り狂って襲いかかってきた！`, () => {
-                openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res));
+                openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res), context);
             });
         }
     };

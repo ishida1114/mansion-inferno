@@ -1,4 +1,4 @@
-// maps/map2F.js - 2階マップ（影山戦完全固定版）
+// maps/map2F.js - 影山ボス戦の context 連携完全版
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI 
@@ -141,7 +141,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                         } else {
                             onComplete();
                         }
-                    });
+                    }, context);
                 });
             }
         };
