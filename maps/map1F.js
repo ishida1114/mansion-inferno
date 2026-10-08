@@ -1,10 +1,11 @@
-// maps/map1F.js - 1階マップデータ（ヒント手紙テキスト反映版）
+// maps/map1F.js - 1階マップデータ・ストーリーイベント制御（完全正本）
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
-    playVideo, openShopUI 
+    playVideo, openShopUI, playFloorTransition 
 } from '../ui.js';
 
+// 1階スタート位置 (x: 7, y: 1, 北向き)
 export const playerStart1F = { x: 7, y: 1, dir: 0 };
 
 export const map1F = [
@@ -18,6 +19,7 @@ export const map1F = [
 ];
 
 export function handleEvent1F(targetCell, gameState, context) {
+    // 4: 非常階段（2F扉）
     if (targetCell === 4) {
         if (!gameState.hasKey2F) {
             return { 
@@ -25,7 +27,13 @@ export function handleEvent1F(targetCell, gameState, context) {
             };
         } else {
             return { 
-                run: (onComplete) => { context.changeFloor(2); onComplete(); } 
+                run: (onComplete) => {
+                    // ★ 2階へ登る足音＆タメ演出を追加
+                    playFloorTransition(2, () => {
+                        context.changeFloor(2);
+                        onComplete();
+                    });
+                } 
             };
         }
     }
@@ -67,7 +75,6 @@ export function handleEvent1F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ 集合ポスト手紙イベント（ヒント1獲得）
 function startPostEvent(gameState, onComplete) {
     playVideo("assets/videos/post.mp4", () => {
         const letterText = "【ポストに入っていた古びた手紙】\n『影山は気味の悪い視線で部屋を覗き込んでくる。奴の顔（上段①）に「真実の鏡（2）」を向けろ。そして足元（下段④）に「浄化の塩（3）」を撒けば、身動きが取れなくなるはずだ……』";

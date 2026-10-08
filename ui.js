@@ -1,10 +1,10 @@
-// ui.js - 会話・査問・ショップ・影山パズルレイアウト修復完全版
+// ui.js - 心理戦査問・パズルUI拡大・緑背景確定透過対応版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ モデルガン緑背景(純緑 RGB:0,255,0)を確定透過するクロマキー関数
+// ★ 緑背景のクロマキー透過処理（確実ロード）
 export function applyChromaKey(imgElement) {
     if (!imgElement) return;
 
@@ -21,8 +21,7 @@ export function applyChromaKey(imgElement) {
             
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i], g = data[i + 1], b = data[i + 2];
-                // 鮮やかな緑（GがRとBより明らかに大きい）領域を確実に透過
-                if (g > 50 && g > r * 1.1 && g > b * 1.1) {
+                if (g > 45 && g > r * 1.05 && g > b * 1.05) {
                     data[i + 3] = 0;
                 }
             }
@@ -86,7 +85,6 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// ★ アイテム獲得モーダルのモデルガン緑背景透過を100%保証
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
     modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.90); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
@@ -97,7 +95,7 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     imgEl.onerror = () => { imgEl.style.display = 'none'; };
     
     imgEl.src = imagePath;
-    document.body.appendChild(modal); // 先にDOM追加
+    document.body.appendChild(modal);
 
     modal.innerHTML = `<div style="color: #ff3333; font-size: 1.5em; margin-bottom: 12px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
     modal.appendChild(imgEl);
@@ -107,7 +105,6 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
         <div style="color: #888; font-size: 0.8em;">タップ または [ SPACE ] で閉じる</div>
     `;
 
-    // ロード完了時に即時透過適用
     applyChromaKey(imgEl);
 
     const closeHandler = (e) => {
@@ -374,6 +371,7 @@ export function openCombatUI(enemy, gameState, onResult) {
     };
 }
 
+// ★ 査問UI（弱点1つ・心理戦あやふやリアクション・嘘つき対応）
 export function openInquisitionUI(entity, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -385,7 +383,7 @@ export function openInquisitionUI(entity, gameState, onResult) {
         ${visualHTML}
         <div style="color: #ddd; font-size: 1.1em; margin-top: 5px; font-weight: bold;">${entity.name}</div>
         
-        <div id="inq-log" style="width: 100%; max-width: 500px; height: 110px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin: 12px 0; color: #ccc; font-size: 0.9em; line-height: 1.5; overflow-y: auto; white-space: pre-wrap;">（住人と対面した。1枚目のラミナカードを提示して様子を見よう……）</div>
+        <div id="inq-log" style="width: 100%; max-width: 500px; height: 110px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin: 12px 0; color: #ccc; font-size: 0.9em; line-height: 1.5; overflow-y: auto; white-space: pre-wrap;">（住人と対面した。ラミナカードを提示して相手の表情や仕草を伺おう……）</div>
 
         <div style="display: flex; gap: 15px; margin-bottom: 10px;">
             <div id="slot1" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #888; font-size: 0.75em; background: #111;">1枚目</div>
@@ -441,46 +439,53 @@ export function openInquisitionUI(entity, gameState, onResult) {
     const protectBtn = document.getElementById("btn-protect");
     const log = document.getElementById("inq-log");
 
+    // あやふやな心理リアクション生成
+    function getReactionMessage(cardNum, entity) {
+        if (entity.type === "human") {
+            const humanMsg = [
+                "「え…？ なんですかその紙切れは？ 宗教の勧誘ですか？」",
+                "「気味が悪いカードですね……近付けないでください！」",
+                "「何がしたいんですか？ 警察を呼びますよ！」"
+            ];
+            return humanMsg[Math.floor(Math.random() * humanMsg.length)];
+        } else {
+            const targetWeakness = entity.weakness || 3;
+            const diff = Math.abs(parseInt(cardNum) - targetWeakness);
+            
+            // 25%の確率で悪魔が「嘘（ブラフ）」をつく
+            const isLying = Math.random() < 0.25;
+            const effectiveDiff = isLying ? (diff === 0 ? 4 : 0) : diff;
+
+            if (effectiveDiff === 0) {
+                // 完全弱点一致
+                return "「ぐぐっ……！？」\n相手の瞳が一瞬赤くうごめき、肌から不気味な煙が立ち上った！";
+            } else if (effectiveDiff <= 2) {
+                // 近い
+                return "「……くっ……！」\n平然を装おうとしているが、不自然に口元を引きつらせて身体を硬直させた……。";
+            } else {
+                // 遠い
+                return "「……ハッ、何ですかそれ？ 馬鹿馬鹿しい。」\n不気味なほど余裕の笑みを浮かべて、せせら笑っている。";
+            }
+        }
+    }
+
     showBtn.onclick = () => {
         if (step === 1) {
             if (!selected[0]) { alert("1枚目のカードを選択してください。"); return; }
-            
-            if (entity.type === "human") {
-                log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${entity.name}】\n「え…？ なんですかその紙切れは？」\n（人間らしく困惑している。もう1枚提示して確認しよう）`;
-            } else {
-                const isWeak = entity.weaknesses && entity.weaknesses.includes(parseInt(selected[0]));
-                if (isWeak) {
-                    log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${entity.name}】\n「チッ……う、うぐっ…！」\n（苦痛で顔が不自然に歪んだ！ 弱点にかなり近い反応だ！）`;
-                } else {
-                    log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${entity.name}】\n「……ふん、何か用ですか？」\n（無反応に近い。別のカードを試してみよう）`;
-                }
-            }
-
+            log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[0], entity);
             step = 2;
             showBtn.innerText = "2枚目を提示する";
 
         } else if (step === 2) {
             if (!selected[1]) { alert("2枚目のカードを選択してください。"); return; }
 
-            if (entity.type === "human") {
-                log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n「しつこいですね！ 宗教の勧誘なら警察を呼びますよ！」\n（完全に人間特有の嫌悪反応だ。【撃つ】か【保護する】か決めよう）`;
-            } else {
-                const isWeak1 = entity.weaknesses && entity.weaknesses.includes(parseInt(selected[0]));
-                const isWeak2 = entity.weaknesses && entity.weaknesses.includes(parseInt(selected[1]));
-
-                if (entityImg && entity.realImage) {
-                    entityImg.src = entity.realImage;
-                    applyChromaKey(entityImg);
-                }
-
-                if (isWeak1 && isWeak2) {
-                    log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n「ギャアアアッ！？ や、やめろォォォッ！！」\n（完全に正体を暴いた！ 肌が焼け焦げ、悪魔の正体を露わにした！）`;
-                } else if (isWeak1 || isWeak2) {
-                    log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n「ググ……調子に乗るなよ……人間が……！」\n（正体を隠しきれず、殺意をむき出しにしている！）`;
-                } else {
-                    log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n「くだらん……」\n（見当違いの提示だったようだ……）`;
-                }
+            // 正体をチラリと暴くタイミング（確率）
+            if (entity.type === "demon" && entityImg && entity.realImage && Math.random() < 0.6) {
+                entityImg.src = entity.realImage;
+                applyChromaKey(entityImg);
             }
+
+            log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[1], entity);
 
             step = 3;
             showBtn.style.display = "none";
@@ -510,7 +515,6 @@ export function openInquisitionUI(entity, gameState, onResult) {
         if (entity.type === "human") {
             gameState.player.money += 200;
             
-            // ★ ヒント文章の付与 ＆ 悪魔手記への自動記録
             const hintText = "「助けてくれてありがとうございます……！ これはお礼です！\nあ、そういえば2F奥の影山ですが……あいつの陣を破るには『4マスの合計をピッタリ10』にしないといけないらしいです！ 腕には小さい数字から順にカードを置いてみてください！」";
             if (!gameState.bossHints) gameState.bossHints = [];
             gameState.bossHints.push("【2F住人の証言】影山の魔方陣は4マスの合計を「10」にする。腕(左右)には小さい数字のカードから順に配置する。");
@@ -526,31 +530,29 @@ export function openInquisitionUI(entity, gameState, onResult) {
     };
 }
 
-// ★ 2Fボス影山「悪魔陣解読パズル」レイアウト修復 ＆ 2重起動完全防止版
+// ★ 2Fボス影山「悪魔陣解読パズル」（カード画像拡大 ＆ 通常戦闘画像引継ぎ）
 export function openBossPuzzleUI(gameState, onResult) {
-    // すでに開いているパズルUIがあれば削除（2重起動防止）
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
 
     const ui = document.createElement("div");
     ui.id = "boss-puzzle-modal";
-    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.96); z-index: 3500; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 12px 10px; font-family: ${HORROR_FONT}; box-sizing: border-box; overflow-y: auto;`;
+    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.96); z-index: 3500; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 10px; font-family: ${HORROR_FONT}; box-sizing: border-box; overflow-y: auto;`;
 
     let slots = { slot1: null, slot2: null, slot3: null, slot4: null };
     let activeSlotKey = "slot1";
 
     ui.innerHTML = `
-        <h2 style="color: #ff3333; margin: 5px 0 2px 0; text-shadow: 0 0 10px red; font-size: 1.3em;">【フロアボス戦】覗き魔・影山</h2>
-        <div style="color: #bbb; font-size: 0.75em; margin-bottom: 8px;">陣の4マスをタップし、セットするカードを選べ！</div>
+        <h2 style="color: #ff3333; margin: 4px 0; text-shadow: 0 0 10px red; font-size: 1.25em;">【フロアボス戦】覗き魔・影山</h2>
+        <div style="color: #bbb; font-size: 0.75em; margin-bottom: 6px;">陣の4マスをタップし、セットするカードを選べ！</div>
 
-        <!-- 3x3 魔法陣配置 -->
-        <div style="display: grid; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 70px); gap: 5px; margin-bottom: 8px; background: rgba(20,0,0,0.85); padding: 8px; border: 2px solid #550000; border-radius: 8px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 68px); gap: 5px; margin-bottom: 6px; background: rgba(20,0,0,0.85); padding: 6px; border: 2px solid #550000; border-radius: 8px;">
             <div style="background: #111; border: 1px solid #222;"></div>
             <div id="slot1" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">①顔<br>(上)</div>
             <div style="background: #111; border: 1px solid #222;"></div>
 
             <div id="slot2" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">②左腕</div>
-            <div style="background: #150000; border: 1px solid #440000; display:flex; justify-content:center; align-items:center; color:#ff3333; font-weight:bold; font-size:0.9em;">影山</div>
+            <div style="background: #150000; border: 1px solid #440000; display:flex; justify-content:center; align-items:center; color:#ff3333; font-weight:bold; font-size:0.85em;">影山</div>
             <div id="slot3" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">③右腕</div>
 
             <div style="background: #111; border: 1px solid #222;"></div>
@@ -558,12 +560,12 @@ export function openBossPuzzleUI(gameState, onResult) {
             <div style="background: #111; border: 1px solid #222;"></div>
         </div>
 
-        <div style="color: #aaa; font-size: 0.8em; margin-bottom: 6px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
+        <div style="color: #aaa; font-size: 0.78em; margin-bottom: 4px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
 
-        <!-- 手持ちカード（タップしやすい3x3グリッド） -->
-        <div style="width: 100%; max-width: 320px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; background: rgba(0,0,0,0.8); border: 1px solid #444; border-radius: 6px;" id="boss-cards"></div>
+        <!-- ★ カード視認性アップ：大きく見やすいグリッド表示 -->
+        <div style="width: 100%; max-width: 340px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 6px;" id="boss-cards"></div>
 
-        <button id="btn-fire-vox" style="margin-top: 10px; width: 100%; max-width: 320px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.05em; box-shadow: 0 0 10px red;">Vox Sacra 発射！</button>
+        <button id="btn-fire-vox" style="margin-top: 8px; width: 100%; max-width: 320px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.05em; box-shadow: 0 0 10px red;">Vox Sacra 発射！</button>
     `;
     document.body.appendChild(ui);
 
@@ -581,16 +583,17 @@ export function openBossPuzzleUI(gameState, onResult) {
         };
     });
 
+    // ★ カード画像のサイズ・フォント表示を拡大
     const cardsDiv = document.getElementById("boss-cards");
     [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(num => {
         const cDiv = document.createElement("div");
-        cDiv.style.cssText = "height: 48px; border: 1px solid #555; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold; border-radius: 4px;";
-        cDiv.innerHTML = `<img src="assets/images/cards/${num}Card.png" style="max-height: 40px; max-width: 30px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div style="display:none; font-size:1.1em;">${num}</div>`;
+        cDiv.style.cssText = "height: 60px; border: 1px solid #666; background: #111; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold; border-radius: 4px; padding: 2px;";
+        cDiv.innerHTML = `<img src="assets/images/cards/${num}Card.png" style="max-height: 42px; max-width: 42px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div style="display:none; font-size:1.3em;">【${num}】</div>`;
         
         cDiv.onclick = () => {
             slots[activeSlotKey] = num;
             const targetEl = document.getElementById(activeSlotKey);
-            targetEl.innerHTML = `<div style="font-size:1.4em; font-weight:bold; color:#00ff66;">${num}</div>`;
+            targetEl.innerHTML = `<div style="font-size:1.5em; font-weight:bold; color:#00ff66;">${num}</div>`;
         };
         cardsDiv.appendChild(cDiv);
     });
@@ -608,6 +611,15 @@ export function openBossPuzzleUI(gameState, onResult) {
         const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
         const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
+        // ★ 通常戦闘移行時に「影山」の名前と画像を正しく引き継ぐ設定
+        const kageyamaEnemy = { 
+            name: "覗き魔・影山", 
+            image: "assets/images/demon/demon1.png", 
+            hp: 60, 
+            atk: 12, 
+            def: 2 
+        };
+
         if (isPerfect) {
             playVideo("assets/videos/magic-circle.mp4", () => {
                 const playerLevel = gameState.player.level;
@@ -618,23 +630,23 @@ export function openBossPuzzleUI(gameState, onResult) {
                     });
                 } else if (playerLevel === 4) {
                     showMessageDialog("【完全解読成功！】\n魔方陣が作動！ 影山に壊滅的な大ダメージ（80%）を与えた！\n瀕死の影山との残弾戦に入る！", () => {
-                        const bossEnemy = { name: "影山 (瀕死)", image: "assets/images/demon/demon1.png", hp: 24, atk: 12, def: 1 };
-                        openCombatUI(bossEnemy, gameState, (res) => onResult(res));
+                        kageyamaEnemy.name = "覗き魔・影山 (瀕死)";
+                        kageyamaEnemy.hp = 24;
+                        openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res));
                     });
                 } else {
                     showMessageDialog("【完全解読成功！】\n魔方陣が作動！ しかし主人公の霊力が足りず仕留めきれない！\n影山に50%ダメージを与え、通常戦闘へ移行！", () => {
-                        const bossEnemy = { name: "影山", image: "assets/images/demon/demon1.png", hp: 60, atk: 14, def: 2 };
-                        openCombatUI(bossEnemy, gameState, (res) => onResult(res));
+                        kageyamaEnemy.hp = 60;
+                        openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res));
                     });
                 }
             });
         } else {
             let matchCount = (isFaceCorrect ? 1 : 0) + (isFootCorrect ? 1 : 0) + (isArmsCorrect ? 2 : 0);
-            let startHp = Math.max(30, 120 - (matchCount * 22));
+            kageyamaEnemy.hp = Math.max(30, 120 - (matchCount * 22));
 
             showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: ${matchCount}/4）\n影山が怒り狂って襲いかかってきた！`, () => {
-                const bossEnemy = { name: "影山", image: "assets/images/demon/demon1.png", hp: startHp, atk: 12, def: 2 };
-                openCombatUI(bossEnemy, gameState, (res) => onResult(res));
+                openCombatUI(kageyamaEnemy, gameState, (res) => onResult(res));
             });
         }
     };

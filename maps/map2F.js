@@ -1,4 +1,4 @@
-// maps/map2F.js - 2階マップ（影山ボス戦発火対応完全版）
+// maps/map2F.js - 2階マップ（ボス戦画像引継ぎ修正版）
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI 
@@ -7,17 +7,16 @@ import {
 export const playerStart2F = { x: 1, y: 1, dir: 0 };
 
 export const map2F = [
-    [1, 4, 1, 1, 1, 1, 1, 1, 1], // (1, 0) 1階非常階段扉
+    [1, 4, 1, 1, 1, 1, 1, 1, 1], 
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
-    [1, 0, 1, 0, 2, 0, 1, 0, 1], // (4, 2) 教え子の部屋
+    [1, 0, 1, 0, 2, 0, 1, 0, 1], 
     [1, 0, 1, 0, 0, 0, 1, 0, 1],
-    [1, 3, 1, 1, 1, 0, 1, 8, 1], // (7, 4) ボス影山の部屋(8)
+    [1, 3, 1, 1, 1, 0, 1, 8, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
 export function handleEvent2F(targetCell, gameState, context) {
-    // 4: 1階へ下りる非常階段扉
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
@@ -29,7 +28,6 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // 2: 教え子の部屋（モデルガン ＆ 魔除けのお守り DEF +1 入手）
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
@@ -64,7 +62,6 @@ export function handleEvent2F(targetCell, gameState, context) {
         }
     }
 
-    // 3: 一般部屋ドア（対面時は人間と同じ見た目で擬態）
     if (targetCell === 3) {
         return {
             run: (onComplete) => {
@@ -84,10 +81,11 @@ export function handleEvent2F(targetCell, gameState, context) {
                 const humanImages = ["assets/images/human1.png", "assets/images/human2.png", "assets/images/human3.png"];
                 const randFace = humanImages[Math.floor(Math.random() * humanImages.length)];
 
+                // 弱点を1つに設定
                 const demonList = [
-                    { name: "2階の不審な住人", realImage: "assets/images/demon/demon1.png", weaknesses: [1, 3] },
-                    { name: "気妙な笑顔の住人", realImage: "assets/images/demon/demon2.png", weaknesses: [2, 4] },
-                    { name: "言葉遣いがおかしい住民", realImage: "assets/images/demon/demon3.png", weaknesses: [5, 7] }
+                    { name: "2階の不審な住人", realImage: "assets/images/demon/demon1.png", weakness: 3 },
+                    { name: "不気味な笑顔の住人", realImage: "assets/images/demon/demon2.png", weakness: 4 },
+                    { name: "言葉遣いがおかしい住民", realImage: "assets/images/demon/demon3.png", weakness: 5 }
                 ];
                 const randDemon = demonList[Math.floor(Math.random() * demonList.length)];
 
@@ -98,13 +96,13 @@ export function handleEvent2F(targetCell, gameState, context) {
                     faceImage: randFace,
                     realImage: randDemon.realImage,
                     image: randDemon.realImage,
-                    weaknesses: randDemon.weaknesses
+                    weakness: randDemon.weakness
                 } : {
                     name: "怯えるマンション住民",
                     type: "human",
                     faceImage: randFace,
                     image: randFace,
-                    weaknesses: []
+                    weakness: null
                 };
 
                 if (context && context.openInquisitionUI) {
@@ -121,7 +119,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // ★ 8: 最奥 影山の部屋（登場演出 ➔ パズルUI発火）
+    // 8: 影山の部屋
     if (targetCell === 8) {
         return {
             run: (onComplete) => {
@@ -130,7 +128,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // 影山登場動画再生 ➔ パズル戦UI起動
                 playVideo("assets/videos/2f-kageyama.mp4", () => {
                     openBossPuzzleUI(gameState, (result) => {
                         if (result === "win") {
