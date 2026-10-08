@@ -1,4 +1,4 @@
-// maps/map2F.js - 影山ボス戦の context 連携完全版
+// maps/map2F.js - 2階マップ＆影山固有ボスデータ完全定義版
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI 
@@ -15,6 +15,40 @@ export const map2F = [
     [1, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
+
+// ★ 影山固有のパズル設定データ（2Fマップファイル内に集約）
+const kageyamaPuzzleConfig = {
+    title: "【フロアボス戦】覗き魔・影山",
+    subTitle: "陣の4マスをタップし、下の特大カードを選べ！（※重複使用不可）",
+    bossName: "影山",
+    slots: [
+        { id: "slot1", label: "①顔<br>(上)", gridPos: "grid-area: 1 / 2;" },
+        { id: "slot2", label: "②左腕", gridPos: "grid-area: 2 / 1;" },
+        { id: "slot3", label: "③右腕", gridPos: "grid-area: 2 / 3;" },
+        { id: "slot4", label: "④足元<br>(下)", gridPos: "grid-area: 3 / 2;" }
+    ],
+    // 影山固有の完全正解判定ロジック
+    checkSolution: (slots) => {
+        const isFaceCorrect = slots.slot1 === 2; // 顔：2
+        const isFootCorrect = slots.slot4 === 3; // 足元：3
+        const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1); // 腕：1と4
+        return isFaceCorrect && isFootCorrect && isArmsCorrect;
+    },
+    // 部分合致計算
+    calcMatchCount: (slots) => {
+        const isFaceCorrect = slots.slot1 === 2;
+        const isFootCorrect = slots.slot4 === 3;
+        const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
+        return (isFaceCorrect ? 1 : 0) + (isFootCorrect ? 1 : 0) + (isArmsCorrect ? 2 : 0);
+    },
+    enemy: {
+        name: "覗き魔・影山",
+        image: "assets/images/demon/2f-kageyama2.jpg",
+        hp: 60,
+        atk: 12,
+        def: 2
+    }
+};
 
 export function handleEvent2F(targetCell, gameState, context) {
     if (targetCell === 4) {
@@ -111,7 +145,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                             gameState.clearedRooms[roomKey] = true;
                         }
                         onComplete();
-                    });
+                    }, context);
                 } else {
                     onComplete();
                 }
@@ -119,6 +153,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
+    // 8: ボス影山の部屋
     if (targetCell === 8) {
         return {
             run: (onComplete) => {
@@ -127,21 +162,30 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
+                // ★ 1. カットイン動画(2f-kageyama.mp4)再生
                 playVideo("assets/videos/2f-kageyama.mp4", () => {
-                    openBossPuzzleUI(gameState, (result) => {
-                        if (result === "win") {
-                            gameState.flags.cleared2F = true;
-                            gameState.hasElevatorKey = true;
-                            
-                            showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァッ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
-                                gameState.player.money += 500;
-                                gameState.gainExp(200);
-                                onComplete();
-                            });
-                        } else {
-                            onComplete();
+                    // ★ 2. 画像(2f-kageyama2.jpg)で会話ウィンドウ表示
+                    showConversationDialog(
+                        "assets/images/demon/2f-kageyama2.jpg", 
+                        "【覗き魔・影山】\n「中学生の父親？？さぁな、男には興味がなくてねぇ、邪魔するなら、お前のトラウマを覗いて闇の檻に閉じ込めるぞ」", 
+                        () => {
+                            // ★ 3. 影山の設定データ(kageyamaPuzzleConfig)を渡して汎用UIを発火
+                            openBossPuzzleUI(kageyamaPuzzleConfig, gameState, (result) => {
+                                if (result === "win") {
+                                    gameState.flags.cleared2F = true;
+                                    gameState.hasElevatorKey = true;
+                                    
+                                    showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァッ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
+                                        gameState.player.money += 500;
+                                        gameState.gainExp(200);
+                                        onComplete();
+                                    });
+                                } else {
+                                    onComplete();
+                                }
+                            }, context);
                         }
-                    }, context);
+                    );
                 });
             }
         };
