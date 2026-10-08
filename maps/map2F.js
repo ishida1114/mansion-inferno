@@ -1,4 +1,4 @@
-// maps/map2F.js - 影山動画パス修正（assets/images/demon/2f-kageyama.mp4）
+// maps/map2F.js - 徘徊悪魔画像ランダム化対応版
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI 
@@ -154,7 +154,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // ★ 正しい配置先（assets/images/demon/2f-kageyama.mp4）を指定
                 playVideo("assets/images/demon/2f-kageyama.mp4", () => {
                     showConversationDialog(
                         "assets/images/demon/2f-kageyama2.jpg", 
@@ -252,7 +251,8 @@ export function check2FRandomEncounter(gameState, onEncounter) {
         const demonNum = Math.floor(Math.random() * 3) + 1;
         const enemy = {
             name: `2階の徘徊悪魔 (${demonNum})`,
-            image: `assets/images/demon/demon1.png`,
+            // ★ 画像のファイル名を番号に合わせて動的に変更
+            image: `assets/images/demon/demon${demonNum}.png`,
             hp: 30,
             atk: 8,
             def: 2

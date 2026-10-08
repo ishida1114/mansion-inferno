@@ -1,4 +1,4 @@
-// ui.js - 二重入力防止＆キー貫通完全ガード版
+// ui.js - 戦闘アイテム使用・保護報酬300円・二重入力防止統合版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -11,9 +11,8 @@ export function applyChromaKey(element) {
     element.style.filter = "url(#chroma-green-filter)";
 }
 
-// ★ 汎用ダイアログ作成用内部関数（二重実行ガード＆キー貫通防止を共通化）
 function createGuardedDialogContainer(contentHTML, onClosed) {
-    let isClosing = false; // 二重実行防止フラグ（一回しか受け入れない）
+    let isClosing = false;
 
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 3000; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5%; box-sizing: border-box; background: rgba(0,0,0,0.3);";
@@ -22,9 +21,8 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
     document.body.appendChild(overlay);
 
     const handleClose = (e) => {
-        if (isClosing) return; // すでに閉じる処理が始まっていたら一切受け付けない
+        if (isClosing) return;
 
-        // キーボードの場合、SPACEかEnter以外は無視（移動キーなどで誤閉鎖させない）
         if (e.type === "keydown") {
             if (e.key !== " " && e.key !== "Enter" && e.key !== "Spacebar") {
                 return;
@@ -33,26 +31,24 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
             e.stopPropagation();
         }
 
-        isClosing = true; // ガード実行
+        isClosing = true;
         window.removeEventListener("keydown", handleClose, true);
         overlay.onclick = null;
         overlay.remove();
 
-        window.lastDialogCloseTime = Date.now(); // 閉じた時間を記録
+        window.lastDialogCloseTime = Date.now();
 
         if (onClosed) {
-            // 次のイベント発火までわずかに猶予を設ける
             setTimeout(() => {
                 onClosed();
             }, 50);
         }
     };
 
-    // keydownのキャプチャリングフェーズ(true)で捕まえて背景への伝播を完全遮断
     setTimeout(() => {
         overlay.onclick = handleClose;
         window.addEventListener("keydown", handleClose, true);
-    }, 150); // ダイアログ表示直後の誤連打を防ぐ150msのウェイト
+    }, 150);
 }
 
 export function showMessageDialog(text, onClosed) {
@@ -314,6 +310,7 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { window.lastDialogCloseTime = Date.now(); shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
+// ★ 戦闘UI（道具使用・回復・ガード効果対応版）
 export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -322,6 +319,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const enemyAtk = enemy.atk || 8;
     const enemyDef = enemy.def || 0;
     const enemyWeakness = enemy.weakness || [1];
+    let isGuarding = false; // ビニール傘使用時のガードフラグ
 
     const visualHTML = `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;">`;
 
@@ -338,8 +336,9 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         <div id="combat-log" style="width: 100%; max-width: 450px; height: 85px; background: rgba(0,0,0,0.8); border: 1px solid #550000; padding: 10px; margin-bottom: 15px; color: #ccc; font-size: 0.9em; line-height: 1.5; white-space: pre-wrap; overflow-y: auto;">悪魔が目の前に立ち塞がった！ どうする？</div>
 
         <div style="display: flex; gap: 10px; width: 100%; max-width: 450px;">
-            <button id="btn-attack" style="flex: 1; background: #440000; color: #fff; border: 1px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold;">Vox Sacra (射撃)</button>
-            <button id="btn-escape" style="flex: 1; background: #111; color: #aaa; border: 1px solid #555; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px;">逃げる</button>
+            <button id="btn-attack" style="flex: 1.2; background: #440000; color: #fff; border: 1px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold;">Vox Sacra (射撃)</button>
+            <button id="btn-item" style="flex: 1; background: #002244; color: #66ccff; border: 1px solid #3388ff; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold;">道具</button>
+            <button id="btn-escape" style="flex: 0.8; background: #111; color: #aaa; border: 1px solid #555; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px;">逃げる</button>
         </div>
     `;
     document.body.appendChild(ui);
@@ -351,10 +350,16 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const playerHpText = document.getElementById("player-hp-text");
     const enemyHpText = document.getElementById("enemy-hp-text");
     const attackBtn = document.getElementById("btn-attack");
+    const itemBtn = document.getElementById("btn-item");
     const escapeBtn = document.getElementById("btn-escape");
+
+    const updateHpDisplay = () => {
+        playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
+    };
 
     const triggerDeathSequence = () => {
         attackBtn.disabled = true;
+        itemBtn.disabled = true;
         escapeBtn.disabled = true;
         playerHpText.innerText = `主人公HP: 0 / ${gameState.player.maxHp}`;
         playerHpText.style.color = "#ff0000";
@@ -370,6 +375,40 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 if (onResult) onResult("defeat");
             });
         }, 1500); 
+    };
+
+    const enemyTurn = (actionMessage) => {
+        log.innerText = actionMessage;
+
+        setTimeout(() => {
+            const dodgeChance = (gameState.player.agi || 5) * 0.04;
+            if (Math.random() < dodgeChance) {
+                log.innerText += `\n素早い身こなし！ 悪魔の攻撃を回避した！`;
+                attackBtn.disabled = false;
+                itemBtn.disabled = false;
+                escapeBtn.disabled = false;
+            } else {
+                let baseEnemyAtk = enemyAtk - (gameState.player.def || 0);
+                if (isGuarding) {
+                    baseEnemyAtk = Math.max(1, Math.floor(baseEnemyAtk * 0.5)); // ビニール傘ガードでダメージ半減
+                    isGuarding = false;
+                }
+                const enemyRand = 0.85 + Math.random() * 0.3;
+                const damageTaken = Math.max(1, Math.floor(baseEnemyAtk * enemyRand));
+
+                gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
+
+                if (gameState.player.hp <= 0) {
+                    triggerDeathSequence();
+                } else {
+                    updateHpDisplay();
+                    log.innerText += `\n悪魔の反撃！ 主人公は ${damageTaken} ダメージを受けた！`;
+                    attackBtn.disabled = false;
+                    itemBtn.disabled = false;
+                    escapeBtn.disabled = false;
+                }
+            }
+        }, 1000);
     };
 
     attackBtn.onclick = () => {
@@ -388,6 +427,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }
 
         attackBtn.disabled = true;
+        itemBtn.disabled = true;
         escapeBtn.disabled = true;
 
         log.innerText = "Vox Sacra（聖なる声）を放った……！";
@@ -403,7 +443,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             enemyHp = Math.max(0, enemyHp - netDamage);
             enemyHpText.innerText = `敵HP: ${enemyHp}`;
 
-            log.innerText = `Vox Sacraの射撃！${isWeaknessHit ? '（弱点特効！）' : ''} 悪魔に ${netDamage} ダメージ！`;
+            const shotMsg = `Vox Sacraの射撃！${isWeaknessHit ? '（弱点特効！）' : ''} 悪魔に ${netDamage} ダメージ！`;
 
             if (enemyHp <= 0) {
                 setTimeout(() => {
@@ -417,36 +457,74 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 return;
             }
 
-            setTimeout(() => {
-                const dodgeChance = (gameState.player.agi || 5) * 0.04;
-                if (Math.random() < dodgeChance) {
-                    log.innerText += `\n素早い身こなし！ 悪魔の攻撃を回避した！`;
-                    attackBtn.disabled = false;
-                    escapeBtn.disabled = false;
-                } else {
-                    const baseEnemyAtk = enemyAtk - (gameState.player.def || 0);
-                    const enemyRand = 0.85 + Math.random() * 0.3;
-                    const damageTaken = Math.max(1, Math.floor(baseEnemyAtk * enemyRand));
-
-                    gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
-
-                    if (gameState.player.hp <= 0) {
-                        triggerDeathSequence();
-                    } else {
-                        playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
-                        log.innerText += `\n悪魔の反撃！ 主人公は ${damageTaken} ダメージを受けた！`;
-                        attackBtn.disabled = false;
-                        escapeBtn.disabled = false;
-                    }
-                }
-            }, 1000);
+            enemyTurn(shotMsg);
         }, 800);
+    };
+
+    // ★ 戦闘中の道具使用処理
+    itemBtn.onclick = () => {
+        if (Date.now() - window.lastDialogCloseTime < 300) return;
+
+        const itemsList = (gameState.inventory && gameState.inventory.items) ? gameState.inventory.items : [];
+        if (itemsList.length === 0) {
+            log.innerText = "【道具】使用できる持ち物がない！";
+            return;
+        }
+
+        const itemModal = document.createElement("div");
+        itemModal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3200; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
+
+        let listHTML = `<div style="color: #ffdd66; font-size: 1.2em; margin-bottom: 15px; font-weight: bold;">【所持品を選択】</div>`;
+        listHTML += `<div style="width: 100%; max-width: 380px; max-height: 250px; overflow-y: auto; background: #111; border: 1px solid #555; border-radius: 6px; padding: 10px;">`;
+
+        itemsList.forEach((itm, idx) => {
+            listHTML += `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding: 8px 4px;">
+                    <div><span style="color: #fff; font-weight: bold;">${itm.name}</span><div style="font-size:0.75em; color:#aaa;">${itm.description || ''}</div></div>
+                    <button class="use-battle-item-btn" data-idx="${idx}" style="background: #004488; color: #fff; border: 1px solid #33aahh; padding: 5px 12px; cursor: pointer; border-radius: 4px; font-weight: bold;">使用</button>
+                </div>
+            `;
+        });
+
+        listHTML += `</div><button id="close-item-modal" style="margin-top: 15px; background: #333; color: #ccc; border: 1px solid #666; padding: 8px 20px; border-radius: 4px; cursor: pointer;">キャンセル</button>`;
+        itemModal.innerHTML = listHTML;
+        document.body.appendChild(itemModal);
+
+        document.getElementById("close-item-modal").onclick = () => itemModal.remove();
+
+        itemModal.querySelectorAll(".use-battle-item-btn").forEach(btn => {
+            btn.onclick = () => {
+                const idx = parseInt(btn.getAttribute("data-idx"));
+                const usedItem = itemsList[idx];
+
+                // アイテム消費
+                itemsList.splice(idx, 1);
+                itemModal.remove();
+
+                attackBtn.disabled = true;
+                itemBtn.disabled = true;
+                escapeBtn.disabled = true;
+
+                if (usedItem.id === "energy_drink" || usedItem.healAmount) {
+                    const heal = usedItem.healAmount || 15;
+                    gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + heal);
+                    updateHpDisplay();
+                    enemyTurn(`【道具使用】${usedItem.name} を飲んだ！\n主人公のHPが ${heal} 回復した！（現在HP: ${gameState.player.hp}）`);
+                } else if (usedItem.id === "umbrella" || usedItem.guardEffect) {
+                    isGuarding = true;
+                    enemyTurn(`【道具使用】${usedItem.name} を構えて身構えた！\n次の敵の攻撃ダメージを軽減する！`);
+                } else {
+                    enemyTurn(`【道具使用】${usedItem.name} を使ったが、何も起きなかった……。`);
+                }
+            };
+        });
     };
 
     escapeBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
         attackBtn.disabled = true;
+        itemBtn.disabled = true;
         escapeBtn.disabled = true;
         log.innerText = "必死に背を向けて走り出した……！";
 
@@ -467,9 +545,10 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     if (gameState.player.hp <= 0) {
                         triggerDeathSequence();
                     } else {
-                        playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
+                        updateHpDisplay();
                         log.innerText += `\n背後から追撃！ 主人公は ${damageTaken} ダメージを受けた！`;
                         attackBtn.disabled = false;
+                        itemBtn.disabled = false;
                         escapeBtn.disabled = false;
                     }
                 }, 1000);
@@ -620,16 +699,17 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         }
     };
 
+    // ★ 人間保護成功報酬を300円に変更！
     protectBtn.onclick = () => {
         ui.remove();
         if (entity.type === "human") {
-            gameState.player.money += 200;
+            gameState.player.money += 300; // 300円獲得
             
             const hintText = "「助けてくれてありがとうございます……！ これはお礼です！\nあ、そういえば2F奥の影山ですが……あいつの陣を破るには『4マスの合計をピッタリ10』にしないといけないらしいです！ 腕には小さい数字から順にカードを置いてみてください！」";
             if (!gameState.bossHints) gameState.bossHints = [];
             gameState.bossHints.push("【2F住人の証言】影山の魔方陣は4マスの合計を「10」にする。腕(左右)には小さい数字のカードから順に配置する。");
 
-            showMessageDialog(`【人間を保護した】\n${hintText}\n（💰200 を獲得！ / スマホの悪魔手記にヒントが保存された！）`, () => {
+            showMessageDialog(`【人間を保護した】\n${hintText}\n（💰300 を獲得！ / スマホの悪魔手記にヒントが保存された！）`, () => {
                 onResult("finish");
             });
         } else {

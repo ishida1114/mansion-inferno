@@ -1,4 +1,4 @@
-// items.js - アイテム定義データ（重複排除完全版）
+// items.js - アイテム定義データ（全機能保持＆エナジードリンク15回復・戦闘対応版）
 
 // --- 消費アイテム（コンビニ購入） ---
 export const CONSUMABLE_ITEMS = {
@@ -7,10 +7,12 @@ export const CONSUMABLE_ITEMS = {
     name: 'エナジードリンク',
     type: 'consumable',
     price: 100,
-    description: 'HPを 10 回復する。',
+    description: 'HPを 15 回復する。戦闘中も使用可能。',
+    healAmount: 15,
+    battleUsable: true,
     use: (state) => {
-      state.player.hp = Math.min(state.player.maxHp, state.player.hp + 10);
-      return 'HPが10回復した！';
+      state.player.hp = Math.min(state.player.maxHp, state.player.hp + 15);
+      return 'HPが15回復した！';
     }
   },
   bento: {
@@ -19,6 +21,8 @@ export const CONSUMABLE_ITEMS = {
     type: 'consumable',
     price: 250,
     description: 'HPを 25 回復する。',
+    healAmount: 25,
+    battleUsable: true,
     use: (state) => {
       state.player.hp = Math.min(state.player.maxHp, state.player.hp + 25);
       return 'HPが25回復した！';
@@ -32,7 +36,9 @@ export const CONSUMABLE_ITEMS = {
     type: 'consumable',
     price: 200,
     description: '3ターンの間、主人公の DEF を +2 する。',
-    battleEffect: { type: 'BUFF_DEF', value: 2, turns: 3 }
+    battleEffect: { type: 'BUFF_DEF', value: 2, turns: 3 },
+    guardEffect: true,
+    battleUsable: true
   },
   yellow_umbrella: {
     id: 'yellow_umbrella',
@@ -40,7 +46,8 @@ export const CONSUMABLE_ITEMS = {
     type: 'consumable',
     price: 500,
     description: '相手を 2ターン 行動不能（休止）にする。',
-    battleEffect: { type: 'STUN', turns: 2 }
+    battleEffect: { type: 'STUN', turns: 2 },
+    battleUsable: true
   },
   clear_umbrella: {
     id: 'clear_umbrella',
@@ -48,7 +55,8 @@ export const CONSUMABLE_ITEMS = {
     type: 'consumable',
     price: 150,
     description: '3ターンの間 AGI +5（または確実に逃走）。',
-    battleEffect: { type: 'ESCAPE_OR_AGI', value: 5, turns: 3 }
+    battleEffect: { type: 'ESCAPE_OR_AGI', value: 5, turns: 3 },
+    battleUsable: true
   },
   red_umbrella: {
     id: 'red_umbrella',
@@ -56,7 +64,8 @@ export const CONSUMABLE_ITEMS = {
     type: 'consumable',
     price: 300,
     description: '次ターンの Vox Sacra（銃撃）ダメージが 2倍 になる。',
-    battleEffect: { type: 'BOOST_DAMAGE', multiplier: 2, turns: 1 }
+    battleEffect: { type: 'BOOST_DAMAGE', multiplier: 2, turns: 1 },
+    battleUsable: true
   }
 };
 
