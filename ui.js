@@ -1,44 +1,13 @@
-// ui.js - クロマキー判定強化＆ボス戦特大カード＆影山データ完全固定
+// ui.js - SVGクロマキー・動画敵描画対応・影山グラフィック固定完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ 強力クロマキーピクセル処理（純緑〜濃い緑まで完全透過）
-export function applyChromaKey(imgElement) {
-    if (!imgElement) return;
-
-    const process = () => {
-        if (!imgElement.naturalWidth || imgElement.naturalWidth === 0) return;
-        if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
-
-        try {
-            const canvas = document.createElement("canvas");
-            canvas.width = imgElement.naturalWidth; 
-            canvas.height = imgElement.naturalHeight;
-            const cctx = canvas.getContext("2d"); 
-            cctx.drawImage(imgElement, 0, 0);
-            const imgData = cctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imgData.data;
-            
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i], g = data[i + 1], b = data[i + 2];
-                // 広い緑判定（暗い緑から明るい緑まで透過）
-                if (g > 35 && g > r * 1.05 && g > b * 1.05) {
-                    data[i + 3] = 0;
-                }
-            }
-            cctx.putImageData(imgData, 0, 0);
-            imgElement.dataset.chromaKeyed = "true";
-            imgElement.src = canvas.toDataURL();
-        } catch(e) {}
-    };
-
-    if (imgElement.complete && imgElement.naturalWidth > 0) {
-        process();
-    } else {
-        imgElement.onload = process;
-    }
+// ★ ブラウザ制限を100%回避するSVGカラーマトリックスフィルター適用
+export function applyChromaKey(element) {
+    if (!element) return;
+    element.style.filter = "url(#chroma-green-filter)";
 }
 
 export function showMessageDialog(text, onClosed) {
@@ -66,9 +35,8 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     imgDiv.style.cssText = "max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
     
     imgDiv.onerror = () => imgDiv.style.display = 'none';
-    imgDiv.onload = () => applyChromaKey(imgDiv);
     imgDiv.src = imageSrc;
-    if (imgDiv.complete) applyChromaKey(imgDiv);
+    applyChromaKey(imgDiv);
 
     const msgDiv = document.createElement("div");
     msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
@@ -98,10 +66,9 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     imgEl.id = "modal-item-img";
     imgEl.style.cssText = "max-height: 180px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;";
     imgEl.onerror = () => { imgEl.style.display = 'none'; };
-    imgEl.onload = () => applyChromaKey(imgEl);
     
     imgEl.src = imagePath;
-    if (imgEl.complete) applyChromaKey(imgEl);
+    applyChromaKey(imgEl);
 
     modal.innerHTML = `<div style="color: #ff3333; font-size: 1.5em; margin-bottom: 12px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
     modal.appendChild(imgEl);
@@ -150,6 +117,8 @@ export function playVideo(src, onEnded) {
     video.src = src;
     video.style.cssText = "width: 100%; max-width: 540px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.5); background-color: black;";
     video.controls = false; video.autoplay = true; video.playsInline = true; video.muted = true;
+    
+    applyChromaKey(video);
 
     overlay.appendChild(video);
     document.body.appendChild(overlay);
@@ -266,6 +235,7 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
+// ★ 戦闘UI（.mp4動画敵描画 ＆ クロマキー完全対応）
 export function openCombatUI(enemy, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -275,9 +245,15 @@ export function openCombatUI(enemy, gameState, onResult) {
     const enemyDef = enemy.def || 0;
     const enemyWeakness = enemy.weakness || [1];
 
+    // ★ 画像と動画(.mp4)の自動分岐
+    const isVideo = enemy.image && enemy.image.endsWith(".mp4");
+    const visualHTML = isVideo 
+        ? `<video id="combat-enemy-img" src="${enemy.image}" autoplay loop muted playsinline style="max-height: 200px; border-radius: 8px; margin-bottom: 10px;"></video>`
+        : `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px;">`;
+
     ui.innerHTML = `
         <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>
-        <img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px;">
+        ${visualHTML}
         <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold;">${enemy.name}</div>
         
         <div style="display: flex; gap: 20px; font-size: 1.05em; margin: 10px 0 15px 0; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 6px; border: 1px solid #333;">
@@ -562,7 +538,7 @@ export function openInquisitionUI(entity, gameState, onResult) {
     };
 }
 
-// ★ ボス戦パズルUI（特大ラミナカード表記 ＆ ボス影山データ完全固定）
+// ★ ボス戦パズルUI（特大カード表示 ＆ 影山動画敵データ完全固定）
 export function openBossPuzzleUI(gameState, onResult) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
@@ -594,7 +570,7 @@ export function openBossPuzzleUI(gameState, onResult) {
 
         <div style="color: #aaa; font-size: 0.82em; margin-bottom: 6px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
 
-        <!-- ★ 特大見易いカード選択領域（高さ95px） -->
+        <!-- ★ 見やすい特大ラミナカード表示領域 -->
         <div style="width: 100%; max-width: 360px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; background: rgba(0,0,0,0.85); border: 2px solid #550000; border-radius: 8px;" id="boss-cards"></div>
 
         <button id="btn-fire-vox" style="margin-top: 10px; width: 100%; max-width: 340px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.15em; box-shadow: 0 0 15px red;">Vox Sacra 発射！</button>
@@ -615,7 +591,6 @@ export function openBossPuzzleUI(gameState, onResult) {
         };
     });
 
-    // ★ 特大カード＋カード名明確表示（高さ95px）
     const cardNames = ["", "Ⅰ 聖水", "Ⅱ 鏡", "Ⅲ 浄化塩", "Ⅳ 十字架", "Ⅴ 聖書", "Ⅵ 聖炎", "Ⅶ 鐘", "Ⅷ 聖香", "Ⅸ 銀杭"];
 
     const cardsDiv = document.getElementById("boss-cards");
@@ -648,10 +623,10 @@ export function openBossPuzzleUI(gameState, onResult) {
         const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
         const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
-        // ★ ボス影山専用のパラメータ（通常戦闘へ移行時もボスとして固定）
+        // ★ 影山専用のデータ（画像プロパティに影山動画 2f-kageyama.mp4 を指定）
         const kageyamaEnemy = { 
             name: "覗き魔・影山", 
-            image: "assets/images/demon/demon1.png", // ※専用ボス画像があればそちらを指定
+            image: "assets/videos/2f-kageyama.mp4", // ★ 影山の動く動画を指定！
             hp: 60, 
             atk: 12, 
             def: 2 

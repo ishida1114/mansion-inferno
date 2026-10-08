@@ -1,4 +1,4 @@
-// maps/map2F.js - 2階マップ（ボス戦闘移行データ完全固定版）
+// maps/map2F.js - 2階マップ（影山戦完全固定版）
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI 

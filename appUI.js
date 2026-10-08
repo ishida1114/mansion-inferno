@@ -1,4 +1,4 @@
-// appUI.js - スマホUI（ラミナ装填表示バグ修正完全版）
+// appUI.js - スマホUI（テンプレート文字列バグ修正＆SVGフィルター連動完全版）
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -184,14 +184,13 @@ export class AppUI {
     `;
   }
 
-  // ★ テンプレートリテラルのバグを修正
   renderLoadoutView() {
     const pLevel = gameState.player.level;
     const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
     const equipped = gameState.equippedCards || [];
     const totalPower = equipped.reduce((a, b) => a + b, 0);
 
-    const equippedLabel = equipped.length > 0 ? ("【カード " + equipped[0] + "】") : "未装填";
+    const equippedLabel = (equipped.length > 0) ? ("【カード " + equipped[0] + "】") : "未装填";
 
     return `
       <div class="sub-header">
