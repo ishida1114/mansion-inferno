@@ -1,17 +1,18 @@
-// maps/map2F.js - 全画面動画演出・撃破時一歩退避・影山HP120設定完全版
+// maps/map2F.js - 初期位置南向き・動画強制再生・通路退避完全修正版
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI 
 } from '../ui.js';
 
-export const playerStart2F = { x: 1, y: 1, dir: 0 };
+// ★ 【階段誤発火防止】2階に上がった瞬間「階段に背を向けた南向き(dir:2)」でスタート
+export const playerStart2F = { x: 1, y: 1, dir: 2 };
 
 export const map2F = [
-    [1, 4, 1, 1, 1, 1, 1, 1, 1], 
+    [1, 4, 1, 1, 1, 1, 1, 1, 1], // (1,0)=階段
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
     [1, 0, 1, 0, 2, 0, 1, 0, 1], 
     [1, 0, 1, 0, 0, 0, 1, 0, 1],
-    [1, 3, 1, 1, 1, 0, 1, 8, 1], 
+    [1, 3, 1, 1, 1, 0, 1, 8, 1], // (5,4)=通路, (7,4)=影山
     [1, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
@@ -118,7 +119,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                 };
 
                 if (context && context.openInquisitionUI) {
-                    context.openInquisitionUI(entity, (result) => {
+                    context.openInquisitionUI(entity, gameState, (result) => {
                         if (result === "combat_win" || result === "finish" || result === "kill_human") {
                             gameState.clearedRooms[roomKey] = true;
                         }
@@ -140,21 +141,20 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // ★ 1. 部屋に入った瞬間に全画面で 2f-kageyama.mp4 動画を再生！
+                // ★ 1. 全画面で必ず動画再生
                 playVideo("assets/videos/2f-kageyama.mp4", () => {
-                    // ★ 2. 動画終了後に決めセリフを表示(2f-kageyama2.jpg)
+                    // ★ 2. 終わったら静止画ダイアログ
                     showConversationDialog(
                         "assets/images/demon/2f-kageyama2.jpg", 
                         "【覗き魔・影山】\n「中学生の父親？？さぁな、男には興味がなくてねぇ、邪魔するなら、お前のトラウマを覗いて闇の檻に閉じ込めるぞ」", 
                         () => {
-                            // ★ 3. パズル画面発火
                             openBossPuzzleUI(kageyamaPuzzleConfig, gameState, (slots) => {
                                 const isFaceCorrect = slots.slot1 === 2;
                                 const isFootCorrect = slots.slot4 === 3;
                                 const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
                                 const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
-                                // ★ 影山の基本HPを 120 に設定！
+                                // ★ HP120 完全固定
                                 const kageyamaEnemy = { 
                                     name: "覗き魔・影山", 
                                     image: "assets/images/demon/2f-kageyama2.jpg", 
@@ -168,7 +168,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                                         const pLevel = gameState.player.level;
 
                                         if (pLevel >= 5) {
-                                            // ★ Lv.5以上＋正解：90%ダメージ（残りHP 1割: 12/120）でトドメの戦闘へ！
+                                            // 残りHP 12/120 で戦闘突入
                                             kageyamaEnemy.name = "覗き魔・影山 (瀕死)";
                                             kageyamaEnemy.hp = Math.max(12, Math.floor(120 * 0.1));
                                             
@@ -179,7 +179,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                                                 }, context);
                                             });
                                         } else if (pLevel === 4) {
-                                            // ★ Lv.4＋正解：80%ダメージ（残りHP 2割: 24/120）
                                             kageyamaEnemy.name = "覗き魔・影山 (重傷)";
                                             kageyamaEnemy.hp = Math.floor(120 * 0.2);
 
@@ -190,7 +189,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                                                 }, context);
                                             });
                                         } else {
-                                            // ★ Lv.3以下＋正解：50%ダメージ（残りHP 5割: 60/120）
                                             kageyamaEnemy.hp = Math.floor(120 * 0.5);
 
                                             showMessageDialog("【完全解読成功！】\n魔方陣が作動！ しかし主人公の霊力が足りず仕留めきれない！\n影山に50%ダメージを与え、通常戦闘へ移行！", () => {
@@ -223,14 +221,15 @@ export function handleEvent2F(targetCell, gameState, context) {
     return null;
 }
 
-// 影山撃破時の処理（フラグ設定＆プレイヤー位置を通路へ一歩退避させて再発火防止）
+// ★ 【イベント再発火防止】手前の通路「(5, 4)」へ退避させる
 function handleKageyamaWin(gameState, onComplete) {
     gameState.flags.cleared2F = true;
     gameState.hasElevatorKey = true;
     
-    // ★ 撃破後にボス部屋(セル8)から手前の通路へ自動退避
-    gameState.player.x = 7;
+    // 退避座標 (5, 4)、向きは東(1)
+    gameState.player.x = 5;
     gameState.player.y = 4;
+    gameState.player.dir = 1;
 
     showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァッ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
         gameState.player.money += 500;

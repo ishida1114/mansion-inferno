@@ -1,9 +1,10 @@
-// ui.js - キー連打ガード・HP0保持表示・汎用UIエンジン完全版
+// ui.js - 堅牢動画再生 ＆ 戦闘敗北時1.5秒待機 完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
-let lastDialogCloseTime = 0; // キー連打誤発火防止用タイムスタンプ
+
+window.lastDialogCloseTime = 0;
 
 export function applyChromaKey(element) {
     if (!element) return;
@@ -19,10 +20,11 @@ export function showMessageDialog(text, onClosed) {
 
     const closeHandler = (e) => {
         if (e.type === "click" || e.key === " " || e.key === "Enter") {
+            e.stopPropagation();
             window.removeEventListener("keydown", closeHandler); 
             msgDiv.onclick = null; 
             msgDiv.remove(); 
-            lastDialogCloseTime = Date.now(); // 閉じた時間を記録してキー連打ガード
+            window.lastDialogCloseTime = Date.now();
             if (onClosed) onClosed();
         }
     };
@@ -50,10 +52,11 @@ export function showConversationDialog(imageSrc, text, onClosed) {
 
     const closeHandler = (e) => {
         if (e.type === "click" || e.key === " " || e.key === "Enter") {
+            e.stopPropagation();
             window.removeEventListener("keydown", closeHandler); 
             overlay.onclick = null; 
             overlay.remove(); 
-            lastDialogCloseTime = Date.now();
+            window.lastDialogCloseTime = Date.now();
             if (onClosed) onClosed();
         }
     };
@@ -82,10 +85,11 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
 
     const closeHandler = (e) => {
         if (e.type === "click" || e.key === " " || e.key === "Enter") {
+            e.stopPropagation();
             window.removeEventListener("keydown", closeHandler); 
             modal.onclick = null; 
             modal.remove(); 
-            lastDialogCloseTime = Date.now();
+            window.lastDialogCloseTime = Date.now();
             if (onClosed) onClosed();
         }
     };
@@ -106,35 +110,49 @@ export function playFloorTransition(targetFloor, onComplete) {
         if (onComplete) onComplete(); 
         setTimeout(() => { 
             fadeDiv.style.opacity = "0"; 
-            setTimeout(() => fadeDiv.remove(), 500); 
+            setTimeout(() => {
+                fadeDiv.remove();
+                window.lastDialogCloseTime = Date.now();
+            }, 500); 
         }, 800); 
     }, 1500);
 }
 
+// ★ 全画面動画プレイヤー（コンビニ・血の池と完全に同一処理・自動再生保証）
 export function playVideo(src, onEnded) {
     const overlay = document.createElement("div");
-    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 0; box-sizing: border-box;";
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.98); z-index: 3500; display: flex; justify-content: center; align-items: center; padding: 0; box-sizing: border-box;";
 
     const video = document.createElement("video");
     video.src = src;
-    video.style.cssText = "max-width: 100%; max-height: 100%; border: 1px solid #550000; box-shadow: 0 0 20px rgba(0, 0, 0, 0.8); background-color: black; object-fit: contain;";
-    video.controls = false; video.autoplay = true; video.playsInline = true; video.muted = true;
-    
-    applyChromaKey(video);
+    video.style.cssText = "max-width: 100%; max-height: 100%; background-color: black; object-fit: contain;";
+    video.controls = false; 
+    video.autoplay = true; 
+    video.playsInline = true; 
+    video.muted = true; // ★ 必須（ブラウザの自動再生ブロック回避）
 
     overlay.appendChild(video);
     document.body.appendChild(overlay);
 
+    let finished = false;
     const finish = () => {
+        if (finished) return;
+        finished = true;
         if (overlay.parentNode) overlay.remove();
-        lastDialogCloseTime = Date.now();
+        window.lastDialogCloseTime = Date.now();
         if (onEnded) onEnded();
     };
 
     video.onended = finish;
-    video.onerror = () => finish();
-    overlay.onclick = () => { video.pause(); finish(); };
-    video.play().catch(err => finish());
+    overlay.onclick = finish; // タップでスキップ
+
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(err => {
+            console.warn("Autoplay blocked:", err);
+            overlay.innerHTML += `<div style="position:absolute; bottom:10%; color:#fff; font-size:1.2em; background:rgba(0,0,0,0.8); padding:8px 16px; border-radius:4px;">画面をタップして再生</div>`;
+        });
+    }
 }
 
 export function openShopUI(onClosed) {
@@ -239,10 +257,9 @@ export function openShopUI(onClosed) {
             }
         };
     });
-    document.getElementById("closeBtn").onclick = () => { lastDialogCloseTime = Date.now(); shopDiv.remove(); if (onClosed) onClosed(); };
+    document.getElementById("closeBtn").onclick = () => { window.lastDialogCloseTime = Date.now(); shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ 戦闘UI（HP0表示を1.5秒保持してから復帰処理へ移るよう改修）
 export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -282,13 +299,13 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const attackBtn = document.getElementById("btn-attack");
     const escapeBtn = document.getElementById("btn-escape");
 
-    // ★ HP0画面を1.5秒間保持してから復帰画面へ
+    // ★ 敗北時、画面を1.5秒間静止させて確実に確認させてから復帰
     const triggerDeathSequence = () => {
         attackBtn.disabled = true;
         escapeBtn.disabled = true;
         playerHpText.innerText = `主人公HP: 0 / ${gameState.player.maxHp}`;
         playerHpText.style.color = "#ff0000";
-        log.innerText += "\n\n主人公は力尽きて倒れた……！";
+        log.innerText += "\n\n【敗北】主人公は力尽きて倒れた……！";
 
         setTimeout(() => {
             ui.remove();
@@ -299,11 +316,11 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             showMessageDialog(respawnMsg, () => {
                 if (onResult) onResult("defeat");
             });
-        }, 1500);
+        }, 1500); // 1.5秒静止
     };
 
     attackBtn.onclick = () => {
-        if (Date.now() - lastDialogCloseTime < 300) return; // ガード
+        if (Date.now() - window.lastDialogCloseTime < 300) return;
 
         const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
         const equippedCards = gameState.equippedCards || [];
@@ -374,7 +391,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     };
 
     escapeBtn.onclick = () => {
-        if (Date.now() - lastDialogCloseTime < 300) return;
+        if (Date.now() - window.lastDialogCloseTime < 300) return;
 
         attackBtn.disabled = true;
         escapeBtn.disabled = true;

@@ -1,4 +1,4 @@
-// main.js - アプリ起動時トップ固定 ＆ 敗北時帰還対応版
+// main.js - 3Dレンダラー統合＆ダイアログ貫通ガード完全版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -11,6 +11,14 @@ let appUI;
 let renderer;
 let isRunning = false;
 let isProcessingEvent = false;
+
+// ★ ダイアログを閉じた直後400msはマップの移動・調査行動を完全にガード！
+function isActionBlocked() {
+    if (window.lastDialogCloseTime && (Date.now() - window.lastDialogCloseTime < 400)) {
+        return true; 
+    }
+    return false;
+}
 
 function init() {
   appUI = new AppUI();
@@ -39,26 +47,26 @@ function init() {
       return;
     }
 
-    if (isProcessingEvent) return;
+    if (isProcessingEvent || isActionBlocked()) return;
 
     const id = target.id;
     if (id === 'btn-up') moveForward();
     else if (id === 'btn-down') moveBackward();
-    else if (id === 'btn-left') gameState.player.dir = (gameState.player.dir + 3) % 4;
-    else if (id === 'btn-right') gameState.player.dir = (gameState.player.dir + 1) % 4;
+    else if (id === 'btn-left') { gameState.player.dir = (gameState.player.dir + 3) % 4; redraw(); }
+    else if (id === 'btn-right') { gameState.player.dir = (gameState.player.dir + 1) % 4; redraw(); }
     else if (id === 'btn-action') interactFrontCell();
     else if (id === 'btn-app-toggle') toggleAppUI();
     else if (id === 'btn-close-debug') toggleDebugUI();
   });
 
   window.onkeydown = (e) => {
-    if (isProcessingEvent) return;
+    if (isProcessingEvent || isActionBlocked()) return;
 
     switch (e.key) {
       case 'ArrowUp': case 'w': case 'W': moveForward(); break;
       case 'ArrowDown': case 's': case 'S': moveBackward(); break;
-      case 'ArrowLeft': case 'a': case 'A': gameState.player.dir = (gameState.player.dir + 3) % 4; break;
-      case 'ArrowRight': case 'd': case 'D': gameState.player.dir = (gameState.player.dir + 1) % 4; break;
+      case 'ArrowLeft': case 'a': case 'A': gameState.player.dir = (gameState.player.dir + 3) % 4; redraw(); break;
+      case 'ArrowRight': case 'd': case 'D': gameState.player.dir = (gameState.player.dir + 1) % 4; redraw(); break;
       case ' ': case 'Spacebar': e.preventDefault(); interactFrontCell(); break;
       case 'Escape': toggleAppUI(); break;
       case 'F2': e.preventDefault(); toggleDebugUI(); break;
@@ -97,15 +105,19 @@ function resumeGame() {
   }
 }
 
+function redraw() {
+    if (renderer) renderer.render();
+}
+
 function gameLoop() {
   if (isRunning) {
-    renderer.render();
+    redraw();
     requestAnimationFrame(gameLoop);
   }
 }
 
 function interactFrontCell() {
-  if (isProcessingEvent) return;
+  if (isProcessingEvent || isActionBlocked()) return;
 
   const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
   const vec = dirVectors[gameState.player.dir];
@@ -120,7 +132,7 @@ function interactFrontCell() {
 
   const context = {
     changeFloor: (floor) => { changeFloor(floor); },
-    redraw: () => renderer.render(),
+    redraw: () => redraw(),
     openLoadoutApp: () => {
       appUI.currentSubView = 'loadout';
       appUI.renderApp();
@@ -130,7 +142,7 @@ function interactFrontCell() {
     openInquisitionUI: (entity, cb) => {
       openInquisitionUI(entity, gameState, (result) => {
         if (cb) cb(result);
-      });
+      }, { changeFloor });
     }
   };
 
@@ -146,7 +158,7 @@ function interactFrontCell() {
     isProcessingEvent = true;
     eventObj.run(() => {
       isProcessingEvent = false;
-      renderer.render();
+      redraw();
     });
   }
 }
@@ -159,18 +171,17 @@ function changeFloor(floor) {
     gameState.player.y = playerStart2F.y;
     gameState.player.dir = playerStart2F.dir;
     showMessageDialog("【2階 非常階段前】\n2階へ到達した。不気味な足音が暗闇から聞こえる……", () => {
-      renderer.render();
+      redraw();
     });
   } else if (floor === 1) {
     gameState.currentMap = map1F;
     gameState.player.x = playerStart1F.x;
     gameState.player.y = playerStart1F.y;
     gameState.player.dir = playerStart1F.dir;
-    renderer.render();
+    redraw();
   }
 }
 
-// ★ アプリを開く時は必ずトップ画面（ホーム）を表示
 function toggleAppUI() {
   if (!gameState.hasExorcistInherited) {
     showMessageDialog("【スマホ】\nまだ『悪魔辞典アプリ』を入手していない……。", () => {});
@@ -181,7 +192,7 @@ function toggleAppUI() {
   if (container) {
     const isHidden = container.classList.contains('hidden');
     if (isHidden) {
-      appUI.currentSubView = 'home'; // ★ 常にトップ画面を開く
+      appUI.currentSubView = 'home';
       appUI.renderApp();
       container.classList.remove('hidden');
     } else {
@@ -210,12 +221,9 @@ function checkEncounterAfterMove() {
     check2FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
       openCombatUI(enemy, gameState, (result) => {
-        if (result === "defeat") {
-          changeFloor(1); // 敗北時は1階コンビニへ帰還
-        }
         isProcessingEvent = false;
-        renderer.render();
-      });
+        redraw();
+      }, { changeFloor });
     });
   }
 }
