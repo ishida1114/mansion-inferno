@@ -1,4 +1,4 @@
-// appUI.js - 所持品表示バグ修正・アイテム使用機能実装・全テンプレート修正版
+// appUI.js - 所持品テンプレバグ修正＆アイテム使用ボタン機能統合版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -233,23 +233,34 @@ export class AppUI {
     `;
   }
 
-  // ★ 所持品テンプレート表記バグ修正（バッククォート囲み追加）
+  // ★ 所持品表示修正（バッククォートでのHTML生成に修正）
   renderInventoryView() {
     const items = gameState.inventory?.items || [];
+
+    let itemsHTML = "";
+    if (items.length > 0) {
+      items.forEach((item, index) => {
+        const itemName = item.name || "不明なアイテム";
+        const itemDesc = item.description || "";
+        itemsHTML += `
+          <div class="loadout-slot" style="display: flex; justify-content: space-between; align-items: center; border-style: solid; text-align: left; background: #1a0808; border-color: #551111; margin-bottom: 8px;">
+            <div>
+              <div style="color: #ffdd66; font-weight: bold; font-size: 0.95em;">${itemName}</div>
+              <div style="font-size: 0.75em; color: #bbb;">${itemDesc}</div>
+            </div>
+            <button class="use-item-btn" data-index="${index}" style="color: #00ff66; border: 1px solid #00ff66; background: rgba(0,40,0,0.8); padding: 4px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; font-family: inherit;">使用</button>
+          </div>
+        `;
+      });
+    } else {
+      itemsHTML = '<div class="loadout-slot">所持アイテムなし</div>';
+    }
 
     return `
       <div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">所持品</h3></div>
       <div style="font-size: 0.85em; color: #ffdd66; margin-bottom: 10px;">所持金: ${gameState.player.money} 💰 | 防御力(DEF): +${gameState.player.def}</div>
       <div>
-        ${items.length > 0 ? items.map((item, index) => `
-          <div class="loadout-slot" style="display: flex; justify-content: space-between; align-items: center; border-style: solid; text-align: left; background: #1a0808; border-color: #551111;">
-            <div>
-              <div style="color: #ffdd66; font-weight: bold; font-size: 0.95em;">\${item.name}</div>
-              <div style="font-size: 0.75em; color: #bbb;">\${item.description || ''}</div>
-            </div>
-            <button class="use-item-btn" data-index="\${index}" style="color: #00ff66; border: 1px solid #00ff66; background: rgba(0,40,0,0.8); padding: 4px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; font-family: inherit;">使用</button>
-          </div>
-        `).join('') : '<div class="loadout-slot">所持アイテムなし</div>'}
+        ${itemsHTML}
       </div>
     `;
   }
@@ -318,7 +329,7 @@ export class AppUI {
         };
     }
 
-    // ★ 所持品「使用」ボタンの動作処理
+    // ★ アイテム使用ボタンイベント
     const useBtns = document.querySelectorAll('.use-item-btn');
     useBtns.forEach(btn => {
       btn.onclick = () => {
@@ -326,14 +337,11 @@ export class AppUI {
         if (!isNaN(itemIdx) && gameState.inventory?.items[itemIdx]) {
           const item = gameState.inventory.items[itemIdx];
           let msg = "";
-          if (typeof item.use === "function") {
-            msg = item.use(gameState);
-          } else if (item.heal) {
-            gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + item.heal);
-            msg = `${item.name} を使用した！ HPが ${item.heal} 回復した！`;
-          } else {
-            msg = `${item.name} を使用した！`;
-          }
+          
+          const healVal = item.heal || 15; // デフォルト回復量15
+          gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healVal);
+          msg = `【${item.name}】を使用した！ HPが ${healVal} 回復した！（現在HP: ${gameState.player.hp}/${gameState.player.maxHp}）`;
+
           gameState.inventory.items.splice(itemIdx, 1);
           alert(msg);
           this.renderApp();

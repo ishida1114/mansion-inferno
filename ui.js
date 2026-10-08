@@ -1,4 +1,4 @@
-// ui.js - 会話ダイアログ動画対応＆死亡時即時1階切り替え完全版
+// ui.js - 汎用UIエンジン（ボス固有ロジック完全排除・入力データ返却専用版）
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -27,7 +27,6 @@ export function showMessageDialog(text, onClosed) {
     setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// ★ 動画(.mp4)にも対応した会話ダイアログ
 export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
@@ -289,7 +288,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const attackBtn = document.getElementById("btn-attack");
     const escapeBtn = document.getElementById("btn-escape");
 
-    // ★ 死亡直後に即座に1Fへマップ描画切り替えを行う（重複誤発火防止）
     const triggerDeathSequence = () => {
         ui.remove();
         const respawnMsg = gameState.handlePlayerDeath();
@@ -570,7 +568,8 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     };
 }
 
-export function openBossPuzzleUI(puzzleConfig, gameState, onResult, context) {
+// ★ 完全汎用ボスUIコンポーネント（判定・演出・計算一切なし。純粋に入力 slots を返却するのみ）
+export function openBossPuzzleUI(puzzleConfig, gameState, onSubmit) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
 
@@ -654,37 +653,7 @@ export function openBossPuzzleUI(puzzleConfig, gameState, onResult, context) {
         }
 
         ui.remove();
-
-        const isPerfect = puzzleConfig.checkSolution(slots);
-        const enemy = puzzleConfig.enemy;
-
-        if (isPerfect) {
-            playVideo("assets/videos/magic-circle.mp4", () => {
-                const playerLevel = gameState.player.level;
-
-                if (playerLevel >= 5) {
-                    showMessageDialog(`【完全解読成功！】\n魔方陣が完全共鳴を起こした！\n聖なる光が${enemy.name}の肉体を粉々に打ち砕く！`, () => {
-                        onResult("win");
-                    });
-                } else if (playerLevel === 4) {
-                    showMessageDialog(`【完全解読成功！】\n魔方陣が作動！ ${enemy.name}に壊滅的な大ダメージ（80%）を与えた！\n瀕死の${enemy.name}との残弾戦に入る！`, () => {
-                        enemy.name = `${enemy.name} (瀕死)`;
-                        enemy.hp = Math.floor(enemy.hp * 0.2);
-                        openCombatUI(enemy, gameState, (res) => onResult(res), context);
-                    });
-                } else {
-                    showMessageDialog(`【完全解読成功！】\n魔方陣が作動！ しかし主人公の霊力が足りず仕留めきれない！\n${enemy.name}に50%ダメージを与え、通常戦闘へ移行！`, () => {
-                        openCombatUI(enemy, gameState, (res) => onResult(res), context);
-                    });
-                }
-            });
-        } else {
-            const matchCount = puzzleConfig.calcMatchCount ? puzzleConfig.calcMatchCount(slots) : 0;
-            enemy.hp = Math.max(30, 120 - (matchCount * 22));
-
-            showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: ${matchCount}/4）\n${enemy.name}が怒り狂って襲いかかってきた！`, () => {
-                openCombatUI(enemy, gameState, (res) => onResult(res), context);
-            });
-        }
+        // ★ 判定・演出・レベルチェックを行わず、配置データ slots をそのままコールバックへ返却！
+        if (onSubmit) onSubmit(slots);
     };
 }
