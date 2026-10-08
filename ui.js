@@ -1,4 +1,4 @@
-// ui.js - 動画再生無言スキップ完全防止・エラー原因可視化版
+// ui.js - 二重入力防止＆キー貫通完全ガード版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -11,89 +11,84 @@ export function applyChromaKey(element) {
     element.style.filter = "url(#chroma-green-filter)";
 }
 
-export function showMessageDialog(text, onClosed) {
-    const msgDiv = document.createElement("div");
-    msgDiv.style.cssText = `position: fixed; bottom: 8%; left: 5%; width: 90%; max-width: 560px; margin: 0 auto; padding: 20px; background-color: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; z-index: 2000; font-family: ${HORROR_FONT}; font-size: 1.1em; line-height: 1.7; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
-    msgDiv.innerText = text;
-    msgDiv.innerHTML += `<div style="margin-top: 12px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
-    document.body.appendChild(msgDiv);
+// ★ 汎用ダイアログ作成用内部関数（二重実行ガード＆キー貫通防止を共通化）
+function createGuardedDialogContainer(contentHTML, onClosed) {
+    let isClosing = false; // 二重実行防止フラグ（一回しか受け入れない）
 
-    const closeHandler = (e) => {
-        if (e.type === "click" || e.key === " " || e.key === "Enter") {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 3000; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5%; box-sizing: border-box; background: rgba(0,0,0,0.3);";
+    overlay.innerHTML = contentHTML;
+
+    document.body.appendChild(overlay);
+
+    const handleClose = (e) => {
+        if (isClosing) return; // すでに閉じる処理が始まっていたら一切受け付けない
+
+        // キーボードの場合、SPACEかEnter以外は無視（移動キーなどで誤閉鎖させない）
+        if (e.type === "keydown") {
+            if (e.key !== " " && e.key !== "Enter" && e.key !== "Spacebar") {
+                return;
+            }
+            e.preventDefault();
             e.stopPropagation();
-            window.removeEventListener("keydown", closeHandler); 
-            msgDiv.onclick = null; 
-            msgDiv.remove(); 
-            window.lastDialogCloseTime = Date.now();
-            if (onClosed) onClosed();
+        }
+
+        isClosing = true; // ガード実行
+        window.removeEventListener("keydown", handleClose, true);
+        overlay.onclick = null;
+        overlay.remove();
+
+        window.lastDialogCloseTime = Date.now(); // 閉じた時間を記録
+
+        if (onClosed) {
+            // 次のイベント発火までわずかに猶予を設ける
+            setTimeout(() => {
+                onClosed();
+            }, 50);
         }
     };
-    setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 200);
+
+    // keydownのキャプチャリングフェーズ(true)で捕まえて背景への伝播を完全遮断
+    setTimeout(() => {
+        overlay.onclick = handleClose;
+        window.addEventListener("keydown", handleClose, true);
+    }, 150); // ダイアログ表示直後の誤連打を防ぐ150msのウェイト
+}
+
+export function showMessageDialog(text, onClosed) {
+    const html = `
+        <div style="width: 90%; max-width: 560px; padding: 20px; background-color: rgba(10, 0, 0, 0.95); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.1em; line-height: 1.7; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.9); box-sizing: border-box; pointer-events: auto;">
+            ${text}
+            <div style="margin-top: 12px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE / Enter ] で閉じる</div>
+        </div>
+    `;
+    createGuardedDialogContainer(html, onClosed);
 }
 
 export function showConversationDialog(imageSrc, text, onClosed) {
-    const overlay = document.createElement("div");
-    overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
-    
-    const imgDiv = document.createElement("img");
-    imgDiv.style.cssText = "max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start; object-fit: contain;";
-    imgDiv.onerror = () => imgDiv.style.display = 'none';
-    imgDiv.src = imageSrc;
-    applyChromaKey(imgDiv);
-
-    const msgDiv = document.createElement("div");
-    msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
-    msgDiv.innerText = text;
-    msgDiv.innerHTML += `<div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
-
-    overlay.appendChild(imgDiv); 
-    overlay.appendChild(msgDiv); 
-    document.body.appendChild(overlay);
-
-    const closeHandler = (e) => {
-        if (e.type === "click" || e.key === " " || e.key === "Enter") {
-            e.stopPropagation();
-            window.removeEventListener("keydown", closeHandler); 
-            overlay.onclick = null; 
-            overlay.remove(); 
-            window.lastDialogCloseTime = Date.now();
-            if (onClosed) onClosed();
-        }
-    };
-    setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 200);
+    const html = `
+        <div style="width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; pointer-events: auto;">
+            <img src="${imageSrc}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start; object-fit: contain;" onerror="this.style.display='none'">
+            <div style="width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.95); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.9); box-sizing: border-box;">
+                ${text}
+                <div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE / Enter ] で閉じる</div>
+            </div>
+        </div>
+    `;
+    createGuardedDialogContainer(html, onClosed);
 }
 
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
-    const modal = document.createElement("div");
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.90); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
-    
-    const imgEl = document.createElement("img");
-    imgEl.id = "modal-item-img";
-    imgEl.style.cssText = "max-height: 180px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;";
-    imgEl.onerror = () => { imgEl.style.display = 'none'; };
-    imgEl.src = imagePath;
-    applyChromaKey(imgEl);
-
-    modal.innerHTML = `<div style="color: #ff3333; font-size: 1.5em; margin-bottom: 12px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
-    modal.appendChild(imgEl);
-    modal.innerHTML += `
-        <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
-        <div style="color: #cccccc; font-size: 0.95em; margin-bottom: 20px; text-align: center; white-space: pre-wrap; line-height: 1.5;">${detailText}</div>
-        <div style="color: #888; font-size: 0.8em;">タップ または [ SPACE ] で閉じる</div>
+    const html = `
+        <div style="width: 90%; max-width: 500px; padding: 25px; background-color: rgba(5, 0, 0, 0.95); border: 2px solid #ff3333; border-radius: 8px; text-align: center; font-family: ${HORROR_FONT}; box-shadow: 0 0 30px rgba(255,0,0,0.5); pointer-events: auto;">
+            <div style="color: #ff3333; font-size: 1.4em; margin-bottom: 12px; text-shadow: 0 0 10px red;">― アイテム獲得 ―</div>
+            <img src="${imagePath}" style="max-height: 160px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;" onerror="this.style.display='none'">
+            <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">${itemTitle}</div>
+            <div style="color: #cccccc; font-size: 0.95em; margin-bottom: 20px; white-space: pre-wrap; line-height: 1.5;">${detailText}</div>
+            <div style="color: #888; font-size: 0.8em;">タップ または [ SPACE / Enter ] で閉じる</div>
+        </div>
     `;
-    document.body.appendChild(modal);
-
-    const closeHandler = (e) => {
-        if (e.type === "click" || e.key === " " || e.key === "Enter") {
-            e.stopPropagation();
-            window.removeEventListener("keydown", closeHandler); 
-            modal.onclick = null; 
-            modal.remove(); 
-            window.lastDialogCloseTime = Date.now();
-            if (onClosed) onClosed();
-        }
-    };
-    setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 200);
+    createGuardedDialogContainer(html, onClosed);
 }
 
 export function playFloorTransition(targetFloor, onComplete) {
@@ -118,7 +113,6 @@ export function playFloorTransition(targetFloor, onComplete) {
     }, 1500);
 }
 
-// ★ 動画再生プレイヤー（無言スキップを廃止し、確実に再生コントロールを表示）
 export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する") {
     const oldOverlay = document.getElementById("video-player-overlay");
     if (oldOverlay) oldOverlay.remove();
@@ -137,7 +131,6 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
 
     overlay.appendChild(video);
 
-    // 再生コントロール用コンテナ
     const ctrlContainer = document.createElement("div");
     ctrlContainer.style.cssText = "display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 15px; z-index: 3600;";
 
@@ -171,11 +164,10 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
 
     video.onended = finish;
 
-    // ★ 動画読み込みエラー発生時：勝手に飛ばさずエラー原因を表示してスキップ可能にする
     video.onerror = (e) => {
         console.error("Video load error for:", src, e);
         errorMsg.style.display = "block";
-        errorMsg.innerText = `【動画のロード失敗】\nファイルパス: ${src}\n※ファイルが存在するか、名前（大文字小文字）をご確認ください。`;
+        errorMsg.innerText = `【動画のロード失敗】\nファイルパス: ${src}\n※ファイルが存在するか確認してください。`;
         playBtn.innerText = "▶ 再度再生を試みる";
     };
 
@@ -186,7 +178,6 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
         errorMsg.style.display = "none";
     };
 
-    // 背景クリックでの暴発スキップを防ぎ、明示的なボタンのみでスキップ
     skipBtn.onclick = (e) => {
         e.stopPropagation();
         video.pause();
@@ -201,11 +192,10 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
         }).catch(err => {
             console.warn("Manual play error:", err);
             errorMsg.style.display = "block";
-            errorMsg.innerText = "ブラウザの権限により再生できませんでした。画面を直接タップしてください。";
+            errorMsg.innerText = "ブラウザの権限により再生できませんでした。";
         });
     };
 
-    // 自動再生の試行
     const promise = video.play();
     if (promise !== undefined) {
         promise.then(() => {
@@ -214,7 +204,7 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
         }).catch(err => {
             console.warn("Autoplay blocked:", err);
             isPlaying = false;
-            playBtn.style.display = "block"; // ブロックされたら再生ボタンを表示
+            playBtn.style.display = "block";
         });
     }
 }
