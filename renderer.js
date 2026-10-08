@@ -1,4 +1,4 @@
-// renderer.js - 擬似3D透視投影描画（壁めり込み・ズレ完全解消版）
+// renderer.js - 擬似3D透視投影描画（エレベーター画像対応＆全機能保持完全版）
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -12,6 +12,7 @@ const imageSources = {
     door: "assets/images/door.png",
     wall: "assets/images/wall.png",
     stairDoor: "assets/images/stair_door.png",
+    elevator: "assets/images/elevator.png", // ★ エレベーター画像を追加
     entrance: "assets/images/entrance.png", 
     left1: "assets/images/leftwall1.png",
     left2: "assets/images/leftwall2.png",
@@ -134,14 +135,19 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // 正面壁・扉描画
+        // 正面壁・扉・エレベーター描画
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;
 
             if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
+                // 非常階段扉
                 targetImg = images.stairDoor;
+            } else if ((cellType === 5 || cellType === 6) && images.elevator && images.elevator.complete) {
+                // ★ エレベーター扉（セルタイプ5・6に対応）
+                targetImg = images.elevator;
             } else if ([2, 3, 7, 8, 9].includes(cellType) && images.door && images.door.complete) {
+                // 通常扉
                 targetImg = images.door;
             }
 
@@ -172,6 +178,8 @@ function drawActionHint(ctx, canvas, player, currentMap) {
         let label = "[ SPACE ] 調べる";
         if (target === 4) {
             label = gameState.currentFloor === 2 ? "[ SPACE ] 1階へ下りる" : "[ SPACE ] 2階へ登る";
+        } else if (target === 5 || target === 6) {
+            label = "[ SPACE ] エレベーターに乗る";
         } else if (target === 2 && gameState.currentFloor === 1) {
             label = "[ SPACE ] コンビニに入る";
         }
