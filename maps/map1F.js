@@ -1,16 +1,16 @@
-// maps/map1F.js - 1階マップデータ・ストーリーイベント制御（完全正本）
+// maps/map1F.js - 1階マップデータ（エレベーターセル7追加＆移動手段記録対応）
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playVideo, openShopUI, playFloorTransition 
 } from '../ui.js';
 
-// 1階スタート位置 (x: 7, y: 1, 北向き)
 export const playerStart1F = { x: 7, y: 1, dir: 0 };
 
+// 1: 壁 / 0: 通路 / 2: コンビニ / 3: 血の池 / 4: 2F非常階段扉 / 5: 集合ポスト / 6: エントランス / 7: エレベーター
 export const map1F = [
     [1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1], 
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 1], // (11, 1) エレベーター(7)
     [1, 0, 1, 2, 1, 0, 1, 3, 1, 0, 1, 5, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
@@ -28,12 +28,33 @@ export function handleEvent1F(targetCell, gameState, context) {
         } else {
             return { 
                 run: (onComplete) => {
-                    // ★ 2階へ登る足音＆タメ演出を追加
+                    // ★ 移動手段を記録
+                    gameState.lastTransitMethod = 'stair';
                     playFloorTransition(2, () => {
                         context.changeFloor(2);
                         onComplete();
                     });
                 } 
+            };
+        }
+    }
+
+    // ★ 7: エレベーター（3Fショートカット）
+    if (targetCell === 7) {
+        if (!gameState.flags.cleared2F || !gameState.hasElevatorKey) {
+            return {
+                run: (onComplete) => showMessageDialog("【エレベーター】\n「調整中」の張り紙が貼られている……。\n起動させるにはフロアボスを倒して『エレベーターキー』を手に入れる必要がある。", onComplete)
+            };
+        } else {
+            return {
+                run: (onComplete) => {
+                    // ★ 移動手段を記録
+                    gameState.lastTransitMethod = 'elevator';
+                    playFloorTransition(3, () => {
+                        context.changeFloor(3);
+                        onComplete();
+                    });
+                }
             };
         }
     }

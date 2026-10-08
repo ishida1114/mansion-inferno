@@ -1,4 +1,4 @@
-// maps/map2F.js - 2階マップ（ボス戦画像引継ぎ修正版）
+// maps/map2F.js - 2階マップ（影山撃破でエレベーターキー入手機能統合）
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI 
@@ -20,6 +20,8 @@ export function handleEvent2F(targetCell, gameState, context) {
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
+                // ★ 移動手段を記録
+                gameState.lastTransitMethod = 'stair';
                 playFloorTransition(1, () => {
                     context.changeFloor(1);
                     onComplete();
@@ -81,7 +83,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                 const humanImages = ["assets/images/human1.png", "assets/images/human2.png", "assets/images/human3.png"];
                 const randFace = humanImages[Math.floor(Math.random() * humanImages.length)];
 
-                // 弱点を1つに設定
                 const demonList = [
                     { name: "2階の不審な住人", realImage: "assets/images/demon/demon1.png", weakness: 3 },
                     { name: "不気味な笑顔の住人", realImage: "assets/images/demon/demon2.png", weakness: 4 },
@@ -119,7 +120,6 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // 8: 影山の部屋
     if (targetCell === 8) {
         return {
             run: (onComplete) => {
@@ -132,9 +132,9 @@ export function handleEvent2F(targetCell, gameState, context) {
                     openBossPuzzleUI(gameState, (result) => {
                         if (result === "win") {
                             gameState.flags.cleared2F = true;
-                            gameState.hasKey2F = true;
+                            gameState.hasElevatorKey = true; // ★ エレベーターキー獲得！
                             
-                            showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァッ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 3階非常階段の鍵を獲得！）", () => {
+                            showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァッ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
                                 gameState.player.money += 500;
                                 gameState.gainExp(200);
                                 onComplete();

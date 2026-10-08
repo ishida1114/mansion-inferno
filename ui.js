@@ -1,10 +1,9 @@
-// ui.js - 心理戦査問・パズルUI拡大・緑背景確定透過対応版
+// ui.js - ショップSin浄化＆死亡リスポーン処理統合版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ 緑背景のクロマキー透過処理（確実ロード）
 export function applyChromaKey(imgElement) {
     if (!imgElement) return;
 
@@ -125,7 +124,7 @@ export function playFloorTransition(targetFloor, onComplete) {
 
     setTimeout(() => { 
         fadeDiv.style.opacity = "1"; 
-        fadeDiv.innerHTML = `<div>ザッ…… ザッ……</div><div style="font-size: 0.8em; color: #aaa;">${targetFloor === 2 ? '2階へ登っている...' : '1階へ下りている...'}</div>`; 
+        fadeDiv.innerHTML = `<div>ザッ…… ザッ……</div><div style="font-size: 0.8em; color: #aaa;">${targetFloor}階へ移動中...</div>`; 
     }, 10);
 
     setTimeout(() => { 
@@ -160,22 +159,64 @@ export function playVideo(src, onEnded) {
     video.play().catch(err => finish());
 }
 
+// ★ ショップUI（Sin闇金累進浄化機能の追加）
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
     shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
+    
+    const updateShopHeader = () => {
+        document.getElementById("shop-money").innerText = gameState.player.money;
+        document.getElementById("shop-sin").innerText = gameState.player.sin;
+    };
+
     shopDiv.innerHTML = `
         <video src="assets/videos/CVS.mp4" autoplay loop muted playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.35; filter: blur(2px);"></video>
         <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(20,0,0,0.7) 0%, rgba(0,0,0,0.95) 90%);"></div>
         <div style="position: relative; z-index: 10; width: 100%; max-width: 540px; height: 90%; background: rgba(10, 5, 5, 0.92); border: 2px solid #770000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
             <div style="padding: 12px 15px; border-bottom: 2px solid #550000; background: linear-gradient(180deg, #2a0000, #0a0000); display: flex; justify-content: space-between; align-items: center;">
-                <div><h2 style="color: #ff3333; margin: 0; font-size: 1.5em;">悪魔の無人レジ</h2></div>
-                <div style="font-size: 1.05em; color: #ffdd66; font-weight: bold;">💰 <span id="shop-money">${gameState.player?.money || 0}</span> <span style="color:#00ff66; font-size:0.8em; margin-left:8px;">(DEF:+${gameState.player?.def || 0})</span></div>
+                <div><h2 style="color: #ff3333; margin: 0; font-size: 1.4em;">悪魔の無人レジ</h2></div>
+                <div style="font-size: 0.95em; color: #ffdd66; font-weight: bold;">
+                    💰 <span id="shop-money">${gameState.player.money}</span>
+                    <span style="color:#ff4444; margin-left:8px;">(Sin: <span id="shop-sin">${gameState.player.sin}</span>)</span>
+                </div>
             </div>
+
+            <!-- ★ Sin罪の浄化エリア（闇金累進計算） -->
+            <div id="sin-purify-bar" style="background: rgba(40,0,0,0.9); padding: 10px 15px; border-bottom: 1px solid #660000; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="color: #ffaaaa; font-weight: bold; font-size: 0.9em;">【罪(Sin)の浄化・闇金返済】</div>
+                    <div id="purify-cost-text" style="color: #aaa; font-size: 0.78em;">現在コスト: 💰 ${gameState.getPurifyCost()}</div>
+                </div>
+                <button id="btn-purify-sin" style="background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 1px solid #ff3333; padding: 6px 12px; font-family: inherit; cursor: pointer; border-radius: 4px; font-size: 0.85em; font-weight: bold;">
+                    罪を消す
+                </button>
+            </div>
+
             <div id="shop-content" style="flex: 1; overflow-y: auto; padding: 12px; box-sizing: border-box;"></div>
             <div style="padding: 10px; text-align: center; border-top: 1px solid #440000; background: #050505;"><button id="closeBtn" style="background: transparent; color: #aaa; border: 1px solid #555; padding: 8px 25px; cursor: pointer; border-radius: 4px;">立ち去る</button></div>
         </div>
     `;
     document.body.appendChild(shopDiv);
+
+    // Sin浄化ボタン処理
+    const purifyBtn = document.getElementById("btn-purify-sin");
+    purifyBtn.onclick = () => {
+        if (gameState.player.sin <= 0) {
+            alert("現在、背負っている罪(Sin)はありません。");
+            return;
+        }
+        const cost = gameState.getPurifyCost();
+        if (gameState.player.money < cost) {
+            alert(`浄化費用（💰${cost}）が足りません！`);
+            return;
+        }
+
+        if (gameState.purifySin()) {
+            alert("悪魔の無人レジで利息を含めた罪(Sin)を清算しました。");
+            updateShopHeader();
+            document.getElementById("purify-cost-text").innerText = `現在コスト: 💰 0`;
+        }
+    };
 
     let html = "";
     Object.values(itemDefinitions).forEach(item => {
@@ -199,7 +240,7 @@ export function openShopUI(onClosed) {
 
             if (gameState.player.money >= price) {
                 gameState.player.money -= price; 
-                document.getElementById("shop-money").innerText = gameState.player.money;
+                updateShopHeader();
 
                 if (item && item.type === "armor") {
                     gameState.equippedArmor = item.id;
@@ -222,6 +263,7 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
+// ★ 戦闘UI（死亡時の新ランダム減額＆復帰テキスト発火対応）
 export function openCombatUI(enemy, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -258,6 +300,14 @@ export function openCombatUI(enemy, gameState, onResult) {
     const enemyHpText = document.getElementById("enemy-hp-text");
     const attackBtn = document.getElementById("btn-attack");
     const escapeBtn = document.getElementById("btn-escape");
+
+    const triggerDeathSequence = () => {
+        ui.remove();
+        const respawnMsg = gameState.handlePlayerDeath();
+        showMessageDialog(respawnMsg, () => {
+            if (onResult) onResult("defeat");
+        });
+    };
 
     attackBtn.onclick = () => {
         const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
@@ -317,13 +367,7 @@ export function openCombatUI(enemy, gameState, onResult) {
                 }
 
                 if (gameState.player.hp <= 0) {
-                    setTimeout(() => {
-                        ui.remove();
-                        showMessageDialog("【体力が尽きた……】\n意識を失い、1階のコンビニへ連れ戻された……。", () => {
-                            gameState.player.hp = gameState.player.maxHp;
-                            if (onResult) onResult("defeat");
-                        });
-                    }, 1000);
+                    setTimeout(triggerDeathSequence, 1000);
                 } else {
                     attackBtn.disabled = false;
                     escapeBtn.disabled = false;
@@ -354,13 +398,7 @@ export function openCombatUI(enemy, gameState, onResult) {
                     log.innerText += `\n背後から追撃！ 主人公は ${damageTaken} ダメージを受けた！`;
 
                     if (gameState.player.hp <= 0) {
-                        setTimeout(() => {
-                            ui.remove();
-                            showMessageDialog("【体力が尽きた……】\n意識を失い、1階のコンビニへ連れ戻された……。", () => {
-                                gameState.player.hp = gameState.player.maxHp;
-                                if (onResult) onResult("defeat");
-                            });
-                        }, 1000);
+                        setTimeout(triggerDeathSequence, 1000);
                     } else {
                         attackBtn.disabled = false;
                         escapeBtn.disabled = false;
@@ -371,7 +409,6 @@ export function openCombatUI(enemy, gameState, onResult) {
     };
 }
 
-// ★ 査問UI（弱点1つ・心理戦あやふやリアクション・嘘つき対応）
 export function openInquisitionUI(entity, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -439,7 +476,6 @@ export function openInquisitionUI(entity, gameState, onResult) {
     const protectBtn = document.getElementById("btn-protect");
     const log = document.getElementById("inq-log");
 
-    // あやふやな心理リアクション生成
     function getReactionMessage(cardNum, entity) {
         if (entity.type === "human") {
             const humanMsg = [
@@ -451,19 +487,14 @@ export function openInquisitionUI(entity, gameState, onResult) {
         } else {
             const targetWeakness = entity.weakness || 3;
             const diff = Math.abs(parseInt(cardNum) - targetWeakness);
-            
-            // 25%の確率で悪魔が「嘘（ブラフ）」をつく
             const isLying = Math.random() < 0.25;
             const effectiveDiff = isLying ? (diff === 0 ? 4 : 0) : diff;
 
             if (effectiveDiff === 0) {
-                // 完全弱点一致
                 return "「ぐぐっ……！？」\n相手の瞳が一瞬赤くうごめき、肌から不気味な煙が立ち上った！";
             } else if (effectiveDiff <= 2) {
-                // 近い
                 return "「……くっ……！」\n平然を装おうとしているが、不自然に口元を引きつらせて身体を硬直させた……。";
             } else {
-                // 遠い
                 return "「……ハッ、何ですかそれ？ 馬鹿馬鹿しい。」\n不気味なほど余裕の笑みを浮かべて、せせら笑っている。";
             }
         }
@@ -479,7 +510,6 @@ export function openInquisitionUI(entity, gameState, onResult) {
         } else if (step === 2) {
             if (!selected[1]) { alert("2枚目のカードを選択してください。"); return; }
 
-            // 正体をチラリと暴くタイミング（確率）
             if (entity.type === "demon" && entityImg && entity.realImage && Math.random() < 0.6) {
                 entityImg.src = entity.realImage;
                 applyChromaKey(entityImg);
@@ -530,7 +560,6 @@ export function openInquisitionUI(entity, gameState, onResult) {
     };
 }
 
-// ★ 2Fボス影山「悪魔陣解読パズル」（カード画像拡大 ＆ 通常戦闘画像引継ぎ）
 export function openBossPuzzleUI(gameState, onResult) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
@@ -562,7 +591,6 @@ export function openBossPuzzleUI(gameState, onResult) {
 
         <div style="color: #aaa; font-size: 0.78em; margin-bottom: 4px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
 
-        <!-- ★ カード視認性アップ：大きく見やすいグリッド表示 -->
         <div style="width: 100%; max-width: 340px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 6px;" id="boss-cards"></div>
 
         <button id="btn-fire-vox" style="margin-top: 8px; width: 100%; max-width: 320px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.05em; box-shadow: 0 0 10px red;">Vox Sacra 発射！</button>
@@ -583,7 +611,6 @@ export function openBossPuzzleUI(gameState, onResult) {
         };
     });
 
-    // ★ カード画像のサイズ・フォント表示を拡大
     const cardsDiv = document.getElementById("boss-cards");
     [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(num => {
         const cDiv = document.createElement("div");
@@ -611,7 +638,6 @@ export function openBossPuzzleUI(gameState, onResult) {
         const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
         const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
-        // ★ 通常戦闘移行時に「影山」の名前と画像を正しく引き継ぐ設定
         const kageyamaEnemy = { 
             name: "覗き魔・影山", 
             image: "assets/images/demon/demon1.png", 
