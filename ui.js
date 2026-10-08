@@ -1,4 +1,4 @@
-// ui.js - 堅牢動画再生 ＆ 戦闘敗北時1.5秒待機 完全版
+// ui.js - 査問画像ネタバレ防止 ＆ 戦闘敗北時1.5秒待機 完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -118,7 +118,6 @@ export function playFloorTransition(targetFloor, onComplete) {
     }, 1500);
 }
 
-// ★ 全画面動画プレイヤー（コンビニ・血の池と完全に同一処理・自動再生保証）
 export function playVideo(src, onEnded) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.98); z-index: 3500; display: flex; justify-content: center; align-items: center; padding: 0; box-sizing: border-box;";
@@ -129,7 +128,7 @@ export function playVideo(src, onEnded) {
     video.controls = false; 
     video.autoplay = true; 
     video.playsInline = true; 
-    video.muted = true; // ★ 必須（ブラウザの自動再生ブロック回避）
+    video.muted = true; 
 
     overlay.appendChild(video);
     document.body.appendChild(overlay);
@@ -144,7 +143,7 @@ export function playVideo(src, onEnded) {
     };
 
     video.onended = finish;
-    overlay.onclick = finish; // タップでスキップ
+    overlay.onclick = finish; 
 
     const playPromise = video.play();
     if (playPromise !== undefined) {
@@ -299,7 +298,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const attackBtn = document.getElementById("btn-attack");
     const escapeBtn = document.getElementById("btn-escape");
 
-    // ★ 敗北時、画面を1.5秒間静止させて確実に確認させてから復帰
     const triggerDeathSequence = () => {
         attackBtn.disabled = true;
         escapeBtn.disabled = true;
@@ -316,7 +314,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             showMessageDialog(respawnMsg, () => {
                 if (onResult) onResult("defeat");
             });
-        }, 1500); // 1.5秒静止
+        }, 1500); 
     };
 
     attackBtn.onclick = () => {
@@ -429,6 +427,7 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
     
+    // ★ 査問中は保護/撃つを選ぶまで絶対に画像を変えない
     let visualHTML = `<img id="inq-entity-img" src="${entity.faceImage || entity.image}" style="max-height: 180px; border-radius: 8px;" onerror="this.style.display='none'">`;
 
     ui.innerHTML = `
@@ -526,11 +525,7 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         } else if (step === 2) {
             if (!selected[1]) { alert("2枚目のカードを選択してください。"); return; }
 
-            if (entity.type === "demon" && entityImg && entity.realImage && Math.random() < 0.6) {
-                entityImg.src = entity.realImage;
-                applyChromaKey(entityImg);
-            }
-
+            // ★ ネタバレ防止：2枚目を提示しても画像は変更せずセリフのみ反応させる
             log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[1], entity);
 
             step = 3;

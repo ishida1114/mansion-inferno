@@ -1,18 +1,17 @@
-// maps/map2F.js - 初期位置南向き・動画強制再生・通路退避完全修正版
+// maps/map2F.js - 査問敗北フリーズ防止＆動画強制再生・通路退避完全修正版
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI 
 } from '../ui.js';
 
-// ★ 【階段誤発火防止】2階に上がった瞬間「階段に背を向けた南向き(dir:2)」でスタート
 export const playerStart2F = { x: 1, y: 1, dir: 2 };
 
 export const map2F = [
-    [1, 4, 1, 1, 1, 1, 1, 1, 1], // (1,0)=階段
+    [1, 4, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
     [1, 0, 1, 0, 2, 0, 1, 0, 1], 
     [1, 0, 1, 0, 0, 0, 1, 0, 1],
-    [1, 3, 1, 1, 1, 0, 1, 8, 1], // (5,4)=通路, (7,4)=影山
+    [1, 3, 1, 1, 1, 0, 1, 8, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
@@ -120,10 +119,11 @@ export function handleEvent2F(targetCell, gameState, context) {
 
                 if (context && context.openInquisitionUI) {
                     context.openInquisitionUI(entity, gameState, (result) => {
+                        // ★ 査問の全ルート（勝利、人間誤射、保護、敗北）で確実に onComplete を呼びロックを解除する
                         if (result === "combat_win" || result === "finish" || result === "kill_human") {
                             gameState.clearedRooms[roomKey] = true;
                         }
-                        onComplete();
+                        onComplete(); 
                     }, context);
                 } else {
                     onComplete();
@@ -132,7 +132,6 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // 8: ボス影山の部屋
     if (targetCell === 8) {
         return {
             run: (onComplete) => {
@@ -141,9 +140,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // ★ 1. 全画面で必ず動画再生
                 playVideo("assets/videos/2f-kageyama.mp4", () => {
-                    // ★ 2. 終わったら静止画ダイアログ
                     showConversationDialog(
                         "assets/images/demon/2f-kageyama2.jpg", 
                         "【覗き魔・影山】\n「中学生の父親？？さぁな、男には興味がなくてねぇ、邪魔するなら、お前のトラウマを覗いて闇の檻に閉じ込めるぞ」", 
@@ -154,7 +151,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                                 const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
                                 const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
-                                // ★ HP120 完全固定
                                 const kageyamaEnemy = { 
                                     name: "覗き魔・影山", 
                                     image: "assets/images/demon/2f-kageyama2.jpg", 
@@ -168,7 +164,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                                         const pLevel = gameState.player.level;
 
                                         if (pLevel >= 5) {
-                                            // 残りHP 12/120 で戦闘突入
                                             kageyamaEnemy.name = "覗き魔・影山 (瀕死)";
                                             kageyamaEnemy.hp = Math.max(12, Math.floor(120 * 0.1));
                                             
@@ -221,12 +216,11 @@ export function handleEvent2F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ 【イベント再発火防止】手前の通路「(5, 4)」へ退避させる
 function handleKageyamaWin(gameState, onComplete) {
     gameState.flags.cleared2F = true;
     gameState.hasElevatorKey = true;
-    
-    // 退避座標 (5, 4)、向きは東(1)
+    gameState.saveGame();
+
     gameState.player.x = 5;
     gameState.player.y = 4;
     gameState.player.dir = 1;
