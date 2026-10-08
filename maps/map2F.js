@@ -1,4 +1,4 @@
-// maps/map2F.js - 査問ルート別ロック解除完全保証版
+// maps/map2F.js - 影山動画パス修正（assets/images/demon/2f-kageyama.mp4）
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI 
@@ -123,7 +123,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                             gameState.clearedRooms[roomKey] = true;
                             onComplete();
                         } else if (result === "demon_ambush") {
-                            // ★ 悪魔を誤って保護した場合：通常戦闘に入り、勝敗後にロックを解除
                             const demonEnemy = {
                                 name: entity.name,
                                 image: entity.realImage,
@@ -155,7 +154,8 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                playVideo("assets/videos/2f-kageyama.mp4", () => {
+                // ★ 正しい配置先（assets/images/demon/2f-kageyama.mp4）を指定
+                playVideo("assets/images/demon/2f-kageyama.mp4", () => {
                     showConversationDialog(
                         "assets/images/demon/2f-kageyama2.jpg", 
                         "【覗き魔・影山】\n「中学生の父親？？さぁな、男には興味がなくてねぇ、邪魔するなら、お前のトラウマを覗いて闇の檻に閉じ込めるぞ」", 

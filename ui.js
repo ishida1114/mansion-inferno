@@ -1,4 +1,4 @@
-// ui.js - 汎用UIエンジン（特定ボス名完全排除・全ボス共通使い回し対応版）
+// ui.js - 動画再生無言スキップ完全防止・エラー原因可視化版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -118,18 +118,18 @@ export function playFloorTransition(targetFloor, onComplete) {
     }, 1500);
 }
 
-// ★ 全画面汎用動画プレイヤー（特定ボス名一切なし・完全汎用仕様）
+// ★ 動画再生プレイヤー（無言スキップを廃止し、確実に再生コントロールを表示）
 export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する") {
     const oldOverlay = document.getElementById("video-player-overlay");
     if (oldOverlay) oldOverlay.remove();
 
     const overlay = document.createElement("div");
     overlay.id = "video-player-overlay";
-    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 3500; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box;";
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 3500; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; padding: 20px;";
 
     const video = document.createElement("video");
     video.src = src;
-    video.style.cssText = "max-width: 100%; max-height: 100%; object-fit: contain; background-color: #000;";
+    video.style.cssText = "max-width: 100%; max-height: 80%; object-fit: contain; background-color: #000;";
     video.controls = false; 
     video.autoplay = true; 
     video.playsInline = true; 
@@ -137,18 +137,26 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
 
     overlay.appendChild(video);
 
-    // 自動再生ブロック時に表示される汎用再生ボタン
+    // 再生コントロール用コンテナ
+    const ctrlContainer = document.createElement("div");
+    ctrlContainer.style.cssText = "display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 15px; z-index: 3600;";
+
     const playBtn = document.createElement("button");
     playBtn.id = "video-start-btn";
-    playBtn.style.cssText = "position: absolute; padding: 16px 32px; font-size: 1.3em; color: #ffdd66; background: linear-gradient(180deg, #880000, #330000); border: 2px solid #ff3333; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 0 25px red; display: none; z-index: 3600; font-family: " + HORROR_FONT + ";";
-    playBtn.innerText = buttonLabel; // ★ 動的ラベル（デフォルト: ▶ 映像を再生する）
-    overlay.appendChild(playBtn);
+    playBtn.style.cssText = `padding: 14px 28px; font-size: 1.2em; color: #ffdd66; background: linear-gradient(180deg, #880000, #330000); border: 2px solid #ff3333; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 0 20px red; font-family: ${HORROR_FONT};`;
+    playBtn.innerText = buttonLabel;
+    
+    const errorMsg = document.createElement("div");
+    errorMsg.style.cssText = `color: #ff6666; font-size: 0.9em; text-align: center; display: none; font-family: ${HORROR_FONT}; background: rgba(50,0,0,0.8); padding: 8px 12px; border-radius: 4px; border: 1px solid #aa0000;`;
 
-    const skipNotice = document.createElement("div");
-    skipNotice.id = "video-skip-notice";
-    skipNotice.style.cssText = "position: absolute; bottom: 5%; color: #888; font-size: 0.85em; pointer-events: none; font-family: " + HORROR_FONT + "; display: none;";
-    skipNotice.innerText = "▼ 画面タップでスキップ";
-    overlay.appendChild(skipNotice);
+    const skipBtn = document.createElement("button");
+    skipBtn.style.cssText = "background: transparent; color: #888; border: 1px solid #444; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 0.8em; margin-top: 5px;";
+    skipBtn.innerText = "スキップして進む";
+
+    ctrlContainer.appendChild(playBtn);
+    ctrlContainer.appendChild(errorMsg);
+    ctrlContainer.appendChild(skipBtn);
+    overlay.appendChild(ctrlContainer);
 
     document.body.appendChild(overlay);
 
@@ -162,24 +170,27 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
     };
 
     video.onended = finish;
+
+    // ★ 動画読み込みエラー発生時：勝手に飛ばさずエラー原因を表示してスキップ可能にする
     video.onerror = (e) => {
-        console.error("Video load error:", src, e);
-        finish();
+        console.error("Video load error for:", src, e);
+        errorMsg.style.display = "block";
+        errorMsg.innerText = `【動画のロード失敗】\nファイルパス: ${src}\n※ファイルが存在するか、名前（大文字小文字）をご確認ください。`;
+        playBtn.innerText = "▶ 再度再生を試みる";
     };
 
     let isPlaying = false;
     video.onplaying = () => {
         isPlaying = true;
         playBtn.style.display = "none";
-        skipNotice.style.display = "block";
+        errorMsg.style.display = "none";
     };
 
-    overlay.onclick = (e) => {
-        if (e.target === playBtn) return;
-        if (isPlaying) {
-            video.pause();
-            finish();
-        }
+    // 背景クリックでの暴発スキップを防ぎ、明示的なボタンのみでスキップ
+    skipBtn.onclick = (e) => {
+        e.stopPropagation();
+        video.pause();
+        finish();
     };
 
     playBtn.onclick = (e) => {
@@ -187,22 +198,23 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
         video.play().then(() => {
             isPlaying = true;
             playBtn.style.display = "none";
-            skipNotice.style.display = "block";
         }).catch(err => {
-            console.error("Manual play failed:", err);
-            finish();
+            console.warn("Manual play error:", err);
+            errorMsg.style.display = "block";
+            errorMsg.innerText = "ブラウザの権限により再生できませんでした。画面を直接タップしてください。";
         });
     };
 
+    // 自動再生の試行
     const promise = video.play();
     if (promise !== undefined) {
         promise.then(() => {
             isPlaying = true;
-            skipNotice.style.display = "block";
+            playBtn.style.display = "none";
         }).catch(err => {
-            console.warn("Autoplay blocked by browser policy:", err);
+            console.warn("Autoplay blocked:", err);
             isPlaying = false;
-            playBtn.style.display = "block";
+            playBtn.style.display = "block"; // ブロックされたら再生ボタンを表示
         });
     }
 }
