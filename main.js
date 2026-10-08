@@ -1,4 +1,4 @@
-// main.js - 3Dレンダラー統合＆ダイアログ貫通ガード完全版
+// main.js - 3Dレンダラー統合＆査問引数ミスマッチ解消完全版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -12,7 +12,6 @@ let renderer;
 let isRunning = false;
 let isProcessingEvent = false;
 
-// ★ ダイアログを閉じた直後400msはマップの移動・調査行動を完全にガード！
 function isActionBlocked() {
     if (window.lastDialogCloseTime && (Date.now() - window.lastDialogCloseTime < 400)) {
         return true; 
@@ -130,6 +129,7 @@ function interactFrontCell() {
   const cellType = map[frontY][frontX];
   if (!cellType || cellType === 0 || cellType === 1) return;
 
+  // ★ openInquisitionUI に渡す引数を正確に転送するように修正
   const context = {
     changeFloor: (floor) => { changeFloor(floor); },
     redraw: () => redraw(),
@@ -139,10 +139,11 @@ function interactFrontCell() {
       const container = document.getElementById('app-ui-container');
       if (container) container.classList.remove('hidden');
     },
-    openInquisitionUI: (entity, cb) => {
+    openInquisitionUI: (entity, gState, cb, ctxObj) => {
+      const callbackFunc = typeof gState === 'function' ? gState : cb;
       openInquisitionUI(entity, gameState, (result) => {
-        if (cb) cb(result);
-      }, { changeFloor });
+        if (typeof callbackFunc === 'function') callbackFunc(result);
+      }, ctxObj || context);
     }
   };
 

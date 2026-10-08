@@ -1,4 +1,4 @@
-// ui.js - 査問画像ネタバレ防止 ＆ 戦闘敗北時1.5秒待機 完全版
+// ui.js - 査問顔変化ネタバレ除去＆ダイアログ制御完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -427,7 +427,7 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
     
-    // ★ 査問中は保護/撃つを選ぶまで絶対に画像を変えない
+    // ★ 顔写真は決定するまで変更しない
     let visualHTML = `<img id="inq-entity-img" src="${entity.faceImage || entity.image}" style="max-height: 180px; border-radius: 8px;" onerror="this.style.display='none'">`;
 
     ui.innerHTML = `
@@ -525,7 +525,6 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         } else if (step === 2) {
             if (!selected[1]) { alert("2枚目のカードを選択してください。"); return; }
 
-            // ★ ネタバレ防止：2枚目を提示しても画像は変更せずセリフのみ反応させる
             log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[1], entity);
 
             step = 3;

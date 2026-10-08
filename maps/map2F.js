@@ -1,4 +1,4 @@
-// maps/map2F.js - 査問敗北フリーズ防止＆動画強制再生・通路退避完全修正版
+// maps/map2F.js - 査問ルート別ロック解除完全保証版
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI 
@@ -119,11 +119,26 @@ export function handleEvent2F(targetCell, gameState, context) {
 
                 if (context && context.openInquisitionUI) {
                     context.openInquisitionUI(entity, gameState, (result) => {
-                        // ★ 査問の全ルート（勝利、人間誤射、保護、敗北）で確実に onComplete を呼びロックを解除する
                         if (result === "combat_win" || result === "finish" || result === "kill_human") {
                             gameState.clearedRooms[roomKey] = true;
+                            onComplete();
+                        } else if (result === "demon_ambush") {
+                            // ★ 悪魔を誤って保護した場合：通常戦闘に入り、勝敗後にロックを解除
+                            const demonEnemy = {
+                                name: entity.name,
+                                image: entity.realImage,
+                                hp: 30,
+                                atk: 10,
+                                def: 1,
+                                weakness: [entity.weakness]
+                            };
+                            openCombatUI(demonEnemy, gameState, (res) => {
+                                if (res === "win") gameState.clearedRooms[roomKey] = true;
+                                onComplete();
+                            }, context);
+                        } else {
+                            onComplete();
                         }
-                        onComplete(); 
                     }, context);
                 } else {
                     onComplete();
