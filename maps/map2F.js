@@ -1,4 +1,4 @@
-// maps/map2F.js - 2Fボス（影山）固有の解読判定・演出・レベル別ダメージ計算・一元管理完全版
+// maps/map2F.js - 全画面動画演出・撃破時一歩退避・影山HP120設定完全版
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI 
@@ -16,7 +16,6 @@ export const map2F = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
-// ★ 影山固有のパズル画面UI表示設定
 const kageyamaPuzzleConfig = {
     title: "【フロアボス戦】覗き魔・影山",
     subTitle: "陣の4マスをタップし、下の特大カードを選べ！（※重複使用不可）",
@@ -141,25 +140,25 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // ★ 1. カットイン動画(2f-kageyama.mp4)再生
+                // ★ 1. 部屋に入った瞬間に全画面で 2f-kageyama.mp4 動画を再生！
                 playVideo("assets/videos/2f-kageyama.mp4", () => {
-                    // ★ 2. 画像(2f-kageyama2.jpg)で決めセリフ会話ウィンドウ表示
+                    // ★ 2. 動画終了後に決めセリフを表示(2f-kageyama2.jpg)
                     showConversationDialog(
                         "assets/images/demon/2f-kageyama2.jpg", 
                         "【覗き魔・影山】\n「中学生の父親？？さぁな、男には興味がなくてねぇ、邪魔するなら、お前のトラウマを覗いて闇の檻に閉じ込めるぞ」", 
                         () => {
-                            // ★ 3. 汎用パズルUIを呼び出し、選択データ (slots) を受け取って影山固有の全判定を実行！
+                            // ★ 3. パズル画面発火
                             openBossPuzzleUI(kageyamaPuzzleConfig, gameState, (slots) => {
-                                // 影山固有の正解判定チェック
-                                const isFaceCorrect = slots.slot1 === 2; // 顔＝2(鏡)
-                                const isFootCorrect = slots.slot4 === 3; // 足元＝3(塩)
-                                const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1); // 左右＝1と4
+                                const isFaceCorrect = slots.slot1 === 2;
+                                const isFootCorrect = slots.slot4 === 3;
+                                const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
                                 const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
+                                // ★ 影山の基本HPを 120 に設定！
                                 const kageyamaEnemy = { 
                                     name: "覗き魔・影山", 
                                     image: "assets/images/demon/2f-kageyama2.jpg", 
-                                    hp: 60, 
+                                    hp: 120, 
                                     atk: 12, 
                                     def: 2 
                                 };
@@ -169,9 +168,9 @@ export function handleEvent2F(targetCell, gameState, context) {
                                         const pLevel = gameState.player.level;
 
                                         if (pLevel >= 5) {
-                                            // ★ Lv.5以上＋完全正解：90%ダメージ（残りHP 1割: 6/60）でトドメの戦闘！
+                                            // ★ Lv.5以上＋正解：90%ダメージ（残りHP 1割: 12/120）でトドメの戦闘へ！
                                             kageyamaEnemy.name = "覗き魔・影山 (瀕死)";
-                                            kageyamaEnemy.hp = Math.max(6, Math.floor(60 * 0.1));
+                                            kageyamaEnemy.hp = Math.max(12, Math.floor(120 * 0.1));
                                             
                                             showMessageDialog("【完全解読成功！】\n魔方陣が完全共鳴を起こした！\n聖なる光が影山を打ち砕き、壊滅的ダメージ（90%）を与えた！\n瀕死の影山にトドメを刺すため通常戦闘に入る！", () => {
                                                 openCombatUI(kageyamaEnemy, gameState, (res) => {
@@ -180,9 +179,9 @@ export function handleEvent2F(targetCell, gameState, context) {
                                                 }, context);
                                             });
                                         } else if (pLevel === 4) {
-                                            // ★ Lv.4＋完全正解：80%ダメージ（残りHP 2割: 12/60）
+                                            // ★ Lv.4＋正解：80%ダメージ（残りHP 2割: 24/120）
                                             kageyamaEnemy.name = "覗き魔・影山 (重傷)";
-                                            kageyamaEnemy.hp = Math.floor(60 * 0.2);
+                                            kageyamaEnemy.hp = Math.floor(120 * 0.2);
 
                                             showMessageDialog("【完全解読成功！】\n魔方陣が作動！ 影山に大ダメージ（80%）を与えた！\n手負いの影山との戦闘に入る！", () => {
                                                 openCombatUI(kageyamaEnemy, gameState, (res) => {
@@ -191,8 +190,8 @@ export function handleEvent2F(targetCell, gameState, context) {
                                                 }, context);
                                             });
                                         } else {
-                                            // ★ Lv.3以下＋完全正解：50%ダメージ（残りHP 5割: 30/60）
-                                            kageyamaEnemy.hp = Math.floor(60 * 0.5);
+                                            // ★ Lv.3以下＋正解：50%ダメージ（残りHP 5割: 60/120）
+                                            kageyamaEnemy.hp = Math.floor(120 * 0.5);
 
                                             showMessageDialog("【完全解読成功！】\n魔方陣が作動！ しかし主人公の霊力が足りず仕留めきれない！\n影山に50%ダメージを与え、通常戦闘へ移行！", () => {
                                                 openCombatUI(kageyamaEnemy, gameState, (res) => {
@@ -203,9 +202,8 @@ export function handleEvent2F(targetCell, gameState, context) {
                                         }
                                     });
                                 } else {
-                                    // 解読不完全/失敗時の計算
                                     let matchCount = (isFaceCorrect ? 1 : 0) + (isFootCorrect ? 1 : 0) + (isArmsCorrect ? 2 : 0);
-                                    kageyamaEnemy.hp = Math.max(30, 120 - (matchCount * 22));
+                                    kageyamaEnemy.hp = Math.max(60, 120 - (matchCount * 15));
 
                                     showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: ${matchCount}/4）\n影山が怒り狂って襲いかかってきた！`, () => {
                                         openCombatUI(kageyamaEnemy, gameState, (res) => {
@@ -225,11 +223,15 @@ export function handleEvent2F(targetCell, gameState, context) {
     return null;
 }
 
-// 影山撃破時の共通勝利処理
+// 影山撃破時の処理（フラグ設定＆プレイヤー位置を通路へ一歩退避させて再発火防止）
 function handleKageyamaWin(gameState, onComplete) {
     gameState.flags.cleared2F = true;
     gameState.hasElevatorKey = true;
     
+    // ★ 撃破後にボス部屋(セル8)から手前の通路へ自動退避
+    gameState.player.x = 7;
+    gameState.player.y = 4;
+
     showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァッ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
         gameState.player.money += 500;
         gameState.gainExp(200);

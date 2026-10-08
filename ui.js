@@ -1,8 +1,9 @@
-// ui.js - 汎用UIエンジン（ボス固有ロジック完全排除・入力データ返却専用版）
+// ui.js - キー連打ガード・HP0保持表示・汎用UIエンジン完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
+let lastDialogCloseTime = 0; // キー連打誤発火防止用タイムスタンプ
 
 export function applyChromaKey(element) {
     if (!element) return;
@@ -21,39 +22,29 @@ export function showMessageDialog(text, onClosed) {
             window.removeEventListener("keydown", closeHandler); 
             msgDiv.onclick = null; 
             msgDiv.remove(); 
+            lastDialogCloseTime = Date.now(); // 閉じた時間を記録してキー連打ガード
             if (onClosed) onClosed();
         }
     };
-    setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
+    setTimeout(() => { msgDiv.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 200);
 }
 
 export function showConversationDialog(imageSrc, text, onClosed) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; bottom: 3%; left: 5%; width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; z-index: 2000; box-sizing: border-box;";
     
-    const isVideo = imageSrc && imageSrc.endsWith(".mp4");
-    const mediaEl = isVideo ? document.createElement("video") : document.createElement("img");
-    
-    mediaEl.style.cssText = "max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start; object-fit: contain;";
-    
-    if (isVideo) {
-        mediaEl.src = imageSrc;
-        mediaEl.autoplay = true;
-        mediaEl.loop = true;
-        mediaEl.muted = true;
-        mediaEl.playsInline = true;
-    } else {
-        mediaEl.onerror = () => mediaEl.style.display = 'none';
-        mediaEl.src = imageSrc;
-    }
-    applyChromaKey(mediaEl);
+    const imgDiv = document.createElement("img");
+    imgDiv.style.cssText = "max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start; object-fit: contain;";
+    imgDiv.onerror = () => imgDiv.style.display = 'none';
+    imgDiv.src = imageSrc;
+    applyChromaKey(imgDiv);
 
     const msgDiv = document.createElement("div");
     msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
     msgDiv.innerText = text;
     msgDiv.innerHTML += `<div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE ] で閉じる</div>`;
 
-    overlay.appendChild(mediaEl); 
+    overlay.appendChild(imgDiv); 
     overlay.appendChild(msgDiv); 
     document.body.appendChild(overlay);
 
@@ -62,10 +53,11 @@ export function showConversationDialog(imageSrc, text, onClosed) {
             window.removeEventListener("keydown", closeHandler); 
             overlay.onclick = null; 
             overlay.remove(); 
+            lastDialogCloseTime = Date.now();
             if (onClosed) onClosed();
         }
     };
-    setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
+    setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 200);
 }
 
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
@@ -76,7 +68,6 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     imgEl.id = "modal-item-img";
     imgEl.style.cssText = "max-height: 180px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;";
     imgEl.onerror = () => { imgEl.style.display = 'none'; };
-    
     imgEl.src = imagePath;
     applyChromaKey(imgEl);
 
@@ -94,10 +85,11 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
             window.removeEventListener("keydown", closeHandler); 
             modal.onclick = null; 
             modal.remove(); 
+            lastDialogCloseTime = Date.now();
             if (onClosed) onClosed();
         }
     };
-    setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
+    setTimeout(() => { modal.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 200);
 }
 
 export function playFloorTransition(targetFloor, onComplete) {
@@ -135,6 +127,7 @@ export function playVideo(src, onEnded) {
 
     const finish = () => {
         if (overlay.parentNode) overlay.remove();
+        lastDialogCloseTime = Date.now();
         if (onEnded) onEnded();
     };
 
@@ -246,9 +239,10 @@ export function openShopUI(onClosed) {
             }
         };
     });
-    document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
+    document.getElementById("closeBtn").onclick = () => { lastDialogCloseTime = Date.now(); shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
+// ★ 戦闘UI（HP0表示を1.5秒保持してから復帰処理へ移るよう改修）
 export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -288,20 +282,29 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const attackBtn = document.getElementById("btn-attack");
     const escapeBtn = document.getElementById("btn-escape");
 
+    // ★ HP0画面を1.5秒間保持してから復帰画面へ
     const triggerDeathSequence = () => {
-        ui.remove();
-        const respawnMsg = gameState.handlePlayerDeath();
-        
-        if (context && context.changeFloor) {
-            context.changeFloor(1);
-        }
-        
-        showMessageDialog(respawnMsg, () => {
-            if (onResult) onResult("defeat");
-        });
+        attackBtn.disabled = true;
+        escapeBtn.disabled = true;
+        playerHpText.innerText = `主人公HP: 0 / ${gameState.player.maxHp}`;
+        playerHpText.style.color = "#ff0000";
+        log.innerText += "\n\n主人公は力尽きて倒れた……！";
+
+        setTimeout(() => {
+            ui.remove();
+            const respawnMsg = gameState.handlePlayerDeath();
+            if (context && context.changeFloor) {
+                context.changeFloor(1);
+            }
+            showMessageDialog(respawnMsg, () => {
+                if (onResult) onResult("defeat");
+            });
+        }, 1500);
     };
 
     attackBtn.onclick = () => {
+        if (Date.now() - lastDialogCloseTime < 300) return; // ガード
+
         const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
         const equippedCards = gameState.equippedCards || [];
 
@@ -348,27 +351,31 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 const dodgeChance = (gameState.player.agi || 5) * 0.04;
                 if (Math.random() < dodgeChance) {
                     log.innerText += `\n素早い身こなし！ 悪魔の攻撃を回避した！`;
+                    attackBtn.disabled = false;
+                    escapeBtn.disabled = false;
                 } else {
                     const baseEnemyAtk = enemyAtk - (gameState.player.def || 0);
                     const enemyRand = 0.85 + Math.random() * 0.3;
                     const damageTaken = Math.max(1, Math.floor(baseEnemyAtk * enemyRand));
 
                     gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
-                    playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
-                    log.innerText += `\n悪魔の反撃！ 主人公は ${damageTaken} ダメージを受けた！`;
-                }
 
-                if (gameState.player.hp <= 0) {
-                    setTimeout(triggerDeathSequence, 1000);
-                } else {
-                    attackBtn.disabled = false;
-                    escapeBtn.disabled = false;
+                    if (gameState.player.hp <= 0) {
+                        triggerDeathSequence();
+                    } else {
+                        playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
+                        log.innerText += `\n悪魔の反撃！ 主人公は ${damageTaken} ダメージを受けた！`;
+                        attackBtn.disabled = false;
+                        escapeBtn.disabled = false;
+                    }
                 }
             }, 1000);
         }, 800);
     };
 
     escapeBtn.onclick = () => {
+        if (Date.now() - lastDialogCloseTime < 300) return;
+
         attackBtn.disabled = true;
         escapeBtn.disabled = true;
         log.innerText = "必死に背を向けて走り出した……！";
@@ -386,12 +393,12 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 setTimeout(() => {
                     const damageTaken = Math.max(1, Math.floor((enemyAtk - (gameState.player.def || 0)) * 1.2));
                     gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
-                    playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
-                    log.innerText += `\n背後から追撃！ 主人公は ${damageTaken} ダメージを受けた！`;
 
                     if (gameState.player.hp <= 0) {
-                        setTimeout(triggerDeathSequence, 1000);
+                        triggerDeathSequence();
                     } else {
+                        playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
+                        log.innerText += `\n背後から追撃！ 主人公は ${damageTaken} ダメージを受けた！`;
                         attackBtn.disabled = false;
                         escapeBtn.disabled = false;
                     }
@@ -568,7 +575,6 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     };
 }
 
-// ★ 完全汎用ボスUIコンポーネント（判定・演出・計算一切なし。純粋に入力 slots を返却するのみ）
 export function openBossPuzzleUI(puzzleConfig, gameState, onSubmit) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
@@ -653,7 +659,6 @@ export function openBossPuzzleUI(puzzleConfig, gameState, onSubmit) {
         }
 
         ui.remove();
-        // ★ 判定・演出・レベルチェックを行わず、配置データ slots をそのままコールバックへ返却！
         if (onSubmit) onSubmit(slots);
     };
 }
