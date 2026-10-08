@@ -1,4 +1,4 @@
-// maps/map1F.js - 1階マップデータ（エレベーターセル7追加＆移動手段記録対応）
+// maps/map1F.js - 1階マップデータ（エレベーターをエントランス横へ配置）
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -7,19 +7,18 @@ import {
 
 export const playerStart1F = { x: 7, y: 1, dir: 0 };
 
-// 1: 壁 / 0: 通路 / 2: コンビニ / 3: 血の池 / 4: 2F非常階段扉 / 5: 集合ポスト / 6: エントランス / 7: エレベーター
+// 1: 壁 / 0: 通路 / 2: コンビニ / 3: 血の池 / 4: 非常階段 / 5: 集合ポスト / 6: エントランス / 7: エレベーター
 export const map1F = [
     [1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1], 
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // (11, 1) エレベーター(7)
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
     [1, 0, 1, 2, 1, 0, 1, 3, 1, 0, 1, 5, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
-    [1, 0, 1, 1, 1, 0, 1, 7, 1, 0, 1, 1, 1, 0, 1], 
+    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-    [1, 1, 1, 1, 1, 1, 1, 6, 1, 1, 1, 1, 1, 1, 1]  
+    [1, 1, 1, 1, 1, 1, 7, 6, 1, 1, 1, 1, 1, 1, 1]  // ★ (6, 6) にエレベーター(7)を配置
 ];
 
 export function handleEvent1F(targetCell, gameState, context) {
-    // 4: 非常階段（2F扉）
     if (targetCell === 4) {
         if (!gameState.hasKey2F) {
             return { 
@@ -28,7 +27,6 @@ export function handleEvent1F(targetCell, gameState, context) {
         } else {
             return { 
                 run: (onComplete) => {
-                    // ★ 移動手段を記録
                     gameState.lastTransitMethod = 'stair';
                     playFloorTransition(2, () => {
                         context.changeFloor(2);
@@ -39,7 +37,7 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // ★ 7: エレベーター（3Fショートカット）
+    // 7: エレベーター（エントランス横）
     if (targetCell === 7) {
         if (!gameState.flags.cleared2F || !gameState.hasElevatorKey) {
             return {
@@ -48,7 +46,6 @@ export function handleEvent1F(targetCell, gameState, context) {
         } else {
             return {
                 run: (onComplete) => {
-                    // ★ 移動手段を記録
                     gameState.lastTransitMethod = 'elevator';
                     playFloorTransition(3, () => {
                         context.changeFloor(3);

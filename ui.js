@@ -1,39 +1,13 @@
-// ui.js - ショップSin浄化＆死亡リスポーン処理統合版
+// ui.js - SVGクロマキー適用＆ボス特大カード＆ボス影山データ固定版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
+// ★ ブラウザCORS制限を100%回避するSVGカラーマトリックス透過関数
 export function applyChromaKey(imgElement) {
     if (!imgElement) return;
-
-    const process = () => {
-        if (!imgElement.naturalWidth || imgElement.naturalWidth === 0) return;
-        try {
-            const canvas = document.createElement("canvas");
-            canvas.width = imgElement.naturalWidth; 
-            canvas.height = imgElement.naturalHeight;
-            const cctx = canvas.getContext("2d"); 
-            cctx.drawImage(imgElement, 0, 0);
-            const imgData = cctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imgData.data;
-            
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i], g = data[i + 1], b = data[i + 2];
-                if (g > 45 && g > r * 1.05 && g > b * 1.05) {
-                    data[i + 3] = 0;
-                }
-            }
-            cctx.putImageData(imgData, 0, 0);
-            imgElement.src = canvas.toDataURL();
-        } catch(e) {}
-    };
-
-    if (imgElement.complete && imgElement.naturalWidth > 0) {
-        process();
-    } else {
-        imgElement.onload = process;
-    }
+    imgElement.style.filter = "url(#chroma-green-filter)";
 }
 
 export function showMessageDialog(text, onClosed) {
@@ -84,6 +58,7 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
+// ★ アイテム獲得モーダル（SVGフィルターで100%緑背景透過）
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
     modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.90); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
@@ -94,7 +69,7 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     imgEl.onerror = () => { imgEl.style.display = 'none'; };
     
     imgEl.src = imagePath;
-    document.body.appendChild(modal);
+    applyChromaKey(imgEl);
 
     modal.innerHTML = `<div style="color: #ff3333; font-size: 1.5em; margin-bottom: 12px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
     modal.appendChild(imgEl);
@@ -103,8 +78,7 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
         <div style="color: #cccccc; font-size: 0.95em; margin-bottom: 20px; text-align: center; white-space: pre-wrap; line-height: 1.5;">${detailText}</div>
         <div style="color: #888; font-size: 0.8em;">タップ または [ SPACE ] で閉じる</div>
     `;
-
-    applyChromaKey(imgEl);
+    document.body.appendChild(modal);
 
     const closeHandler = (e) => {
         if (e.type === "click" || e.key === " " || e.key === "Enter") {
@@ -136,6 +110,7 @@ export function playFloorTransition(targetFloor, onComplete) {
     }, 1500);
 }
 
+// ★ 動画再生（魔法陣・影山動画の緑背景も自動フィルター補正）
 export function playVideo(src, onEnded) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
@@ -144,6 +119,8 @@ export function playVideo(src, onEnded) {
     video.src = src;
     video.style.cssText = "width: 100%; max-width: 540px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.5); background-color: black;";
     video.controls = false; video.autoplay = true; video.playsInline = true; video.muted = true;
+    
+    applyChromaKey(video);
 
     overlay.appendChild(video);
     document.body.appendChild(overlay);
@@ -159,7 +136,6 @@ export function playVideo(src, onEnded) {
     video.play().catch(err => finish());
 }
 
-// ★ ショップUI（Sin闇金累進浄化機能の追加）
 export function openShopUI(onClosed) {
     const shopDiv = document.createElement("div");
     shopDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2800; overflow: hidden; font-family: ${HORROR_FONT}; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;`; 
@@ -167,6 +143,7 @@ export function openShopUI(onClosed) {
     const updateShopHeader = () => {
         document.getElementById("shop-money").innerText = gameState.player.money;
         document.getElementById("shop-sin").innerText = gameState.player.sin;
+        document.getElementById("purify-cost-text").innerText = `現在コスト: 💰 ${gameState.getPurifyCost()}`;
     };
 
     shopDiv.innerHTML = `
@@ -181,10 +158,10 @@ export function openShopUI(onClosed) {
                 </div>
             </div>
 
-            <!-- ★ Sin罪の浄化エリア（闇金累進計算） -->
+            <!-- ★ Sin罪の浄化エリア（1Sin=2💰） -->
             <div id="sin-purify-bar" style="background: rgba(40,0,0,0.9); padding: 10px 15px; border-bottom: 1px solid #660000; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <div style="color: #ffaaaa; font-weight: bold; font-size: 0.9em;">【罪(Sin)の浄化・闇金返済】</div>
+                    <div style="color: #ffaaaa; font-weight: bold; font-size: 0.9em;">【罪(Sin)の浄化】</div>
                     <div id="purify-cost-text" style="color: #aaa; font-size: 0.78em;">現在コスト: 💰 ${gameState.getPurifyCost()}</div>
                 </div>
                 <button id="btn-purify-sin" style="background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 1px solid #ff3333; padding: 6px 12px; font-family: inherit; cursor: pointer; border-radius: 4px; font-size: 0.85em; font-weight: bold;">
@@ -198,7 +175,6 @@ export function openShopUI(onClosed) {
     `;
     document.body.appendChild(shopDiv);
 
-    // Sin浄化ボタン処理
     const purifyBtn = document.getElementById("btn-purify-sin");
     purifyBtn.onclick = () => {
         if (gameState.player.sin <= 0) {
@@ -212,9 +188,8 @@ export function openShopUI(onClosed) {
         }
 
         if (gameState.purifySin()) {
-            alert("悪魔の無人レジで利息を含めた罪(Sin)を清算しました。");
+            alert("悪魔の無人レジで罪(Sin)を清算しました。");
             updateShopHeader();
-            document.getElementById("purify-cost-text").innerText = `現在コスト: 💰 0`;
         }
     };
 
@@ -263,7 +238,6 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ 戦闘UI（死亡時の新ランダム減額＆復帰テキスト発火対応）
 export function openCombatUI(enemy, gameState, onResult) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -274,7 +248,7 @@ export function openCombatUI(enemy, gameState, onResult) {
     const enemyWeakness = enemy.weakness || [1];
 
     ui.innerHTML = `
-        <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【通常戦闘】</h2>
+        <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>
         <img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px;">
         <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold;">${enemy.name}</div>
         
@@ -445,12 +419,13 @@ export function openInquisitionUI(entity, gameState, onResult) {
     const cardsDiv = document.getElementById("inq-cards");
     const cardsList = gameState.cards || ["1Card.png"];
     
+    // ★ 大文字小文字URLズレ補正
     cardsList.forEach(card => {
         const numMatch = card.match(/\d+/);
         const num = numMatch ? numMatch[0] : "1";
         const cDiv = document.createElement("div");
         cDiv.style.cssText = "min-width: 45px; height: 60px; border: 1px solid #555; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold;";
-        cDiv.innerHTML = `<img src="assets/images/cards/${card}" style="max-width:100%; max-height:100%;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div style="display:none; font-size:1.2em;">${num}</div>`;
+        cDiv.innerHTML = `<img src="assets/images/cards/${num}card.png" style="max-width:100%; max-height:100%;" onerror="this.src='assets/images/cards/${num}Card.png';"><div style="display:none; font-size:1.2em;">${num}</div>`;
         
         cDiv.onclick = () => {
             if (step === 1) {
@@ -560,6 +535,7 @@ export function openInquisitionUI(entity, gameState, onResult) {
     };
 }
 
+// ★ ボス戦パズルUI（カード特大表示 ＆ ボス影山データ完全固定）
 export function openBossPuzzleUI(gameState, onResult) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
@@ -572,28 +548,29 @@ export function openBossPuzzleUI(gameState, onResult) {
     let activeSlotKey = "slot1";
 
     ui.innerHTML = `
-        <h2 style="color: #ff3333; margin: 4px 0; text-shadow: 0 0 10px red; font-size: 1.25em;">【フロアボス戦】覗き魔・影山</h2>
-        <div style="color: #bbb; font-size: 0.75em; margin-bottom: 6px;">陣の4マスをタップし、セットするカードを選べ！</div>
+        <h2 style="color: #ff3333; margin: 4px 0; text-shadow: 0 0 10px red; font-size: 1.35em;">【フロアボス戦】覗き魔・影山</h2>
+        <div style="color: #bbb; font-size: 0.8em; margin-bottom: 6px;">陣の4マスをタップし、下の特大カードを選べ！</div>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 68px); gap: 5px; margin-bottom: 6px; background: rgba(20,0,0,0.85); padding: 6px; border: 2px solid #550000; border-radius: 8px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 62px); grid-template-rows: repeat(3, 75px); gap: 6px; margin-bottom: 8px; background: rgba(20,0,0,0.85); padding: 8px; border: 2px solid #550000; border-radius: 8px;">
             <div style="background: #111; border: 1px solid #222;"></div>
-            <div id="slot1" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">①顔<br>(上)</div>
+            <div id="slot1" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.75em;">①顔<br>(上)</div>
             <div style="background: #111; border: 1px solid #222;"></div>
 
-            <div id="slot2" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">②左腕</div>
-            <div style="background: #150000; border: 1px solid #440000; display:flex; justify-content:center; align-items:center; color:#ff3333; font-weight:bold; font-size:0.85em;">影山</div>
-            <div id="slot3" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">③右腕</div>
+            <div id="slot2" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.75em;">②左腕</div>
+            <div style="background: #150000; border: 1px solid #440000; display:flex; justify-content:center; align-items:center; color:#ff3333; font-weight:bold; font-size:0.95em;">影山</div>
+            <div id="slot3" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.75em;">③右腕</div>
 
             <div style="background: #111; border: 1px solid #222;"></div>
-            <div id="slot4" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.7em;">④足元<br>(下)</div>
+            <div id="slot4" class="boss-slot" style="background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.75em;">④足元<br>(下)</div>
             <div style="background: #111; border: 1px solid #222;"></div>
         </div>
 
-        <div style="color: #aaa; font-size: 0.78em; margin-bottom: 4px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
+        <div style="color: #aaa; font-size: 0.82em; margin-bottom: 6px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
 
-        <div style="width: 100%; max-width: 340px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 6px;" id="boss-cards"></div>
+        <!-- ★ 見やすい特大ラミナカード表示エリア（高さ75px） -->
+        <div style="width: 100%; max-width: 360px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; background: rgba(0,0,0,0.85); border: 2px solid #550000; border-radius: 8px;" id="boss-cards"></div>
 
-        <button id="btn-fire-vox" style="margin-top: 8px; width: 100%; max-width: 320px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.05em; box-shadow: 0 0 10px red;">Vox Sacra 発射！</button>
+        <button id="btn-fire-vox" style="margin-top: 10px; width: 100%; max-width: 340px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.15em; box-shadow: 0 0 15px red;">Vox Sacra 発射！</button>
     `;
     document.body.appendChild(ui);
 
@@ -611,16 +588,20 @@ export function openBossPuzzleUI(gameState, onResult) {
         };
     });
 
+    // ★ 特大カード生成処理（画像＋巨大文字フォールバック）
     const cardsDiv = document.getElementById("boss-cards");
     [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(num => {
         const cDiv = document.createElement("div");
-        cDiv.style.cssText = "height: 60px; border: 1px solid #666; background: #111; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold; border-radius: 4px; padding: 2px;";
-        cDiv.innerHTML = `<img src="assets/images/cards/${num}Card.png" style="max-height: 42px; max-width: 42px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div style="display:none; font-size:1.3em;">【${num}】</div>`;
+        cDiv.style.cssText = "height: 75px; border: 2px solid #770000; background: #111; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #ffdd66; font-weight: bold; border-radius: 6px; padding: 3px;";
+        cDiv.innerHTML = `
+            <img src="assets/images/cards/${num}card.png" style="max-height: 52px; max-width: 52px; object-fit: contain;" onerror="this.src='assets/images/cards/${num}Card.png'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='block'; };">
+            <div style="display:none; font-size:1.6em; font-weight:bold; color:#ffdd66;">【${num}】</div>
+        `;
         
         cDiv.onclick = () => {
             slots[activeSlotKey] = num;
             const targetEl = document.getElementById(activeSlotKey);
-            targetEl.innerHTML = `<div style="font-size:1.5em; font-weight:bold; color:#00ff66;">${num}</div>`;
+            targetEl.innerHTML = `<div style="font-size:1.6em; font-weight:bold; color:#00ff66;">${num}</div>`;
         };
         cardsDiv.appendChild(cDiv);
     });
@@ -638,6 +619,7 @@ export function openBossPuzzleUI(gameState, onResult) {
         const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
         const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
+        // ★ 通常戦闘移行時も雑魚的にならず「覗き魔・影山」で固定するデータ
         const kageyamaEnemy = { 
             name: "覗き魔・影山", 
             image: "assets/images/demon/demon1.png", 

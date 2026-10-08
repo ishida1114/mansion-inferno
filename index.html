@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>怠惰な僕の悪魔辞典～マンション・インフェルノ～</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -69,6 +69,17 @@
     <video id="event-video" class="hidden" playsinline muted></video>
 
   </div>
+
+  <!-- ★ 緑色(RGB:0,255,0)を100%透過するブラウザ制限回避SVGフィルター -->
+  <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+    <filter id="chroma-green-filter" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        1 0 0 0 0
+        0 1 0 0 0
+        0 0 1 0 0
+        -1 2 -1 1 0" />
+    </filter>
+  </svg>
 
   <script type="module" src="main.js"></script>
 </body>

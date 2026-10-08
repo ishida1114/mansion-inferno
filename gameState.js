@@ -1,20 +1,20 @@
-// gameState.js - プレイヤーステータス・経験値・カード装填・新システム完全統合版
+// gameState.js - ステータス・Sin浄化コスト改定版
 
 export const gameState = {
   player: {
-    x: 7,          // X座標（1F初期位置: 7）
-    y: 1,          // Y座標（1F初期位置: 1）
-    dir: 0,        // 向き (0:北, 1:東, 2:南, 3:西)
+    x: 7,
+    y: 1,
+    dir: 0,
     level: 1,
-    exp: 0,        // 現在の経験値
-    maxExp: 100,   // Lv1➔2の必要EXP (100)
+    exp: 0,
+    maxExp: 100,
     hp: 20,
     maxHp: 20,
-    def: 0,        // 防具＋成長による防御力
-    agi: 5,        // 素早さ（逃走率・回避率に影響）
-    sin: 0,        // 罪ゲージ（人間の誤射で+30、闇の契約で+15）
-    money: 0,      // 所持金（💰）
-    hasModelGun: false, // 2Fで教え子から入手するまでfalse
+    def: 0,
+    agi: 5,
+    sin: 0,
+    money: 0,
+    hasModelGun: false,
   },
 
   currentFloor: 1,
@@ -22,17 +22,16 @@ export const gameState = {
   equippedArmor: null,
 
   ownedCards: [1, 2, 3, 4, 5, 6, 7, 8, 9],
-  equippedCards: [], // 現在銃に装填されているカードのリスト
+  equippedCards: [],
 
   hasExorcistInherited: false,
   hasKey2F: false,
-  hasElevatorKey: false, // 2F影山撃破で獲得（3Fエレベーター開通）
+  hasElevatorKey: false,
   hasModelGun: false,
   hasMetGrandma: false,
   hasTalkedStudentInCVS: false,
   cards: [],
 
-  // クリア済み部屋の記録（重複査問・無限稼ぎ防止）
   clearedRooms: {},
   bossHints: [],
 
@@ -42,14 +41,12 @@ export const gameState = {
 
   flags: {
     cleared2F: false,
-    hasCat: false, // Lv15以上で自動加入
+    hasCat: false,
   },
 
-  // ★ 新仕様管理データ
-  lastTransitMethod: 'stair', // 'stair' (非常階段) または 'elevator' (エレベーター)
-  lastLostMoney: 0,           // 直前の死亡で失った金額（闇の契約で回収用）
+  lastTransitMethod: 'stair',
+  lastLostMoney: 0,
 
-  // ★ コスト上限に基づくカード装填自動計算
   updateEquippedCards() {
     if (!this.player.hasModelGun && !this.hasModelGun) {
       this.equippedCards = [];
@@ -73,7 +70,6 @@ export const gameState = {
     this.equippedCards = newEquipped;
   },
 
-  // 経験値獲得処理（必要EXPに達したらレベルアップ）
   gainExp(amount) {
     this.player.exp += amount;
     let leveledUp = false;
@@ -85,14 +81,12 @@ export const gameState = {
     return leveledUp;
   },
 
-  // ★ レベルアップ処理（DEFアップ・黒猫フラグ・maxExp計算）
   levelUp(amount = 1) {
     this.player.level += amount;
     this.player.maxHp += 5 * amount;
-    this.player.hp = this.player.maxHp; // 自動全回復
+    this.player.hp = this.player.maxHp;
     this.player.agi += 1 * amount;
 
-    // レベルに応じた必要経験値（maxExp）の増加計算
     this.player.maxExp = Math.floor(100 + (this.player.level - 1) * 60 + Math.pow(this.player.level, 1.3) * 10);
 
     if (this.player.level % 2 === 0) {
@@ -106,24 +100,23 @@ export const gameState = {
     this.updateEquippedCards();
   },
 
-  // ★ 死亡時ペナルティ処理（0%〜50%ランダム減額 ＆ 復帰テキスト生成）
   handlePlayerDeath() {
-    const lostRate = Math.random() * 0.5; // 0.0 〜 0.5 (0%〜50%)
+    const lostRate = Math.random() * 0.5;
     const lostMoney = Math.floor(this.player.money * lostRate);
     
     this.player.money -= lostMoney;
     this.lastLostMoney = lostMoney;
-    this.player.hp = this.player.maxHp; // 体力全回復
+    this.player.hp = this.player.maxHp;
 
     let respawnMsg = "";
-    let respawnCoord = { x: 7, y: 1 }; // デフォルト位置（非常階段前）
+    let respawnCoord = { x: 7, y: 1 };
 
     if (this.lastTransitMethod === 'elevator') {
       respawnMsg = `【意識が浮上する……】\n「チーン……」という電子音でハッと目を覚ました。\n悪魔に弾き飛ばされ、自動で1階のエレベーター前まで送り返されたようだ……。`;
-      respawnCoord = { x: 11, y: 1 }; // 1Fエレベーター前
+      respawnCoord = { x: 6, y: 6 }; // エントランス横エレベーター前
     } else {
       respawnMsg = `【意識が浮上する……】\n重い衝撃とともに目を覚ました……。\n意識を失う寸前、必死で1階の非常階段前まで転がり落ちてきたようだ。`;
-      respawnCoord = { x: 7, y: 1 }; // 1F非常階段前
+      respawnCoord = { x: 7, y: 1 };
     }
 
     if (lostMoney > 0) {
@@ -132,7 +125,6 @@ export const gameState = {
       respawnMsg += `\n\n（奇跡的に所持金は失わずに済んだ！）`;
     }
 
-    // 1階へ復帰
     this.currentFloor = 1;
     this.player.x = respawnCoord.x;
     this.player.y = respawnCoord.y;
@@ -140,14 +132,13 @@ export const gameState = {
     return respawnMsg;
   },
 
-  // ★ 闇の契約（Sin +15 と引き換えに失った所持金を100%全額回収）
   contractRecovery() {
     if (this.lastLostMoney <= 0) return { success: false, msg: "回収できるお金はありません。" };
     
     const recovered = this.lastLostMoney;
     this.player.money += recovered;
-    this.player.sin += 15; // 罪を15加算
-    this.lastLostMoney = 0; // 回収完了
+    this.player.sin += 15;
+    this.lastLostMoney = 0;
 
     return { 
       success: true, 
@@ -155,14 +146,13 @@ export const gameState = {
     };
   },
 
-  // ★ Sin浄化の累進利息計算（基本単価15、倍率1.5）
+  // ★ 改定コスト計算: 1 Sin ＝ 2 💰（Sin 15 ＝ 💰30）
   getPurifyCost() {
     const sin = this.player.sin;
     if (sin <= 0) return 0;
-    return Math.floor(sin * (15 + sin * 1.5));
+    return sin * 2;
   },
 
-  // ★ Sin浄化（コンビニで罪を消去）
   purifySin() {
     const cost = this.getPurifyCost();
     if (this.player.money < cost) return false;
@@ -172,7 +162,6 @@ export const gameState = {
     return true;
   },
 
-  // ★ 初期化リセット
   resetGame() {
     this.currentFloor = 1;
     this.player.x = 7;
@@ -207,7 +196,6 @@ export const gameState = {
     this.lastLostMoney = 0;
   },
 
-  // ★ セーブ処理（エラーハンドリング付き）
   saveGame() {
     try {
       localStorage.setItem('mansion_inferno_save', JSON.stringify(this));
@@ -217,7 +205,6 @@ export const gameState = {
     }
   },
 
-  // ★ ロード処理（エラーハンドリング付き）
   loadGame() {
     try {
       const data = localStorage.getItem('mansion_inferno_save');

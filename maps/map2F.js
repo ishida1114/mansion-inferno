@@ -1,4 +1,4 @@
-// maps/map2F.js - 2階マップ（影山撃破でエレベーターキー入手機能統合）
+// maps/map2F.js - 2階マップ（ボス影山戦完全固定版）
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI 
@@ -20,7 +20,6 @@ export function handleEvent2F(targetCell, gameState, context) {
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
-                // ★ 移動手段を記録
                 gameState.lastTransitMethod = 'stair';
                 playFloorTransition(1, () => {
                     context.changeFloor(1);
@@ -120,6 +119,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
+    // 8: ボス影山の部屋
     if (targetCell === 8) {
         return {
             run: (onComplete) => {
@@ -128,11 +128,12 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
+                // ★ 影山動画再生 ➔ ボス影山パズルUIへ発火
                 playVideo("assets/videos/2f-kageyama.mp4", () => {
                     openBossPuzzleUI(gameState, (result) => {
                         if (result === "win") {
                             gameState.flags.cleared2F = true;
-                            gameState.hasElevatorKey = true; // ★ エレベーターキー獲得！
+                            gameState.hasElevatorKey = true;
                             
                             showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァッ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
                                 gameState.player.money += 500;
