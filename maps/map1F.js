@@ -1,4 +1,4 @@
-// maps/map1F.js - 1階マップデータ（全イベント＆演出100%保持・エレベーター対応完全版）
+// maps/map1F.js - 1階マップデータ（7Fクリア後の手紙投函・後半防具解放イベント追加完全版）
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -57,12 +57,15 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // 2: コンビニ（会話分岐＆ショップ）
+    // 2: コンビニ（会話分岐＆後半防具解放＆ショップ）
     if (targetCell === 2) {
         if (!gameState.hasMetGrandma) {
             return { run: (onComplete) => startGrandmaEvent(gameState, onComplete) };
         } else if (gameState.hasModelGun && !gameState.hasTalkedStudentInCVS) {
             return { run: (onComplete) => startStudentInCvsEvent(gameState, onComplete) };
+        } else if (gameState.flags && gameState.flags.postedArmorLetter && !gameState.flags.unlockedAdvancedArmor) {
+            // ★ 手紙投函後におばあさんに話しかけ、後半防具④〜⑥をショップ解放
+            return { run: (onComplete) => startUnlockArmorEvent(gameState, onComplete) };
         } else {
             return { run: (onComplete) => openShopUI(onComplete) };
         }
@@ -79,7 +82,7 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // 5: 集合ポスト
+    // 5: 集合ポスト（通常のヒント手紙 ＆ 7Fクリア後の防具要請手紙投函）
     if (targetCell === 5) {
         return { run: (onComplete) => startPostEvent(gameState, onComplete) };
     }
@@ -98,15 +101,42 @@ export function handleEvent1F(targetCell, gameState, context) {
     return null;
 }
 
+// ★ 集合ポストイベント（7Fクリア後の投函処理分岐を追加）
 function startPostEvent(gameState, onComplete) {
     playVideo("assets/videos/post.mp4", () => {
+        if (gameState.flags && gameState.flags.cleared7F && !gameState.flags.postedArmorLetter) {
+            // 7Fボス撃破後の防具調達依頼手紙投函
+            showMessageDialog("【1階 集合ポスト】\n7階以降の凶悪な悪魔に対抗するため、おばあさん宛てに『より頑丈な防具の調達依頼』の手紙を投函した！\n\n（※コンビニのおばあさんに話しかけてみよう）", () => {
+                gameState.flags.postedArmorLetter = true;
+                if (gameState.saveGame) gameState.saveGame();
+                onComplete();
+            });
+            return;
+        }
+
+        // 通常の影山攻略ヒント手紙
         const letterText = "【ポストに入っていた古びた手紙】\n『影山は気味の悪い視線で部屋を覗き込んでくる。奴の顔（上段①）に「真実の鏡（2）」を向けろ。そして足元（下段④）に「浄化の塩（3）」を撒けば、身動きが取れなくなるはずだ……』";
         
         if (!gameState.bossHints) gameState.bossHints = [];
-        gameState.bossHints.push("【集合ポストの手紙】影山の顔(上①)には「真実の鏡(2)」、足元(下④)には「浄化の塩(3)」を配置する。");
+        if (!gameState.bossHints.includes("【集合ポストの手紙】影山の顔(上①)には「真実の鏡(2)」、足元(下④)には「浄化の塩(3)」を配置する。")) {
+            gameState.bossHints.push("【集合ポストの手紙】影山の顔(上①)には「真実の鏡(2)」、足元(下④)には「浄化の塩(3)」を配置する。");
+        }
 
         showMessageDialog(`【1階 集合ポスト】\n${letterText}\n（スマホの悪魔手記にヒントが保存された！）`, onComplete);
     });
+}
+
+// ★ 後半防具（④〜⑥）仕入れ会話イベント
+function startUnlockArmorEvent(gameState, onComplete) {
+    showConversationDialog(
+        "assets/images/grandma.jpg", 
+        "【謎のおばあさん】\n「ヒヒヒ……ポストの手紙は受け取ったよ。\n表の世界のツテを使って『訳ありの高級防具』を仕入れておいたからねぇ……気をつけて行くんだよ。」", 
+        () => {
+            gameState.flags.unlockedAdvancedArmor = true;
+            if (gameState.saveGame) gameState.saveGame();
+            openShopUI(onComplete);
+        }
+    );
 }
 
 function startStudentInCvsEvent(gameState, onComplete) {

@@ -1,4 +1,4 @@
-// gameState.js - ステータス・所持金0時無傷・Sinコスト改定対応
+// gameState.js - ステータス・ソフトキャップ・7F防具解放フラグ統合完全版
 
 export const gameState = {
   player: {
@@ -41,11 +41,31 @@ export const gameState = {
 
   flags: {
     cleared2F: false,
+    cleared7F: false,             // 7Fボス撃破
+    postedArmorLetter: false,     // ポストに強防具要請の手紙を投函
+    unlockedAdvancedArmor: false, // ショップに後半防具④〜⑥が並ぶ
     hasCat: false,
   },
 
   lastTransitMethod: 'stair',
   lastLostMoney: 0,
+
+  // ★ フロア別レベルキャップの取得 (2F: 4, 3F: 8, 4F: 12 ... 13F: 52)
+  getFloorLevelCap(floor = this.currentFloor) {
+    if (floor <= 1) return 999;
+    return floor * 4;
+  },
+
+  // ★ 獲得報酬（EXP・お金）へのソフトキャップ（10%減衰）適用計算
+  calculateRewards(baseExp, baseMoney, floor = this.currentFloor) {
+    const capLevel = this.getFloorLevelCap(floor);
+    if (this.player.level >= capLevel) {
+      const cappedExp = Math.max(1, Math.floor(baseExp * 0.1));
+      const cappedMoney = Math.max(1, Math.floor(baseMoney * 0.1));
+      return { exp: cappedExp, money: cappedMoney, isCapped: true };
+    }
+    return { exp: baseExp, money: baseMoney, isCapped: false };
+  },
 
   updateEquippedCards() {
     if (!this.player.hasModelGun && !this.hasModelGun) {
@@ -100,14 +120,14 @@ export const gameState = {
     this.updateEquippedCards();
   },
 
-  // ★ 死亡時処理（所持金ゼロなら没収0円で復帰）
+  // 死亡時処理
   handlePlayerDeath() {
     const lostRate = Math.random() * 0.5;
     const lostMoney = Math.floor(this.player.money * lostRate);
     
     this.player.money -= lostMoney;
     this.lastLostMoney = lostMoney;
-    this.player.hp = this.player.maxHp; // 体力全回復
+    this.player.hp = this.player.maxHp;
 
     let respawnMsg = "";
     let respawnCoord = { x: 7, y: 1 };
@@ -150,7 +170,7 @@ export const gameState = {
   getPurifyCost() {
     const sin = this.player.sin;
     if (sin <= 0) return 0;
-    return sin * 2; // 1 Sin = 2 💰
+    return sin * 2;
   },
 
   purifySin() {
@@ -190,8 +210,15 @@ export const gameState = {
     this.clearedRooms = {};
     this.bossHints = [];
     this.inventory.items = [];
-    this.flags.cleared2F = false;
-    this.flags.hasCat = false;
+    
+    this.flags = {
+      cleared2F: false,
+      cleared7F: false,
+      postedArmorLetter: false,
+      unlockedAdvancedArmor: false,
+      hasCat: false,
+    };
+
     this.lastTransitMethod = 'stair';
     this.lastLostMoney = 0;
   },

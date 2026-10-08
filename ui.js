@@ -1,4 +1,4 @@
-// ui.js - メッセージ中移動完全遮断＆自動クロマキー再適用版
+// ui.js - 移動完全遮断・自動クロマキー・後半防具解放制御・ソフトキャップ報酬対応完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -271,6 +271,11 @@ export function openShopUI(onClosed) {
 
     let html = "";
     Object.values(itemDefinitions).forEach(item => {
+        // ★ 後半防具（④〜⑥）は解放フラグが立つまで非表示
+        if (item.requiresAdvanced && (!gameState.flags || !gameState.flags.unlockedAdvancedArmor)) {
+            return;
+        }
+
         const isEquippedArmor = item.type === "armor" && gameState.equippedArmor === item.id;
         html += `
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(20, 10, 10, 0.85); padding: 10px 12px; margin-bottom: 8px; border: 1px solid #441111; border-radius: 6px;">
@@ -455,9 +460,13 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             if (enemyHp <= 0) {
                 setTimeout(() => {
                     ui.remove();
-                    gameState.player.money += 150;
-                    const isLvUp = gameState.gainExp(50);
-                    showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰150 獲得 / 50 EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}`, () => {
+                    // ★ ソフトキャップ（獲得減衰）計算の適用
+                    const reward = gameState.calculateRewards ? gameState.calculateRewards(50, 150) : { exp: 50, money: 150 };
+                    gameState.player.money += reward.money;
+                    const isLvUp = gameState.gainExp(reward.exp);
+                    
+                    const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
+                    showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
                         if (onResult) onResult("win");
                     });
                 }, 1000);
@@ -683,9 +692,13 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
             const isWeaknessHit = selected.some(num => parseInt(num) === entity.weakness);
 
             if (isWeaknessHit) {
-                gameState.player.money += 250;
-                const isLvUp = gameState.gainExp(100);
-                showMessageDialog(`【完全見破り成功！】\n悪魔の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰250 獲得 / 100 EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}`, () => {
+                // ★ ソフトキャップ（獲得減衰）計算の適用
+                const reward = gameState.calculateRewards ? gameState.calculateRewards(100, 250) : { exp: 100, money: 250 };
+                gameState.player.money += reward.money;
+                const isLvUp = gameState.gainExp(reward.exp);
+                
+                const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
+                showMessageDialog(`【完全見破り成功！】\n悪魔の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
                     onResult("combat_win");
                 });
             } else {
@@ -707,13 +720,16 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     protectBtn.onclick = () => {
         ui.remove();
         if (entity.type === "human") {
-            gameState.player.money += 300;
+            // ★ 人間保護成功報酬（ソフトキャップ計算の適用）
+            const reward = gameState.calculateRewards ? gameState.calculateRewards(0, 300) : { exp: 0, money: 300 };
+            gameState.player.money += reward.money;
             
             const hintText = "「助けてくれてありがとうございます……！ これはお礼です！\nあ、そういえば2F奥の影山ですが……あいつの陣を破るには『4マスの合計をピッタリ10』にしないといけないらしいです！ 腕には小さい数字から順にカードを置いてみてください！」";
             if (!gameState.bossHints) gameState.bossHints = [];
             gameState.bossHints.push("【2F住人の証言】影山の魔方陣は4マスの合計を「10」にする。腕(左右)には小さい数字のカードから順に配置する。");
 
-            showMessageDialog(`【人間を保護した】\n${hintText}\n（💰300 を獲得！ / スマホの悪魔手記にヒントが保存された！）`, () => {
+            const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
+            showMessageDialog(`【人間を保護した】\n${hintText}\n（💰${reward.money} を獲得！ / スマホの悪魔手記にヒントが保存された！）${capNotice}`, () => {
                 onResult("finish");
             });
         } else {

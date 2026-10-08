@@ -1,4 +1,4 @@
-// items.js - アイテム定義データ（全機能保持＆エナジードリンク15回復・戦闘対応版）
+// items.js - アイテム定義データ（全機能保持＆後半防具④〜⑥追加版）
 
 // --- 消費アイテム（コンビニ購入） ---
 export const CONSUMABLE_ITEMS = {
@@ -71,6 +71,7 @@ export const CONSUMABLE_ITEMS = {
 
 // --- 防具（ショップ専用） ---
 export const ARMOR_ITEMS = {
+  // 【初期ラインナップ ①〜③】
   delivery_jacket: {
     id: 'delivery_jacket',
     name: '配達員のジャケット',
@@ -94,6 +95,35 @@ export const ARMOR_ITEMS = {
     price: 2000,
     def: 4,
     description: 'お札が縫い付けられた漆黒のジャケット。(DEF +4)'
+  },
+
+  // 【追加ラインナップ ④〜⑥】（7Fボス撃破後のポスト投函イベントで追加）
+  tactical_vest: {
+    id: 'tactical_vest',
+    name: '儀式用タクティカルベスト',
+    type: 'armor',
+    price: 4500,
+    def: 6,
+    description: '悪魔祓いの刻印が入った特殊防具。(DEF +6)',
+    requiresAdvanced: true
+  },
+  relic_leather_suit: {
+    id: 'relic_leather_suit',
+    name: '聖遺物のレザースーツ',
+    type: 'armor',
+    price: 10000,
+    def: 8,
+    description: '聖人の骨の粉末が練り込まれた重装備。(DEF +8)',
+    requiresAdvanced: true
+  },
+  exorcist_coat: {
+    id: 'exorcist_coat',
+    name: 'エクソシストの漆黒コート',
+    type: 'armor',
+    price: 22000,
+    def: 10,
+    description: '初代神父の遺品。悪魔の攻撃を大幅に軽減する。(DEF +10)',
+    requiresAdvanced: true
   }
 };
 
