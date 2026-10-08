@@ -1,13 +1,44 @@
-// ui.js - SVGクロマキー適用＆ボス特大カード＆ボス影山データ固定版
+// ui.js - クロマキー判定強化＆ボス戦特大カード＆影山データ完全固定
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
-// ★ ブラウザCORS制限を100%回避するSVGカラーマトリックス透過関数
+// ★ 強力クロマキーピクセル処理（純緑〜濃い緑まで完全透過）
 export function applyChromaKey(imgElement) {
     if (!imgElement) return;
-    imgElement.style.filter = "url(#chroma-green-filter)";
+
+    const process = () => {
+        if (!imgElement.naturalWidth || imgElement.naturalWidth === 0) return;
+        if (imgElement.dataset && imgElement.dataset.chromaKeyed === "true") return;
+
+        try {
+            const canvas = document.createElement("canvas");
+            canvas.width = imgElement.naturalWidth; 
+            canvas.height = imgElement.naturalHeight;
+            const cctx = canvas.getContext("2d"); 
+            cctx.drawImage(imgElement, 0, 0);
+            const imgData = cctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i + 1], b = data[i + 2];
+                // 広い緑判定（暗い緑から明るい緑まで透過）
+                if (g > 35 && g > r * 1.05 && g > b * 1.05) {
+                    data[i + 3] = 0;
+                }
+            }
+            cctx.putImageData(imgData, 0, 0);
+            imgElement.dataset.chromaKeyed = "true";
+            imgElement.src = canvas.toDataURL();
+        } catch(e) {}
+    };
+
+    if (imgElement.complete && imgElement.naturalWidth > 0) {
+        process();
+    } else {
+        imgElement.onload = process;
+    }
 }
 
 export function showMessageDialog(text, onClosed) {
@@ -35,8 +66,9 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     imgDiv.style.cssText = "max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start;";
     
     imgDiv.onerror = () => imgDiv.style.display = 'none';
+    imgDiv.onload = () => applyChromaKey(imgDiv);
     imgDiv.src = imageSrc;
-    applyChromaKey(imgDiv);
+    if (imgDiv.complete) applyChromaKey(imgDiv);
 
     const msgDiv = document.createElement("div");
     msgDiv.style.cssText = `width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.92); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.8); box-sizing: border-box;`;
@@ -58,7 +90,6 @@ export function showConversationDialog(imageSrc, text, onClosed) {
     setTimeout(() => { overlay.onclick = closeHandler; window.addEventListener("keydown", closeHandler); }, 150);
 }
 
-// ★ アイテム獲得モーダル（SVGフィルターで100%緑背景透過）
 export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed) {
     const modal = document.createElement("div");
     modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.90); z-index: 2500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; padding: 20px; box-sizing: border-box;`;
@@ -67,9 +98,10 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
     imgEl.id = "modal-item-img";
     imgEl.style.cssText = "max-height: 180px; max-width: 80%; border-radius: 6px; margin-bottom: 15px;";
     imgEl.onerror = () => { imgEl.style.display = 'none'; };
+    imgEl.onload = () => applyChromaKey(imgEl);
     
     imgEl.src = imagePath;
-    applyChromaKey(imgEl);
+    if (imgEl.complete) applyChromaKey(imgEl);
 
     modal.innerHTML = `<div style="color: #ff3333; font-size: 1.5em; margin-bottom: 12px; text-shadow: 0 0 10px red; letter-spacing: 2px;">― アイテム獲得 ―</div>`;
     modal.appendChild(imgEl);
@@ -110,7 +142,6 @@ export function playFloorTransition(targetFloor, onComplete) {
     }, 1500);
 }
 
-// ★ 動画再生（魔法陣・影山動画の緑背景も自動フィルター補正）
 export function playVideo(src, onEnded) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2500; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;";
@@ -119,8 +150,6 @@ export function playVideo(src, onEnded) {
     video.src = src;
     video.style.cssText = "width: 100%; max-width: 540px; border: 3px solid #550000; box-shadow: 0 0 30px rgba(255, 0, 0, 0.5); background-color: black;";
     video.controls = false; video.autoplay = true; video.playsInline = true; video.muted = true;
-    
-    applyChromaKey(video);
 
     overlay.appendChild(video);
     document.body.appendChild(overlay);
@@ -158,7 +187,6 @@ export function openShopUI(onClosed) {
                 </div>
             </div>
 
-            <!-- ★ Sin罪の浄化エリア（1Sin=2💰） -->
             <div id="sin-purify-bar" style="background: rgba(40,0,0,0.9); padding: 10px 15px; border-bottom: 1px solid #660000; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div style="color: #ffaaaa; font-weight: bold; font-size: 0.9em;">【罪(Sin)の浄化】</div>
@@ -419,7 +447,6 @@ export function openInquisitionUI(entity, gameState, onResult) {
     const cardsDiv = document.getElementById("inq-cards");
     const cardsList = gameState.cards || ["1Card.png"];
     
-    // ★ 大文字小文字URLズレ補正
     cardsList.forEach(card => {
         const numMatch = card.match(/\d+/);
         const num = numMatch ? numMatch[0] : "1";
@@ -535,7 +562,7 @@ export function openInquisitionUI(entity, gameState, onResult) {
     };
 }
 
-// ★ ボス戦パズルUI（カード特大表示 ＆ ボス影山データ完全固定）
+// ★ ボス戦パズルUI（特大ラミナカード表記 ＆ ボス影山データ完全固定）
 export function openBossPuzzleUI(gameState, onResult) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
@@ -567,7 +594,7 @@ export function openBossPuzzleUI(gameState, onResult) {
 
         <div style="color: #aaa; font-size: 0.82em; margin-bottom: 6px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">① 顔（上）</span></div>
 
-        <!-- ★ 見やすい特大ラミナカード表示エリア（高さ75px） -->
+        <!-- ★ 特大見易いカード選択領域（高さ95px） -->
         <div style="width: 100%; max-width: 360px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; background: rgba(0,0,0,0.85); border: 2px solid #550000; border-radius: 8px;" id="boss-cards"></div>
 
         <button id="btn-fire-vox" style="margin-top: 10px; width: 100%; max-width: 340px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.15em; box-shadow: 0 0 15px red;">Vox Sacra 発射！</button>
@@ -588,14 +615,16 @@ export function openBossPuzzleUI(gameState, onResult) {
         };
     });
 
-    // ★ 特大カード生成処理（画像＋巨大文字フォールバック）
+    // ★ 特大カード＋カード名明確表示（高さ95px）
+    const cardNames = ["", "Ⅰ 聖水", "Ⅱ 鏡", "Ⅲ 浄化塩", "Ⅳ 十字架", "Ⅴ 聖書", "Ⅵ 聖炎", "Ⅶ 鐘", "Ⅷ 聖香", "Ⅸ 銀杭"];
+
     const cardsDiv = document.getElementById("boss-cards");
     [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(num => {
         const cDiv = document.createElement("div");
-        cDiv.style.cssText = "height: 75px; border: 2px solid #770000; background: #111; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #ffdd66; font-weight: bold; border-radius: 6px; padding: 3px;";
+        cDiv.style.cssText = "height: 95px; border: 2px solid #770000; background: #111; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #ffdd66; font-weight: bold; border-radius: 6px; padding: 4px; box-sizing: border-box;";
         cDiv.innerHTML = `
-            <img src="assets/images/cards/${num}card.png" style="max-height: 52px; max-width: 52px; object-fit: contain;" onerror="this.src='assets/images/cards/${num}Card.png'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='block'; };">
-            <div style="display:none; font-size:1.6em; font-weight:bold; color:#ffdd66;">【${num}】</div>
+            <img src="assets/images/cards/${num}card.png" style="max-height: 52px; max-width: 52px; object-fit: contain; margin-bottom: 3px;" onerror="this.src='assets/images/cards/${num}Card.png'; this.onerror=function(){ this.style.display='none'; };">
+            <div style="font-size:0.85em; color:#ffdd66; white-space:nowrap; font-weight:bold;">${cardNames[num]}</div>
         `;
         
         cDiv.onclick = () => {
@@ -619,10 +648,10 @@ export function openBossPuzzleUI(gameState, onResult) {
         const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
         const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
 
-        // ★ 通常戦闘移行時も雑魚的にならず「覗き魔・影山」で固定するデータ
+        // ★ ボス影山専用のパラメータ（通常戦闘へ移行時もボスとして固定）
         const kageyamaEnemy = { 
             name: "覗き魔・影山", 
-            image: "assets/images/demon/demon1.png", 
+            image: "assets/images/demon/demon1.png", // ※専用ボス画像があればそちらを指定
             hp: 60, 
             atk: 12, 
             def: 2 

@@ -1,4 +1,4 @@
-// appUI.js - スマホUI（闇の契約・回収ボタン統合版）
+// appUI.js - スマホUI（ラミナ装填表示バグ修正完全版）
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -142,7 +142,6 @@ export class AppUI {
         <img src="${LOGO_ASSETS.APP_LOGO}" alt="悪魔辞典" style="width: 85%; max-height: 90px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.5)); margin: 0 auto; display: block;" />
       </div>
 
-      <!-- ★ 闇の契約（回収）ボタン -->
       <div style="margin-bottom: 12px;">
         <button id="btn-dark-contract" style="width: 100%; background: ${hasLostMoney ? 'linear-gradient(180deg, #880000, #330000)' : '#1a1a1a'}; color: ${hasLostMoney ? '#ffdd66' : '#555'}; border: 1px solid ${hasLostMoney ? '#ff3333' : '#333'}; padding: 8px; border-radius: 8px; font-family: inherit; font-weight: bold; cursor: ${hasLostMoney ? 'pointer' : 'not-allowed'}; box-shadow: ${hasLostMoney ? '0 0 10px rgba(255,0,0,0.6)' : 'none'};">
           🩸 闇の契約 (資金回収)
@@ -185,11 +184,14 @@ export class AppUI {
     `;
   }
 
+  // ★ テンプレートリテラルのバグを修正
   renderLoadoutView() {
     const pLevel = gameState.player.level;
     const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
     const equipped = gameState.equippedCards || [];
     const totalPower = equipped.reduce((a, b) => a + b, 0);
+
+    const equippedLabel = equipped.length > 0 ? ("【カード " + equipped[0] + "】") : "未装填";
 
     return `
       <div class="sub-header">
@@ -212,7 +214,7 @@ export class AppUI {
 
       <div>
         <div class="loadout-slot ${equipped.length > 0 ? 'equipped-slot' : ''}">
-          装填中：<strong>${equipped.length > 0 ? `【カード \${equipped[0]}】` : '未装填'}</strong>
+          装填中：<strong>${equippedLabel}</strong>
         </div>
         <div style="color: #00ff66; font-size: 0.8em; margin-bottom: 10px; text-align: center;">基本威力 (Vox Sacra): ${totalPower}</div>
       </div>
@@ -223,7 +225,7 @@ export class AppUI {
           const isAllowed = hasGun && (num <= pLevel);
           return `
             <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
-              <img src="assets/images/cards/\${num}Card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}card.png'" />
+              <img src="assets/images/cards/\${num}card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}Card.png';" />
               <div style="font-size: 0.7em; font-weight:bold;">【${num}】${isAllowed ? '' : '<br><span style="color:#ff4444;">ロック</span>'}</div>
             </div>
           `;
@@ -301,7 +303,6 @@ export class AppUI {
     const backBtn = document.getElementById('btn-back');
     if (backBtn) backBtn.onclick = () => { this.currentSubView = 'home'; this.renderApp(); };
 
-    // 闇の契約ボタン処理
     const contractBtn = document.getElementById('btn-dark-contract');
     if (contractBtn) {
         contractBtn.onclick = () => {

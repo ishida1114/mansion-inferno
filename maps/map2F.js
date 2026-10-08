@@ -1,4 +1,4 @@
-// maps/map2F.js - 2階マップ（ボス影山戦完全固定版）
+// maps/map2F.js - 2階マップ（ボス戦闘移行データ完全固定版）
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI 
@@ -119,7 +119,6 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
-    // 8: ボス影山の部屋
     if (targetCell === 8) {
         return {
             run: (onComplete) => {
@@ -128,7 +127,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // ★ 影山動画再生 ➔ ボス影山パズルUIへ発火
                 playVideo("assets/videos/2f-kageyama.mp4", () => {
                     openBossPuzzleUI(gameState, (result) => {
                         if (result === "win") {
