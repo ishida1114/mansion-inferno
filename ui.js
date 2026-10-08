@@ -1,4 +1,4 @@
-// ui.js - 戦闘アイテム使用・保護報酬300円・二重入力防止統合版
+// ui.js - メッセージ中移動完全遮断＆自動クロマキー再適用版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -11,6 +11,7 @@ export function applyChromaKey(element) {
     element.style.filter = "url(#chroma-green-filter)";
 }
 
+// ★ 汎用ダイアログ作成用内部関数（全キー遮断＆クロマキー自動適用）
 function createGuardedDialogContainer(contentHTML, onClosed) {
     let isClosing = false;
 
@@ -20,18 +21,24 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
 
     document.body.appendChild(overlay);
 
-    const handleClose = (e) => {
-        if (isClosing) return;
+    // ダイアログ内の全画像にクロマキー（緑消し）を自動適用
+    overlay.querySelectorAll("img").forEach(img => applyChromaKey(img));
 
+    const handleClose = (e) => {
+        // キーボード入力時は、メッセージ表示中あらゆるキーの移動イベント伝播を即座に完全ブロック！
         if (e.type === "keydown") {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // SPACE または Enter 以外のキーを押した場合は閉じる処理を行わず無視（移動もさせない）
             if (e.key !== " " && e.key !== "Enter" && e.key !== "Spacebar") {
                 return;
             }
-            e.preventDefault();
-            e.stopPropagation();
         }
 
+        if (isClosing) return;
         isClosing = true;
+
         window.removeEventListener("keydown", handleClose, true);
         overlay.onclick = null;
         overlay.remove();
@@ -45,9 +52,10 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
         }
     };
 
+    // キャプチャリングフェーズ(true)でキーボードイベントを最優先横取りして背景への移動入力を完全遮断
+    window.addEventListener("keydown", handleClose, true);
     setTimeout(() => {
         overlay.onclick = handleClose;
-        window.addEventListener("keydown", handleClose, true);
     }, 150);
 }
 
@@ -310,7 +318,6 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { window.lastDialogCloseTime = Date.now(); shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ 戦闘UI（道具使用・回復・ガード効果対応版）
 export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -319,7 +326,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const enemyAtk = enemy.atk || 8;
     const enemyDef = enemy.def || 0;
     const enemyWeakness = enemy.weakness || [1];
-    let isGuarding = false; // ビニール傘使用時のガードフラグ
+    let isGuarding = false;
 
     const visualHTML = `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;">`;
 
@@ -390,7 +397,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             } else {
                 let baseEnemyAtk = enemyAtk - (gameState.player.def || 0);
                 if (isGuarding) {
-                    baseEnemyAtk = Math.max(1, Math.floor(baseEnemyAtk * 0.5)); // ビニール傘ガードでダメージ半減
+                    baseEnemyAtk = Math.max(1, Math.floor(baseEnemyAtk * 0.5));
                     isGuarding = false;
                 }
                 const enemyRand = 0.85 + Math.random() * 0.3;
@@ -461,7 +468,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }, 800);
     };
 
-    // ★ 戦闘中の道具使用処理
     itemBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -497,7 +503,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 const idx = parseInt(btn.getAttribute("data-idx"));
                 const usedItem = itemsList[idx];
 
-                // アイテム消費
                 itemsList.splice(idx, 1);
                 itemModal.remove();
 
@@ -699,11 +704,10 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         }
     };
 
-    // ★ 人間保護成功報酬を300円に変更！
     protectBtn.onclick = () => {
         ui.remove();
         if (entity.type === "human") {
-            gameState.player.money += 300; // 300円獲得
+            gameState.player.money += 300;
             
             const hintText = "「助けてくれてありがとうございます……！ これはお礼です！\nあ、そういえば2F奥の影山ですが……あいつの陣を破るには『4マスの合計をピッタリ10』にしないといけないらしいです！ 腕には小さい数字から順にカードを置いてみてください！」";
             if (!gameState.bossHints) gameState.bossHints = [];
