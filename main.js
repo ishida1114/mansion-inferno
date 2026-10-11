@@ -1,10 +1,11 @@
-// main.js - オープニング表示機能統合完全版
+// main.js - 3Fテスト環境＆オープニング・map3F統合完全版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './maps/map2F.js';
+import { map3F, playerStart3F, handleEvent3F, check3FRandomEncounter } from './maps/map3F.js';
 import { showMessageDialog, openCombatUI, openInquisitionUI, showOpeningUI } from './ui.js';
 
 let appUI;
@@ -73,20 +74,39 @@ function init() {
   };
 }
 
+// ★ 3Fテストプレイ用初期設定でニューゲーム開始
 function startNewGame() {
   gameState.resetGame();
-  gameState.currentFloor = 1;
-  gameState.currentMap = map1F;
-  gameState.player.x = playerStart1F.x;
-  gameState.player.y = playerStart1F.y;
-  gameState.player.dir = playerStart1F.dir;
+  
+  // --- 3Fテスト用データセット ---
+  gameState.currentFloor = 3;
+  gameState.currentMap = map3F;
+  gameState.player.x = playerStart3F.x;
+  gameState.player.y = playerStart3F.y;
+  gameState.player.dir = playerStart3F.dir;
+
+  // プレイヤーLv.4セット（ステータス＆装備自動計算）
+  gameState.player.level = 4;
+  gameState.player.maxHp = 35;
+  gameState.player.hp = 35;
+  gameState.player.def = 2;
+  gameState.player.agi = 8;
+  gameState.player.money = 1000;
+
+  // フラグ・装備設定
+  gameState.player.hasModelGun = true;
+  gameState.hasModelGun = true;
+  gameState.hasExorcistInherited = true; // スマホアプリ解放
+  gameState.hasElevatorKey = true;
+  gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
+  gameState.updateEquippedCards(); // コストに応じたカード自動装填
+  // ------------------------------
 
   const container = document.getElementById('app-ui-container');
   if (container) container.classList.add('hidden');
 
   document.getElementById('touch-controls')?.classList.remove('hidden');
 
-  // ★ はじめからスタート時にオープニングを表示し、閉じたらゲームループを開始
   showOpeningUI(() => {
     if (!isRunning) {
       isRunning = true;
@@ -157,6 +177,8 @@ function interactFrontCell() {
     eventObj = handleEvent1F(cellType, gameState, context);
   } else if (gameState.currentFloor === 2) {
     eventObj = handleEvent2F(cellType, gameState, context);
+  } else if (gameState.currentFloor === 3) {
+    eventObj = handleEvent3F(cellType, gameState, context);
   }
 
   if (eventObj && typeof eventObj.run === 'function') {
@@ -170,7 +192,15 @@ function interactFrontCell() {
 
 function changeFloor(floor) {
   gameState.currentFloor = floor;
-  if (floor === 2) {
+  if (floor === 3) {
+    gameState.currentMap = map3F;
+    gameState.player.x = playerStart3F.x;
+    gameState.player.y = playerStart3F.y;
+    gameState.player.dir = playerStart3F.dir;
+    showMessageDialog("【3階 エレベーター前】\n3階へ到着した。漂うヘドロと強烈な異臭が鼻をつく……", () => {
+      redraw();
+    });
+  } else if (floor === 2) {
     gameState.currentMap = map2F;
     gameState.player.x = playerStart2F.x;
     gameState.player.y = playerStart2F.y;
@@ -224,6 +254,14 @@ function toggleDebugUI() {
 function checkEncounterAfterMove() {
   if (gameState.currentFloor === 2) {
     check2FRandomEncounter(gameState, (enemy) => {
+      isProcessingEvent = true;
+      openCombatUI(enemy, gameState, (result) => {
+        isProcessingEvent = false;
+        redraw();
+      }, { changeFloor });
+    });
+  } else if (gameState.currentFloor === 3) {
+    check3FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
       openCombatUI(enemy, gameState, (result) => {
         isProcessingEvent = false;

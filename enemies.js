@@ -1,4 +1,4 @@
-// enemies.js - 敵ステータス・2F影山魔方陣パズル判定（完全版）
+// enemies.js - 敵ステータス・2F影山/3F真田魔方陣パズル判定（完全版）
 
 export const ENEMIES = {
   // 1F 雑魚
@@ -25,6 +25,41 @@ export const ENEMIES = {
     weaknessCard: 3, // 塩が弱点
   },
 
+  // 3F 雑魚
+  DEVIL4_3F: {
+    name: 'ヘドロ悪魔',
+    image: 'assets/images/demon/demon4.png',
+    hp: 25,
+    atk: 9,
+    satk: 5,
+    def: 1,
+    agi: 5,
+    rewardMoney: 160,
+    weaknessCard: 8, // 聖香が弱点
+  },
+  DEVIL5_3F: {
+    name: '不法投棄の怪物',
+    image: 'assets/images/demon/demon5.png',
+    hp: 35,
+    atk: 11,
+    satk: 4,
+    def: 2,
+    agi: 4,
+    rewardMoney: 180,
+    weaknessCard: 6, // 聖炎が弱点
+  },
+  DEVIL6_3F: {
+    name: '腐敗蟲',
+    image: 'assets/images/demon/demon6.png',
+    hp: 20,
+    atk: 8,
+    satk: 6,
+    def: 0,
+    agi: 7,
+    rewardMoney: 150,
+    weaknessCard: 3, // 塩が弱点
+  },
+
   // 2F フロアボス：ストーカー影山
   KAGEYAMA_2F: {
     name: 'ストーカー影山',
@@ -47,6 +82,31 @@ export const ENEMIES = {
         5: 4, // ③右（腕）      ＝ 【Ⅳ】聖なる十字架 (4)
       },
       targetSum: 10 // 4マスの合計数字
+    }
+  },
+
+  // 3F フロアボス：ゴミ屋敷の狂人・真田
+  SANADA_3F: {
+    name: 'ゴミ屋敷の狂人・真田',
+    video: 'assets/videos/3f-sanada.mp4',
+    hp: 100,
+    atk: 14,
+    satk: 10,
+    def: 3,
+    agi: 6,
+    rewardMoney: 800,
+    baseLevel: 12,
+
+    // 3Fボス 3x3魔方陣パズル（4マス開放 / 目標合計18）
+    puzzle: {
+      openSlots: [1, 3, 5, 7],
+      correctSolution: {
+        1: 8, // ①上段（毒ガス口） ＝ 【Ⅷ】聖香 (8)
+        7: 6, // ④下段（腐敗ゴミ） ＝ 【Ⅵ】聖なる炎 (6)
+        3: 1, // ②左（腕）         ＝ 【Ⅰ】聖水 (1)
+        5: 3, // ③右（腕）         ＝ 【Ⅲ】浄化の塩 (3)
+      },
+      targetSum: 18 // 4マスの合計数字 (8 + 6 + 1 + 3 = 18)
     }
   }
 };
@@ -73,5 +133,30 @@ export function evaluateKageyamaPuzzle(placedCards) {
     return { result: 'PARTIAL', damageMultiplier: 1.2, message: '一部の弱点が合致！ 手応えがあった。' };
   } else {
     return { result: 'FAIL', damageMultiplier: 0.2, message: '不完全な陣だ！ 影山に弾かれた！' };
+  }
+}
+
+// 3Fボス真田魔方陣パズルの解読判定処理
+export function evaluateSanadaPuzzle(placedCards) {
+  const solution = ENEMIES.SANADA_3F.puzzle.correctSolution;
+  let correctCount = 0;
+  let currentSum = 0;
+
+  for (const slotId of [1, 3, 5, 7]) {
+    const card = placedCards[slotId];
+    if (card) {
+      currentSum += card;
+      if (card === solution[slotId]) {
+        correctCount++;
+      }
+    }
+  }
+
+  if (correctCount === 4 && currentSum === 18) {
+    return { result: 'PERFECT', damageMultiplier: 3.0, message: '特効発動！ 聖なる香と炎が悪臭とゴミの悪魔を浄化する！' };
+  } else if (correctCount >= 2 || currentSum === 18) {
+    return { result: 'PARTIAL', damageMultiplier: 1.2, message: '一部の弱点が合致！ 毒気が和らいだ。' };
+  } else {
+    return { result: 'FAIL', damageMultiplier: 0.2, message: '不完全な陣だ！ 悪臭とヘドロに阻まれた！' };
   }
 }
