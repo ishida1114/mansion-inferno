@@ -1,4 +1,4 @@
-// appUI.js - 所持品・悪魔手記テンプレート展開バグ解消＆完全版
+// appUI.js - ヒント展開バグ（\${hint}）完全修復版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -146,7 +146,7 @@ export class AppUI {
         <button id="btn-dark-contract" style="width: 100%; background: ${hasLostMoney ? 'linear-gradient(180deg, #880000, #330000)' : '#1a1a1a'}; color: ${hasLostMoney ? '#ffdd66' : '#555'}; border: 1px solid ${hasLostMoney ? '#ff3333' : '#333'}; padding: 8px; border-radius: 8px; font-family: inherit; font-weight: bold; cursor: ${hasLostMoney ? 'pointer' : 'not-allowed'}; box-shadow: ${hasLostMoney ? '0 0 10px rgba(255,0,0,0.6)' : 'none'};">
           🩸 闇の契約 (資金回収)
           <div style="font-size: 0.72em; font-weight: normal; color: ${hasLostMoney ? '#ffaabb' : '#444'};">
-            ${hasLostMoney ? `Sin+15 と引き換えに 💰\${gameState.lastLostMoney} を全額回収` : '回収できる失われた資金はありません'}
+            ${hasLostMoney ? 'Sin+15 と引き換えに 💰' + gameState.lastLostMoney + ' を全額回収' : '回収できる失われた資金はありません'}
           </div>
         </button>
       </div>
@@ -224,7 +224,7 @@ export class AppUI {
           const isAllowed = hasGun && (num <= pLevel);
           return `
             <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
-              <img src="assets/images/cards/\${num}card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}Card.png';" />
+              <img src="assets/images/cards/${num}card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}Card.png';" />
               <div style="font-size: 0.7em; font-weight:bold;">【${num}】${isAllowed ? '' : '<br><span style="color:#ff4444;">ロック</span>'}</div>
             </div>
           `;
@@ -264,9 +264,18 @@ export class AppUI {
     `;
   }
 
-  // ★ 悪魔手記のテンプレ展開バグ修復箇所
+  // ★ 悪魔手記（\${hint}を展開する完全修復処理）
   renderNotesView() {
     const hints = gameState.bossHints || [];
+    let hintsHTML = "";
+    if (hints.length > 0) {
+      hintsHTML = hints.map(hintText => {
+        return '<div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5; color: #dddddd; border-color: #770000; background: #1a0505; margin-bottom: 8px;">' + hintText + '</div>';
+      }).join('');
+    } else {
+      hintsHTML = '<div class="loadout-slot" style="color:#666;">（まだ攻略ヒントを入手していません）</div>';
+    }
+
     return `
       <div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">悪魔手記</h3></div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -274,11 +283,7 @@ export class AppUI {
           <div style="color: #ffdd66; font-weight: bold;">【エクソシストの遺言】</div>
           <div>「ボスの魔方陣に合わせて適切な弱点カードを撃ち抜くのだ……」</div>
         </div>
-        ${hints.length > 0 ? hints.map(hint => `
-          <div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5; color: #dddddd; border-color: #770000; background: #1a0505;">
-            \${hint}
-          </div>
-        `).join('') : '<div class="loadout-slot" style="color:#666;">（まだ攻略ヒントを入手していません）</div>'}
+        ${hintsHTML}
       </div>
     `;
   }

@@ -1,4 +1,4 @@
-// main.js - 3Fテスト環境・エレベーター復帰担保・マップ切替統合完全版
+// main.js - 3Fテスト環境・エレベーター復帰座標(x:6, y:5)完全対応版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -74,7 +74,7 @@ function init() {
   };
 }
 
-// ★ 3Fテスト環境用初期起動
+// ★ 3Fテスト環境初期セットアップ
 function startNewGame() {
   gameState.resetGame();
   
@@ -85,7 +85,7 @@ function startNewGame() {
   gameState.player.y = playerStart3F.y;
   gameState.player.dir = playerStart3F.dir;
 
-  // プレイヤーLv.4設定
+  // テスト用ステータス設定 (Lv.4)
   gameState.player.level = 4;
   gameState.player.maxHp = 35;
   gameState.player.hp = 35;
@@ -93,14 +93,16 @@ function startNewGame() {
   gameState.player.agi = 8;
   gameState.player.money = 1000;
 
-  // 詰み防止用全フラグ解放設定
+  // フラグ・装備設定
   gameState.player.hasModelGun = true;
   gameState.hasModelGun = true;
   gameState.hasExorcistInherited = true;
   gameState.hasKey2F = true;
   gameState.hasElevatorKey = true;
+  gameState.lastTransitMethod = 'elevator'; // デフォルトはエレベーター移動扱い
+
   if (!gameState.flags) gameState.flags = {};
-  gameState.flags.cleared2F = true; // 1Fエレベーター使用可能にする
+  gameState.flags.cleared2F = true;
 
   gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
   gameState.updateEquippedCards();
@@ -193,6 +195,7 @@ function interactFrontCell() {
   }
 }
 
+// ★ 移動手段に応じたフロア切替 ＆ 1F復帰位置完全制御
 function changeFloor(floor) {
   gameState.currentFloor = floor;
   if (floor === 3) {
@@ -213,9 +216,16 @@ function changeFloor(floor) {
     });
   } else if (floor === 1) {
     gameState.currentMap = map1F;
-    gameState.player.x = playerStart1F.x;
-    gameState.player.y = playerStart1F.y;
-    gameState.player.dir = playerStart1F.dir;
+    // ★ 1Fエレベーター(x: 6, y: 6)の正面(x: 6, y: 5 / 北向き)へ復帰
+    if (gameState.lastTransitMethod === 'elevator') {
+      gameState.player.x = 6;
+      gameState.player.y = 5;
+      gameState.player.dir = 0; // 北向き
+    } else {
+      gameState.player.x = playerStart1F.x;
+      gameState.player.y = playerStart1F.y;
+      gameState.player.dir = playerStart1F.dir;
+    }
     redraw();
   }
 }
@@ -254,22 +264,35 @@ function toggleDebugUI() {
   }
 }
 
+// ★ 死亡時（全滅時）の復帰メッセージ＆位置処理
 function checkEncounterAfterMove() {
+  const handleBattleResult = (result) => {
+    isProcessingEvent = false;
+    if (result === 'defeat') {
+      changeFloor(1);
+      let deathMsg = "";
+      if (gameState.lastTransitMethod === 'elevator') {
+        deathMsg = "チーン……という電子音でハッと目を覚ました。\n悪魔に弾き飛ばされ、自動で1階のエレベーター前まで送り返されたようだ……。";
+      } else {
+        deathMsg = "重い衝撃とともに目を覚ました……。\n意識を失う寸前、必死で1階の非常階段前まで転がり落ちてきたようだ。";
+      }
+      showMessageDialog(deathMsg, () => {
+        redraw();
+      });
+    } else {
+      redraw();
+    }
+  };
+
   if (gameState.currentFloor === 2) {
     check2FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
-      openCombatUI(enemy, gameState, (result) => {
-        isProcessingEvent = false;
-        redraw();
-      }, { changeFloor });
+      openCombatUI(enemy, gameState, handleBattleResult, { changeFloor });
     });
   } else if (gameState.currentFloor === 3) {
     check3FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
-      openCombatUI(enemy, gameState, (result) => {
-        isProcessingEvent = false;
-        redraw();
-      }, { changeFloor });
+      openCombatUI(enemy, gameState, handleBattleResult, { changeFloor });
     });
   }
 }

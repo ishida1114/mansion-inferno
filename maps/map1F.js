@@ -1,4 +1,4 @@
-// maps/map1F.js - 1階マップデータ（7Fクリア後の手紙投函・後半防具解放イベント追加完全版）
+// maps/map1F.js - 1階マップデータ（7F手紙＆防具解放イベント・エレベーター安全参照統合版）
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -19,7 +19,7 @@ export const map1F = [
 ];
 
 export function handleEvent1F(targetCell, gameState, context) {
-    // 4: 非常階段
+    // 4: 非常階段（2Fへ）
     if (targetCell === 4) {
         if (!gameState.hasKey2F) {
             return { 
@@ -38,19 +38,22 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // 7: エレベーター（エントランス横）
+    // 7: エレベーター（エントランス横 x:6, y:6）
     if (targetCell === 7) {
-        if (!gameState.flags.cleared2F || !gameState.hasElevatorKey) {
+        const isCleared2F = gameState.flags && gameState.flags.cleared2F;
+        if (!isCleared2F && !gameState.hasElevatorKey) {
             return {
                 run: (onComplete) => showMessageDialog("【エレベーター】\n「調整中」の張り紙が貼られている……。\n起動させるにはフロアボスを倒して『エレベーターキー』を手に入れる必要がある。", onComplete)
             };
         } else {
             return {
                 run: (onComplete) => {
-                    gameState.lastTransitMethod = 'elevator';
-                    playFloorTransition(3, () => {
-                        context.changeFloor(3);
-                        onComplete();
+                    showMessageDialog("【エレベーター】\n3階へ上がりますか？", () => {
+                        gameState.lastTransitMethod = 'elevator';
+                        playFloorTransition(3, () => {
+                            context.changeFloor(3);
+                            onComplete();
+                        });
                     });
                 }
             };
@@ -64,7 +67,6 @@ export function handleEvent1F(targetCell, gameState, context) {
         } else if (gameState.hasModelGun && !gameState.hasTalkedStudentInCVS) {
             return { run: (onComplete) => startStudentInCvsEvent(gameState, onComplete) };
         } else if (gameState.flags && gameState.flags.postedArmorLetter && !gameState.flags.unlockedAdvancedArmor) {
-            // ★ 手紙投函後におばあさんに話しかけ、後半防具④〜⑥をショップ解放
             return { run: (onComplete) => startUnlockArmorEvent(gameState, onComplete) };
         } else {
             return { run: (onComplete) => openShopUI(onComplete) };
@@ -101,11 +103,9 @@ export function handleEvent1F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ 集合ポストイベント（7Fクリア後の投函処理分岐を追加）
 function startPostEvent(gameState, onComplete) {
     playVideo("assets/videos/post.mp4", () => {
         if (gameState.flags && gameState.flags.cleared7F && !gameState.flags.postedArmorLetter) {
-            // 7Fボス撃破後の防具調達依頼手紙投函
             showMessageDialog("【1階 集合ポスト】\n7階以降の凶悪な悪魔に対抗するため、おばあさん宛てに『より頑丈な防具の調達依頼』の手紙を投函した！\n\n（※コンビニのおばあさんに話しかけてみよう）", () => {
                 gameState.flags.postedArmorLetter = true;
                 if (gameState.saveGame) gameState.saveGame();
@@ -114,7 +114,6 @@ function startPostEvent(gameState, onComplete) {
             return;
         }
 
-        // 通常の影山攻略ヒント手紙
         const letterText = "【ポストに入っていた古びた手紙】\n『影山は気味の悪い視線で部屋を覗き込んでくる。奴の顔（上段①）に「真実の鏡（2）」を向けろ。そして足元（下段④）に「浄化の塩（3）」を撒けば、身動きが取れなくなるはずだ……』";
         
         if (!gameState.bossHints) gameState.bossHints = [];
@@ -126,7 +125,6 @@ function startPostEvent(gameState, onComplete) {
     });
 }
 
-// ★ 後半防具（④〜⑥）仕入れ会話イベント
 function startUnlockArmorEvent(gameState, onComplete) {
     showConversationDialog(
         "assets/images/grandma.jpg", 
