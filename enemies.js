@@ -1,4 +1,4 @@
-// enemies.js - 敵ステータス・真田画像パス（assets/images/demon/3f-sanada.jpg）修正版
+// enemies.js - 敵ステータス・真田動画パス（assets/images/demon/3f-sanada.mp4）修正版
 
 export const ENEMIES = {
   // 1F 雑魚
@@ -87,7 +87,8 @@ export const ENEMIES = {
   // 3F フロアボス：ゴミ屋敷の狂人・真田
   SANADA_3F: {
     name: 'ゴミ屋敷の狂人・真田',
-    image: 'assets/images/demon/3f-sanada.jpg',
+    video: 'assets/images/demon/3f-sanada.mp4',
+    image: 'assets/images/demon/demon5.png',
     hp: 110,
     atk: 18,
     satk: 12,
@@ -104,7 +105,7 @@ export const ENEMIES = {
         3: 1, // ②左（腕）     ＝ 聖水 (1)
         5: 3, // ③右（腕）     ＝ 塩 (3)
       },
-      targetSum: 18
+      targetSum: 18 // 8 + 6 + 1 + 3 = 18
     }
   }
 };

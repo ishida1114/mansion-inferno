@@ -1,4 +1,4 @@
-// maps/map3F.js - 真田戦立ち絵ダイアログ＆戦闘画像（3f-sanada.jpg）適用版
+// maps/map3F.js - 真田ボス動画(3f-sanada.mp4)再生対応完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -130,8 +130,8 @@ function start3FRoomInquisition(gameState, context, onComplete) {
 
 function startSanadaBossSequence(gameState, context, onComplete) {
     showMessageDialog("【真田の部屋前】\n手に入れた『鉄のバール』で粗大ゴミと鎖を叩き壊した！\n重い扉が開く……！", () => {
-        // ★ 3f-sanada.jpg を使用したボス会話ダイアログ演出
-        showConversationDialog("assets/images/demon/3f-sanada.jpg", "【ゴミ屋敷の狂人・真田】\n「ヒヒヒ……オレのゴミ山を荒らす奴は誰だぁ！？ 腐敗と悪臭の中で死ねぇ！！」", () => {
+        // ★ 3f-sanada.mp4 動画再生演出
+        playVideo("assets/images/demon/3f-sanada.mp4", () => {
             const puzzleConfig = {
                 title: "【3Fボス解読】ゴミ屋敷の狂人・真田",
                 subTitle: "毒ガスを放つ口と足元の腐敗ゴミを浄化せよ",
@@ -163,7 +163,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                     showMessageDialog(`${evalResult.message}\n弱点を突いてダメージを与えた！ 真田（HP50%）との戦闘に入る！`, () => {
                         const sanadaEnemy = {
                             name: ENEMIES.SANADA_3F.name,
-                            image: "assets/images/demon/3f-sanada.jpg",
+                            image: "assets/images/demon/demon5.png",
                             hp: Math.floor(ENEMIES.SANADA_3F.hp * 0.5),
                             atk: ENEMIES.SANADA_3F.atk,
                             def: ENEMIES.SANADA_3F.def,
@@ -182,7 +182,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                     showMessageDialog(`${evalResult.message}\n魔方陣が解除できず、真田が襲いかかってきた！`, () => {
                         const sanadaEnemy = {
                             name: ENEMIES.SANADA_3F.name,
-                            image: "assets/images/demon/3f-sanada.jpg",
+                            image: "assets/images/demon/demon5.png",
                             hp: ENEMIES.SANADA_3F.hp,
                             atk: ENEMIES.SANADA_3F.atk,
                             def: ENEMIES.SANADA_3F.def,
