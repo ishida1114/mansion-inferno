@@ -1,4 +1,4 @@
-// enemies.js - 敵ステータス（3F強化版）・パズル判定完全版
+// enemies.js - 敵ステータス（3F適正マイルド調整版）・パズル判定完全版
 
 export const ENEMIES = {
   // 1F 雑魚
@@ -25,38 +25,38 @@ export const ENEMIES = {
     weaknessCard: 3,
   },
 
-  // 3F 雑魚（大幅強化：適正Lv.8向け）
+  // 3F 雑魚（マイルド調整：Lv.4〜6でしっかり戦える強さ）
   DEVIL4_3F: {
     name: '悪魔の赤ちゃん',
     image: 'assets/images/demon/demon4.png',
-    hp: 45,       // 25 -> 45
-    atk: 16,      // 9 -> 16
-    satk: 8,
-    def: 2,
-    agi: 6,
-    rewardMoney: 180,
+    hp: 28,       // 手頃なHP
+    atk: 8,       // 被ダメ 5〜6程度に軽減
+    satk: 4,
+    def: 1,
+    agi: 5,
+    rewardMoney: 160,
     weaknessCard: 8, // 聖香
   },
   DEVIL5_3F: {
     name: 'かつてペットだったもの',
     image: 'assets/images/demon/demon5.png',
-    hp: 65,       // 35 -> 65
-    atk: 20,      // 11 -> 20
-    satk: 6,
-    def: 3,
-    agi: 5,
-    rewardMoney: 220,
+    hp: 38,
+    atk: 10,      // 被ダメ 7〜8程度に軽減
+    satk: 5,
+    def: 2,
+    agi: 4,
+    rewardMoney: 200,
     weaknessCard: 6, // 聖炎
   },
   DEVIL6_3F: {
     name: '腐敗蟲',
     image: 'assets/images/demon/demon6.png',
-    hp: 35,       // 20 -> 35
-    atk: 14,      // 8 -> 14
-    satk: 10,
-    def: 1,
-    agi: 8,
-    rewardMoney: 160,
+    hp: 22,
+    atk: 7,
+    satk: 6,
+    def: 0,
+    agi: 7,
+    rewardMoney: 140,
     weaknessCard: 3, // 塩
   },
 
@@ -88,13 +88,13 @@ export const ENEMIES = {
   SANADA_3F: {
     name: 'ゴミ屋敷の狂人・真田',
     video: 'assets/videos/3f-sanada.mp4',
-    hp: 120,
-    atk: 22,
-    satk: 14,
-    def: 3,
-    agi: 6,
+    hp: 80,       // 120 -> 80
+    atk: 14,      // 22 -> 14
+    satk: 8,
+    def: 2,
+    agi: 5,
     rewardMoney: 800,
-    baseLevel: 12,
+    baseLevel: 8,
 
     puzzle: {
       openSlots: [1, 3, 5, 7],

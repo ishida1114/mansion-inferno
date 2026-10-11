@@ -1,4 +1,4 @@
-// main.js - 3Fテスト環境＆オープニング・map3F統合完全版
+// main.js - 3Fテスト環境・エレベーター復帰担保・マップ切替統合完全版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -74,18 +74,18 @@ function init() {
   };
 }
 
-// ★ 3Fテストプレイ用初期設定でニューゲーム開始
+// ★ 3Fテスト環境用初期起動
 function startNewGame() {
   gameState.resetGame();
   
-  // --- 3Fテスト用データセット ---
+  // 3Fスタートデータ
   gameState.currentFloor = 3;
   gameState.currentMap = map3F;
   gameState.player.x = playerStart3F.x;
   gameState.player.y = playerStart3F.y;
   gameState.player.dir = playerStart3F.dir;
 
-  // プレイヤーLv.4セット（ステータス＆装備自動計算）
+  // プレイヤーLv.4設定
   gameState.player.level = 4;
   gameState.player.maxHp = 35;
   gameState.player.hp = 35;
@@ -93,14 +93,17 @@ function startNewGame() {
   gameState.player.agi = 8;
   gameState.player.money = 1000;
 
-  // フラグ・装備設定
+  // 詰み防止用全フラグ解放設定
   gameState.player.hasModelGun = true;
   gameState.hasModelGun = true;
-  gameState.hasExorcistInherited = true; // スマホアプリ解放
+  gameState.hasExorcistInherited = true;
+  gameState.hasKey2F = true;
   gameState.hasElevatorKey = true;
+  if (!gameState.flags) gameState.flags = {};
+  gameState.flags.cleared2F = true; // 1Fエレベーター使用可能にする
+
   gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
-  gameState.updateEquippedCards(); // コストに応じたカード自動装填
-  // ------------------------------
+  gameState.updateEquippedCards();
 
   const container = document.getElementById('app-ui-container');
   if (container) container.classList.add('hidden');
