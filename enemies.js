@@ -1,4 +1,4 @@
-// enemies.js - 敵ステータス（適性Lv.4〜8歯ごたえ調整版）・パズル判定完全版
+// enemies.js - 敵ステータス・真田画像パス（assets/images/demon/3f-sanada.jpg）修正版
 
 export const ENEMIES = {
   // 1F 雑魚
@@ -25,12 +25,12 @@ export const ENEMIES = {
     weaknessCard: 3,
   },
 
-  // 3F 雑魚（Lv.5〜8でもしっかり歯ごたえが残る調整）
+  // 3F 雑魚
   DEVIL4_3F: {
     name: '悪魔の赤ちゃん',
     image: 'assets/images/demon/demon4.png',
-    hp: 42,       // Lv.5（威力20）で2〜3ターン交戦
-    atk: 13,      // 被ダメ約9〜10
+    hp: 42,
+    atk: 13,
     satk: 7,
     def: 2,
     agi: 6,
@@ -40,8 +40,8 @@ export const ENEMIES = {
   DEVIL5_3F: {
     name: 'かつてペットだったもの',
     image: 'assets/images/demon/demon5.png',
-    hp: 68,       // 非常にタフ（Lv.5でも4ターン交戦）
-    atk: 16,      // 被ダメ約12
+    hp: 68,
+    atk: 16,
     satk: 7,
     def: 3,
     agi: 5,
@@ -52,10 +52,10 @@ export const ENEMIES = {
     name: '腐敗蟲',
     image: 'assets/images/demon/demon6.png',
     hp: 36,
-    atk: 14,      // 被ダメ約10
+    atk: 14,
     satk: 8,
     def: 1,
-    agi: 8,       // 高AGI
+    agi: 8,
     rewardMoney: 140,
     weaknessCard: 3, // 塩
   },
@@ -63,7 +63,7 @@ export const ENEMIES = {
   // 2F フロアボス：ストーカー影山
   KAGEYAMA_2F: {
     name: 'ストーカー影山',
-    video: 'assets/videos/2f-kageyama.mp4',
+    video: 'assets/images/demon/2f-kageyama.mp4',
     hp: 60,
     atk: 8,
     satk: 6,
@@ -87,8 +87,8 @@ export const ENEMIES = {
   // 3F フロアボス：ゴミ屋敷の狂人・真田
   SANADA_3F: {
     name: 'ゴミ屋敷の狂人・真田',
-    video: 'assets/videos/3f-sanada.mp4',
-    hp: 110,      // ボスらしい高耐久
+    image: 'assets/images/demon/3f-sanada.jpg',
+    hp: 110,
     atk: 18,
     satk: 12,
     def: 3,

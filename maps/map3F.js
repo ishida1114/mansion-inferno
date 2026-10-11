@@ -1,4 +1,4 @@
-// maps/map3F.js - 動線修正・11x11スクエアマップ完全版
+// maps/map3F.js - 真田戦立ち絵ダイアログ＆戦闘画像（3f-sanada.jpg）適用版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -8,19 +8,18 @@ import { ENEMIES, evaluateSanadaPuzzle } from '../enemies.js';
 
 export const playerStart3F = { x: 5, y: 9, dir: 0 };
 
-// 1: 壁 / 0: 通路 / 7: エレベーター / 2: 査問部屋扉 / 3: ボス部屋（真田） / 4: 4F非常階段
 export const map3F = [
-    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], // y=0: 北端中央に非常階段 (4)
-    [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1], // y=1: (1,1)にボス真田部屋 (3)、(9,1)に査問扉 (2)
-    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1], // y=2
-    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1], // y=3: (2,3)に査問扉 (2)
-    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], // y=4
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // y=5
-    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1], // y=6
-    [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1], // y=7
-    [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1], // y=8
-    [1, 0, 1, 1, 1, 7, 1, 1, 1, 0, 1], // y=9: (5,9)にエレベーター (7)
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  // y=10
+    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1],
+    [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1],
+    [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 7, 1, 1, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
 export function check3FRandomEncounter(gameState, onEncounter) {
@@ -34,7 +33,6 @@ export function check3FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent3F(targetCell, gameState, context) {
-    // 7: エレベーター（1F拠点へ）
     if (targetCell === 7) {
         return {
             run: (onComplete) => {
@@ -49,7 +47,6 @@ export function handleEvent3F(targetCell, gameState, context) {
         };
     }
 
-    // 4: 非常階段（4Fへ）
     if (targetCell === 4) {
         if (!gameState.flags || !gameState.flags.cleared3F) {
             return {
@@ -68,14 +65,12 @@ export function handleEvent3F(targetCell, gameState, context) {
         }
     }
 
-    // 2: 査問部屋
     if (targetCell === 2) {
         return {
             run: (onComplete) => start3FRoomInquisition(gameState, context, onComplete)
         };
     }
 
-    // 3: 3Fボス部屋（真田）
     if (targetCell === 3) {
         if (gameState.flags && gameState.flags.cleared3F) {
             return {
@@ -135,7 +130,8 @@ function start3FRoomInquisition(gameState, context, onComplete) {
 
 function startSanadaBossSequence(gameState, context, onComplete) {
     showMessageDialog("【真田の部屋前】\n手に入れた『鉄のバール』で粗大ゴミと鎖を叩き壊した！\n重い扉が開く……！", () => {
-        playVideo("assets/videos/3f-sanada.mp4", () => {
+        // ★ 3f-sanada.jpg を使用したボス会話ダイアログ演出
+        showConversationDialog("assets/images/demon/3f-sanada.jpg", "【ゴミ屋敷の狂人・真田】\n「ヒヒヒ……オレのゴミ山を荒らす奴は誰だぁ！？ 腐敗と悪臭の中で死ねぇ！！」", () => {
             const puzzleConfig = {
                 title: "【3Fボス解読】ゴミ屋敷の狂人・真田",
                 subTitle: "毒ガスを放つ口と足元の腐敗ゴミを浄化せよ",
@@ -167,7 +163,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                     showMessageDialog(`${evalResult.message}\n弱点を突いてダメージを与えた！ 真田（HP50%）との戦闘に入る！`, () => {
                         const sanadaEnemy = {
                             name: ENEMIES.SANADA_3F.name,
-                            image: "assets/images/demon/demon5.png",
+                            image: "assets/images/demon/3f-sanada.jpg",
                             hp: Math.floor(ENEMIES.SANADA_3F.hp * 0.5),
                             atk: ENEMIES.SANADA_3F.atk,
                             def: ENEMIES.SANADA_3F.def,
@@ -186,7 +182,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                     showMessageDialog(`${evalResult.message}\n魔方陣が解除できず、真田が襲いかかってきた！`, () => {
                         const sanadaEnemy = {
                             name: ENEMIES.SANADA_3F.name,
-                            image: "assets/images/demon/demon5.png",
+                            image: "assets/images/demon/3f-sanada.jpg",
                             hp: ENEMIES.SANADA_3F.hp,
                             atk: ENEMIES.SANADA_3F.atk,
                             def: ENEMIES.SANADA_3F.def,
