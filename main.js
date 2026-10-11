@@ -1,11 +1,11 @@
-// main.js - 3Dレンダラー統合＆査問引数ミスマッチ解消完全版
+// main.js - オープニング表示機能統合完全版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './maps/map2F.js';
-import { showMessageDialog, openCombatUI, openInquisitionUI } from './ui.js';
+import { showMessageDialog, openCombatUI, openInquisitionUI, showOpeningUI } from './ui.js';
 
 let appUI;
 let renderer;
@@ -86,10 +86,15 @@ function startNewGame() {
 
   document.getElementById('touch-controls')?.classList.remove('hidden');
 
-  if (!isRunning) {
-    isRunning = true;
-    gameLoop();
-  }
+  // ★ はじめからスタート時にオープニングを表示し、閉じたらゲームループを開始
+  showOpeningUI(() => {
+    if (!isRunning) {
+      isRunning = true;
+      gameLoop();
+    } else {
+      redraw();
+    }
+  });
 }
 
 function resumeGame() {
@@ -129,7 +134,6 @@ function interactFrontCell() {
   const cellType = map[frontY][frontX];
   if (!cellType || cellType === 0 || cellType === 1) return;
 
-  // ★ openInquisitionUI に渡す引数を正確に転送するように修正
   const context = {
     changeFloor: (floor) => { changeFloor(floor); },
     redraw: () => redraw(),

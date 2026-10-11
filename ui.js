@@ -1,4 +1,4 @@
-// ui.js - 移動完全遮断・自動クロマキー・後半防具解放制御・ソフトキャップ報酬対応完全版
+// ui.js - 移動完全遮断・自動クロマキー・後半防具解放制御・ソフトキャップ報酬・オープニング統合版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -25,12 +25,10 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
     overlay.querySelectorAll("img").forEach(img => applyChromaKey(img));
 
     const handleClose = (e) => {
-        // キーボード入力時は、メッセージ表示中あらゆるキーの移動イベント伝播を即座に完全ブロック！
         if (e.type === "keydown") {
             e.preventDefault();
             e.stopPropagation();
 
-            // SPACE または Enter 以外のキーを押した場合は閉じる処理を行わず無視（移動もさせない）
             if (e.key !== " " && e.key !== "Enter" && e.key !== "Spacebar") {
                 return;
             }
@@ -52,11 +50,39 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
         }
     };
 
-    // キャプチャリングフェーズ(true)でキーボードイベントを最優先横取りして背景への移動入力を完全遮断
     window.addEventListener("keydown", handleClose, true);
     setTimeout(() => {
         overlay.onclick = handleClose;
     }, 150);
+}
+
+// ★ オープニング画面表示UI（画像＋ストーリテキスト一式表示）
+export function showOpeningUI(onClosed) {
+    const html = `
+        <div style="width: 90%; max-width: 580px; max-height: 90vh; padding: 20px; background-color: rgba(5, 0, 0, 0.96); color: #dddddd; border: 2px solid #770000; border-radius: 8px; font-family: ${HORROR_FONT}; box-shadow: 0 0 30px rgba(255,0,0,0.5); display: flex; flex-direction: column; align-items: center; box-sizing: border-box; overflow-y: auto; pointer-events: auto;">
+            <img src="assets/images/opening.png" style="width: 100%; max-height: 300px; object-fit: contain; border-radius: 6px; margin-bottom: 15px; border: 1px solid #440000;" onerror="this.style.display='none'">
+            <div style="font-size: 0.92em; line-height: 1.8; white-space: pre-wrap; color: #ccc; text-align: left; width: 100%; margin-bottom: 15px;">
+新卒の就職活動は全滅した。
+目標を見失い大学を卒業してからも定職には就かず、
+家庭教師のアルバイトで日銭を稼ぐ日々。
+「自分はどう生きるべきなのか」
+日々悶々と過ごすなか、家庭教師の生徒から一本の電話が入った。
+
+『先生……助けて！ マンションが……みんなおかしくなっちゃったんだ……！』
+
+悲鳴とともに途切れた、教え子からのＳＯＳ。
+駆けつけた先は、異様な静寂と黒い霧に包まれた十三階建てのマンション。
+そこはすでに人間の住処ではなく、凶悪な悪魔どもが支配する「地獄（インフェルノ）」と化していた。
+
+特別な力なんてない。悪魔と戦う知識もない。
+でも教え子を救うために踏み込んだ絶望の城。
+
+――俺は、ただの素人だ。だが、あの子を見捨てるわけにはいかない。
+            </div>
+            <div style="color: #ffdd66; font-size: 0.85em; font-weight: bold; text-shadow: 0 0 5px red;">▼ タップ または [ SPACE / Enter ] で探索を開始する</div>
+        </div>
+    `;
+    createGuardedDialogContainer(html, onClosed);
 }
 
 export function showMessageDialog(text, onClosed) {
@@ -271,7 +297,6 @@ export function openShopUI(onClosed) {
 
     let html = "";
     Object.values(itemDefinitions).forEach(item => {
-        // ★ 後半防具（④〜⑥）は解放フラグが立つまで非表示
         if (item.requiresAdvanced && (!gameState.flags || !gameState.flags.unlockedAdvancedArmor)) {
             return;
         }
@@ -460,7 +485,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             if (enemyHp <= 0) {
                 setTimeout(() => {
                     ui.remove();
-                    // ★ ソフトキャップ（獲得減衰）計算の適用
                     const reward = gameState.calculateRewards ? gameState.calculateRewards(50, 150) : { exp: 50, money: 150 };
                     gameState.player.money += reward.money;
                     const isLvUp = gameState.gainExp(reward.exp);
@@ -692,7 +716,6 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
             const isWeaknessHit = selected.some(num => parseInt(num) === entity.weakness);
 
             if (isWeaknessHit) {
-                // ★ ソフトキャップ（獲得減衰）計算の適用
                 const reward = gameState.calculateRewards ? gameState.calculateRewards(100, 250) : { exp: 100, money: 250 };
                 gameState.player.money += reward.money;
                 const isLvUp = gameState.gainExp(reward.exp);
@@ -720,7 +743,6 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     protectBtn.onclick = () => {
         ui.remove();
         if (entity.type === "human") {
-            // ★ 人間保護成功報酬（ソフトキャップ計算の適用）
             const reward = gameState.calculateRewards ? gameState.calculateRewards(0, 300) : { exp: 0, money: 300 };
             gameState.player.money += reward.money;
             
