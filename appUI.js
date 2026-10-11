@@ -1,4 +1,4 @@
-// appUI.js - 所持品テンプレバグ修正＆アイテム使用ボタン機能統合版
+// appUI.js - 所持品・悪魔手記テンプレート展開バグ解消＆完全版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -233,7 +233,6 @@ export class AppUI {
     `;
   }
 
-  // ★ 所持品表示修正（バッククォートでのHTML生成に修正）
   renderInventoryView() {
     const items = gameState.inventory?.items || [];
 
@@ -265,6 +264,7 @@ export class AppUI {
     `;
   }
 
+  // ★ 悪魔手記のテンプレ展開バグ修復箇所
   renderNotesView() {
     const hints = gameState.bossHints || [];
     return `
@@ -329,7 +329,6 @@ export class AppUI {
         };
     }
 
-    // ★ アイテム使用ボタンイベント
     const useBtns = document.querySelectorAll('.use-item-btn');
     useBtns.forEach(btn => {
       btn.onclick = () => {
@@ -338,7 +337,7 @@ export class AppUI {
           const item = gameState.inventory.items[itemIdx];
           let msg = "";
           
-          const healVal = item.heal || 15; // デフォルト回復量15
+          const healVal = item.heal || 15;
           gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healVal);
           msg = `【${item.name}】を使用した！ HPが ${healVal} 回復した！（現在HP: ${gameState.player.hp}/${gameState.player.maxHp}）`;
 
