@@ -1,4 +1,4 @@
-// enemies.js - 敵ステータス・2F影山/3F真田魔方陣パズル判定（完全版）
+// enemies.js - 敵ステータス（3F強化版）・パズル判定完全版
 
 export const ENEMIES = {
   // 1F 雑魚
@@ -10,7 +10,7 @@ export const ENEMIES = {
     def: 0,
     agi: 3,
     rewardMoney: 60,
-    weaknessCard: 1, // 聖水が弱点
+    weaknessCard: 1,
   },
 
   // 2F 雑魚
@@ -22,42 +22,42 @@ export const ENEMIES = {
     def: 1,
     agi: 4,
     rewardMoney: 120,
-    weaknessCard: 3, // 塩が弱点
+    weaknessCard: 3,
   },
 
-  // 3F 雑魚
+  // 3F 雑魚（大幅強化：適正Lv.8向け）
   DEVIL4_3F: {
-    name: 'ヘドロ悪魔',
+    name: '悪魔の赤ちゃん',
     image: 'assets/images/demon/demon4.png',
-    hp: 25,
-    atk: 9,
-    satk: 5,
-    def: 1,
-    agi: 5,
-    rewardMoney: 160,
-    weaknessCard: 8, // 聖香が弱点
+    hp: 45,       // 25 -> 45
+    atk: 16,      // 9 -> 16
+    satk: 8,
+    def: 2,
+    agi: 6,
+    rewardMoney: 180,
+    weaknessCard: 8, // 聖香
   },
   DEVIL5_3F: {
-    name: '不法投棄の怪物',
+    name: 'かつてペットだったもの',
     image: 'assets/images/demon/demon5.png',
-    hp: 35,
-    atk: 11,
-    satk: 4,
-    def: 2,
-    agi: 4,
-    rewardMoney: 180,
-    weaknessCard: 6, // 聖炎が弱点
+    hp: 65,       // 35 -> 65
+    atk: 20,      // 11 -> 20
+    satk: 6,
+    def: 3,
+    agi: 5,
+    rewardMoney: 220,
+    weaknessCard: 6, // 聖炎
   },
   DEVIL6_3F: {
     name: '腐敗蟲',
     image: 'assets/images/demon/demon6.png',
-    hp: 20,
-    atk: 8,
-    satk: 6,
-    def: 0,
-    agi: 7,
-    rewardMoney: 150,
-    weaknessCard: 3, // 塩が弱点
+    hp: 35,       // 20 -> 35
+    atk: 14,      // 8 -> 14
+    satk: 10,
+    def: 1,
+    agi: 8,
+    rewardMoney: 160,
+    weaknessCard: 3, // 塩
   },
 
   // 2F フロアボス：ストーカー影山
@@ -70,18 +70,17 @@ export const ENEMIES = {
     def: 2,
     agi: 6,
     rewardMoney: 500,
-    baseLevel: 8, // 100%合致時の適正Lv
+    baseLevel: 8,
 
-    // 2Fボス 3x3魔方陣パズル（4マス開放）
     puzzle: {
-      openSlots: [1, 3, 5, 7], // 0〜8のグリッドのうち開いている4マス
+      openSlots: [1, 3, 5, 7],
       correctSolution: {
-        1: 2, // ①上段（顔・目） ＝ 【Ⅱ】真実の鏡 (2)
-        7: 3, // ④下段（足元）   ＝ 【Ⅲ】浄化の塩 (3)
-        3: 1, // ②左（腕）      ＝ 【Ⅰ】聖水 (1)
-        5: 4, // ③右（腕）      ＝ 【Ⅳ】聖なる十字架 (4)
+        1: 2,
+        7: 3,
+        3: 1,
+        5: 4,
       },
-      targetSum: 10 // 4マスの合計数字
+      targetSum: 10
     }
   },
 
@@ -89,29 +88,27 @@ export const ENEMIES = {
   SANADA_3F: {
     name: 'ゴミ屋敷の狂人・真田',
     video: 'assets/videos/3f-sanada.mp4',
-    hp: 100,
-    atk: 14,
-    satk: 10,
+    hp: 120,
+    atk: 22,
+    satk: 14,
     def: 3,
     agi: 6,
     rewardMoney: 800,
     baseLevel: 12,
 
-    // 3Fボス 3x3魔方陣パズル（4マス開放 / 目標合計18）
     puzzle: {
       openSlots: [1, 3, 5, 7],
       correctSolution: {
-        1: 8, // ①上段（毒ガス口） ＝ 【Ⅷ】聖香 (8)
-        7: 6, // ④下段（腐敗ゴミ） ＝ 【Ⅵ】聖なる炎 (6)
-        3: 1, // ②左（腕）         ＝ 【Ⅰ】聖水 (1)
-        5: 3, // ③右（腕）         ＝ 【Ⅲ】浄化の塩 (3)
+        1: 8, // ①上（毒ガス口）＝ 聖香 (8)
+        7: 6, // ④下（腐敗ゴミ）＝ 聖炎 (6)
+        3: 1, // ②左（腕）     ＝ 聖水 (1)
+        5: 3, // ③右（腕）     ＝ 塩 (3)
       },
-      targetSum: 18 // 4マスの合計数字 (8 + 6 + 1 + 3 = 18)
+      targetSum: 18
     }
   }
 };
 
-// 2Fボス影山魔方陣パズルの解読判定処理
 export function evaluateKageyamaPuzzle(placedCards) {
   const solution = ENEMIES.KAGEYAMA_2F.puzzle.correctSolution;
   let correctCount = 0;
@@ -136,7 +133,6 @@ export function evaluateKageyamaPuzzle(placedCards) {
   }
 }
 
-// 3Fボス真田魔方陣パズルの解読判定処理
 export function evaluateSanadaPuzzle(placedCards) {
   const solution = ENEMIES.SANADA_3F.puzzle.correctSolution;
   let correctCount = 0;
