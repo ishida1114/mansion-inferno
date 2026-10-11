@@ -1,4 +1,4 @@
-// maps/map3F.js - 11x11スクエアマップ・査問完全偽装対応版
+// maps/map3F.js - 動線修正・11x11スクエアマップ完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -8,18 +8,19 @@ import { ENEMIES, evaluateSanadaPuzzle } from '../enemies.js';
 
 export const playerStart3F = { x: 5, y: 9, dir: 0 };
 
+// 1: 壁 / 0: 通路 / 7: エレベーター / 2: 査問部屋扉 / 3: ボス部屋（真田） / 4: 4F非常階段
 export const map3F = [
-    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 1, 3, 1, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    [1, 0, 2, 0, 0, 0, 0, 0, 2, 0, 1],
-    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1],
-    [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
-    [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 7, 1, 1, 1, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], // y=0: 北端中央に非常階段 (4)
+    [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1], // y=1: (1,1)にボス真田部屋 (3)、(9,1)に査問扉 (2)
+    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1], // y=2
+    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1], // y=3: (2,3)に査問扉 (2)
+    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], // y=4
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // y=5
+    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1], // y=6
+    [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1], // y=7
+    [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1], // y=8
+    [1, 0, 1, 1, 1, 7, 1, 1, 1, 0, 1], // y=9: (5,9)にエレベーター (7)
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  // y=10
 ];
 
 export function check3FRandomEncounter(gameState, onEncounter) {
@@ -33,6 +34,7 @@ export function check3FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent3F(targetCell, gameState, context) {
+    // 7: エレベーター（1F拠点へ）
     if (targetCell === 7) {
         return {
             run: (onComplete) => {
@@ -47,6 +49,7 @@ export function handleEvent3F(targetCell, gameState, context) {
         };
     }
 
+    // 4: 非常階段（4Fへ）
     if (targetCell === 4) {
         if (!gameState.flags || !gameState.flags.cleared3F) {
             return {
@@ -65,12 +68,14 @@ export function handleEvent3F(targetCell, gameState, context) {
         }
     }
 
+    // 2: 査問部屋
     if (targetCell === 2) {
         return {
             run: (onComplete) => start3FRoomInquisition(gameState, context, onComplete)
         };
     }
 
+    // 3: 3Fボス部屋（真田）
     if (targetCell === 3) {
         if (gameState.flags && gameState.flags.cleared3F) {
             return {
@@ -92,7 +97,6 @@ export function handleEvent3F(targetCell, gameState, context) {
     return null;
 }
 
-// 3F 査問イベント（本物・偽物に関わらず、最初は完全に人間の姿で対面）
 function start3FRoomInquisition(gameState, context, onComplete) {
     const isRealHuman = Math.random() < 0.5;
 
@@ -116,11 +120,10 @@ function start3FRoomInquisition(gameState, context, onComplete) {
             }
         }, context);
     } else {
-        // ★ 悪魔でも見た目と名前は人間の「マンションの住人」で提示
         const entity = {
             type: "demon",
-            name: "マンションの住人",              // 偽装名（悪魔名を出さない）
-            faceImage: "assets/images/human1.png", // 人間画像で表示
+            name: "マンションの住人",
+            faceImage: "assets/images/human1.png",
             realImage: "assets/images/demon/demon4.png",
             weakness: 8
         };
@@ -158,10 +161,10 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                     if (gameState.saveGame) gameState.saveGame();
 
                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-                    showMessageDialog(`\${evalResult.message}\n\n【3Fフロアボス全滅！】\n真田の怨霊を浄化し、3階の悪臭が消え去った！\n（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, onComplete);
+                    showMessageDialog(`${evalResult.message}\n\n【3Fフロアボス全滅！】\n真田の怨霊を浄化し、3階の悪臭が消え去った！\n（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, onComplete);
 
                 } else if (evalResult.result === 'PARTIAL') {
-                    showMessageDialog(`\${evalResult.message}\n弱点を突いてダメージを与えた！ 真田（HP50%）との戦闘に入る！`, () => {
+                    showMessageDialog(`${evalResult.message}\n弱点を突いてダメージを与えた！ 真田（HP50%）との戦闘に入る！`, () => {
                         const sanadaEnemy = {
                             name: ENEMIES.SANADA_3F.name,
                             image: "assets/images/demon/demon5.png",
@@ -180,7 +183,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                     });
 
                 } else {
-                    showMessageDialog(`\${evalResult.message}\n魔方陣が解除できず、真田が襲いかかってきた！`, () => {
+                    showMessageDialog(`${evalResult.message}\n魔方陣が解除できず、真田が襲いかかってきた！`, () => {
                         const sanadaEnemy = {
                             name: ENEMIES.SANADA_3F.name,
                             image: "assets/images/demon/demon5.png",
