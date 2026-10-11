@@ -1,4 +1,4 @@
-// ui.js - 移動完全遮断・自動クロマキー・後半防具解放制御・ソフトキャップ報酬・オープニング統合版
+// ui.js - 査問完全人間擬態ブラフ対応・移動完全遮断・自動クロマキー統合版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -11,7 +11,6 @@ export function applyChromaKey(element) {
     element.style.filter = "url(#chroma-green-filter)";
 }
 
-// ★ 汎用ダイアログ作成用内部関数（全キー遮断＆クロマキー自動適用）
 function createGuardedDialogContainer(contentHTML, onClosed) {
     let isClosing = false;
 
@@ -21,7 +20,6 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
 
     document.body.appendChild(overlay);
 
-    // ダイアログ内の全画像にクロマキー（緑消し）を自動適用
     overlay.querySelectorAll("img").forEach(img => applyChromaKey(img));
 
     const handleClose = (e) => {
@@ -56,7 +54,6 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
     }, 150);
 }
 
-// ★ オープニング画面表示UI（画像＋ストーリテキスト一式表示）
 export function showOpeningUI(onClosed) {
     const html = `
         <div style="width: 90%; max-width: 580px; max-height: 90vh; padding: 20px; background-color: rgba(5, 0, 0, 0.96); color: #dddddd; border: 2px solid #770000; border-radius: 8px; font-family: ${HORROR_FONT}; box-shadow: 0 0 30px rgba(255,0,0,0.5); display: flex; flex-direction: column; align-items: center; box-sizing: border-box; overflow-y: auto; pointer-events: auto;">
@@ -662,26 +659,39 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     const protectBtn = document.getElementById("btn-protect");
     const log = document.getElementById("inq-log");
 
+    // ★ 悪魔ブラフ（擬態）対応版メッセージ生成ロジック
     function getReactionMessage(cardNum, entity) {
         if (entity.type === "human") {
             const humanMsg = [
                 "「え…？ なんですかその紙切れは？ 宗教の勧誘ですか？」",
                 "「気味が悪いカードですね……近付けないでください！」",
-                "「何がしたいんですか？ 警察を呼びますよ！」"
+                "「何がしたいんですか？ 警察を呼びますよ！」",
+                "「やめてください！ 意味がわかりません！」"
             ];
             return humanMsg[Math.floor(Math.random() * humanMsg.length)];
         } else {
             const targetWeakness = entity.weakness || 3;
             const diff = Math.abs(parseInt(cardNum) - targetWeakness);
-            const isLying = Math.random() < 0.25;
-            const effectiveDiff = isLying ? (diff === 0 ? 4 : 0) : diff;
 
-            if (effectiveDiff === 0) {
-                return "「ぐぐっ……！？」\n相手の瞳が一瞬赤くうごめき、肌から不気味な煙が立ち上った！";
-            } else if (effectiveDiff <= 2) {
-                return "「……くっ……！」\n平然を装おうとしているが、不自然に口元を引きつらせて身体を硬直させた……。";
+            if (diff === 0) {
+                // ★ 弱点ドンピシャ：耐え切れずに本性が露出
+                return "「ぐぐっ……！？ ぐあああっ！！」\n相手の瞳が一瞬赤くうごめき、肌から不気味な煙が立ち上った！";
+            } else if (diff <= 2) {
+                // ★ 弱点に近い：苦痛を隠そうとして反応が引きつる
+                return "「……くっ……！？」\n平然を装おうとしているが、不自然に口元を引きつらせて身体を硬直させた……。";
             } else {
-                return "「……ハッ、何ですかそれ？ 馬鹿馬鹿しい。」\n不気味なほど余裕の笑みを浮かべて、せせら笑っている。";
+                // ★ 弱点から遠い：高確率(60%)で人間に擬態して全く同じ反応(ブラフ)を返す
+                const isDisguising = Math.random() < 0.6;
+                if (isDisguising) {
+                    const bluffMsg = [
+                        "「え…？ なんですかその紙切れは？ 宗教の勧誘ですか？」",
+                        "「気味が悪いカードですね……近付けないでください！」",
+                        "「何がしたいんですか？ 警察を呼びますよ！」"
+                    ];
+                    return bluffMsg[Math.floor(Math.random() * bluffMsg.length)] + "\n（怯えているようにも見えるが……どこか視線が蠢いている気もする）";
+                } else {
+                    return "「……ハッ、何ですかそれ？ 馬鹿馬鹿しい。」\n不気味なほど余裕の笑みを浮かべて、せせら笑っている。";
+                }
             }
         }
     }

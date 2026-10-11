@@ -1,4 +1,4 @@
-// main.js - 3Fテスト環境・エレベーター復帰座標(x:6, y:5)完全対応版
+// main.js - 4Fリナ進入セリフ分岐＆移動制御対応版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -6,7 +6,8 @@ import { Renderer } from './renderer.js';
 import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './maps/map2F.js';
 import { map3F, playerStart3F, handleEvent3F, check3FRandomEncounter } from './maps/map3F.js';
-import { showMessageDialog, openCombatUI, openInquisitionUI, showOpeningUI } from './ui.js';
+import { map4F, playerStart4F, handleEvent4F, check4FRandomEncounter } from './maps/map4F.js';
+import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI } from './ui.js';
 
 let appUI;
 let renderer;
@@ -74,18 +75,16 @@ function init() {
   };
 }
 
-// ★ 3Fテスト環境初期セットアップ
 function startNewGame() {
   gameState.resetGame();
   
-  // 3Fスタートデータ
+  // 3Fテスト環境初期セットアップ
   gameState.currentFloor = 3;
   gameState.currentMap = map3F;
   gameState.player.x = playerStart3F.x;
   gameState.player.y = playerStart3F.y;
   gameState.player.dir = playerStart3F.dir;
 
-  // テスト用ステータス設定 (Lv.4)
   gameState.player.level = 4;
   gameState.player.maxHp = 35;
   gameState.player.hp = 35;
@@ -93,13 +92,12 @@ function startNewGame() {
   gameState.player.agi = 8;
   gameState.player.money = 1000;
 
-  // フラグ・装備設定
   gameState.player.hasModelGun = true;
   gameState.hasModelGun = true;
   gameState.hasExorcistInherited = true;
   gameState.hasKey2F = true;
   gameState.hasElevatorKey = true;
-  gameState.lastTransitMethod = 'elevator'; // デフォルトはエレベーター移動扱い
+  gameState.lastTransitMethod = 'elevator';
 
   if (!gameState.flags) gameState.flags = {};
   gameState.flags.cleared2F = true;
@@ -184,6 +182,8 @@ function interactFrontCell() {
     eventObj = handleEvent2F(cellType, gameState, context);
   } else if (gameState.currentFloor === 3) {
     eventObj = handleEvent3F(cellType, gameState, context);
+  } else if (gameState.currentFloor === 4) {
+    eventObj = handleEvent4F(cellType, gameState, context);
   }
 
   if (eventObj && typeof eventObj.run === 'function') {
@@ -195,10 +195,25 @@ function interactFrontCell() {
   }
 }
 
-// ★ 移動手段に応じたフロア切替 ＆ 1F復帰位置完全制御
+// ★ 移動手段に応じたフロア切替 ＆ 4F進入セリフ制御
 function changeFloor(floor) {
   gameState.currentFloor = floor;
-  if (floor === 3) {
+  if (floor === 4) {
+    gameState.currentMap = map4F;
+    gameState.player.x = playerStart4F.x;
+    gameState.player.y = playerStart4F.y;
+    gameState.player.dir = playerStart4F.dir;
+
+    if (!gameState.flags || !gameState.flags.cleared4F) {
+      showConversationDialog("assets/images/demon/rina.png", "【色欲・リナ】\n「あら、私は『色欲』のリナ、『嫉妬』と『環境汚染』は倒されたのね、私も悪魔に乗っ取られてるの、私を助けて、強いひと」", () => {
+        redraw();
+      });
+    } else {
+      showMessageDialog("【4階 非常階段前】\n4階へ到達した。リナは討滅され、妖艶な桃色の霧は完全に消え去っている……", () => {
+        redraw();
+      });
+    }
+  } else if (floor === 3) {
     gameState.currentMap = map3F;
     gameState.player.x = playerStart3F.x;
     gameState.player.y = playerStart3F.y;
@@ -216,11 +231,10 @@ function changeFloor(floor) {
     });
   } else if (floor === 1) {
     gameState.currentMap = map1F;
-    // ★ 1Fエレベーター(x: 6, y: 6)の正面(x: 6, y: 5 / 北向き)へ復帰
     if (gameState.lastTransitMethod === 'elevator') {
       gameState.player.x = 6;
       gameState.player.y = 5;
-      gameState.player.dir = 0; // 北向き
+      gameState.player.dir = 0;
     } else {
       gameState.player.x = playerStart1F.x;
       gameState.player.y = playerStart1F.y;
@@ -264,7 +278,6 @@ function toggleDebugUI() {
   }
 }
 
-// ★ 死亡時（全滅時）の復帰メッセージ＆位置処理
 function checkEncounterAfterMove() {
   const handleBattleResult = (result) => {
     isProcessingEvent = false;
@@ -291,6 +304,11 @@ function checkEncounterAfterMove() {
     });
   } else if (gameState.currentFloor === 3) {
     check3FRandomEncounter(gameState, (enemy) => {
+      isProcessingEvent = true;
+      openCombatUI(enemy, gameState, handleBattleResult, { changeFloor });
+    });
+  } else if (gameState.currentFloor === 4) {
+    check4FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
       openCombatUI(enemy, gameState, handleBattleResult, { changeFloor });
     });
