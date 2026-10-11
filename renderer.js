@@ -1,4 +1,4 @@
-// renderer.js - 擬似3D透視投影描画（エントランス/エレベーター画像判定完全分離版）
+// renderer.js - アクションヒント上部移動（ミニマップ右横）＆階層動的連動完全対応版
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -141,23 +141,22 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             let targetImg = images.wall;
 
             if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
-                // 非常階段扉
                 targetImg = images.stairDoor;
             } else if (cellType === 6 && images.entrance && images.entrance.complete) {
-                // ★ セル6: エントランス専用画像（entrance.png）
                 targetImg = images.entrance;
             } else if (cellType === 7 && images.elevator && images.elevator.complete) {
-                // ★ セル7: エレベーター専用画像（elevator.png）
                 targetImg = images.elevator;
             } else if ([2, 3, 5, 8, 9].includes(cellType) && images.door && images.door.complete) {
-                // 通常扉
                 targetImg = images.door;
             }
 
             if (targetImg && targetImg.complete) {
                 ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
-                ctx.fillStyle = `rgba(0, 0, 0, ${(depth - 1) * 0.22})`; 
-                ctx.fillRect(b.x, b.y, b.w, b.h);
+                const shadowAlpha = (depth - 1) * 0.22;
+                if (shadowAlpha > 0) {
+                    ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`; 
+                    ctx.fillRect(b.x, b.y, b.w, b.h);
+                }
             }
         }
     }
@@ -174,27 +173,41 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
     ctx.fillText("[ ESC ] アプリ  |  [ F2 ] デバッグ", 20, canvas.height - 13);
 }
 
+// ★ アクションヒント描画（ミニマップ右横・階層連動テキストへ修正）
 function drawActionHint(ctx, canvas, player, currentMap) {
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
+    
     if ([2, 3, 4, 5, 6, 7, 8, 9].includes(target)) {
         let label = "[ SPACE ] 調べる";
+        
         if (target === 4) {
-            label = gameState.currentFloor === 2 ? "[ SPACE ] 1階へ下りる" : "[ SPACE ] 2階へ登る";
+            // 現在の階層に合わせて動的に〇階へ登る（1階なら2階へ）
+            const nextFloor = (gameState.currentFloor || 1) + 1;
+            label = `[ SPACE ] ${nextFloor}階へ登る`;
         } else if (target === 7) {
             label = "[ SPACE ] エレベーターに乗る";
         } else if (target === 2 && gameState.currentFloor === 1) {
             label = "[ SPACE ] コンビニに入る";
         }
-        ctx.fillStyle = "rgba(15, 0, 0, 0.75)"; 
-        ctx.fillRect(canvas.width / 2 - 100, canvas.height - 50, 200, 32);
-        ctx.strokeStyle = "#550000"; 
+
+        // ミニマップの右隣（x: 140, y: 10）に描画
+        const boxX = 140;
+        const boxY = 10;
+        const boxW = 230;
+        const boxH = 30;
+
+        ctx.fillStyle = "rgba(15, 0, 0, 0.85)"; 
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+        ctx.strokeStyle = "#880000"; 
         ctx.lineWidth = 1; 
-        ctx.strokeRect(canvas.width / 2 - 100, canvas.height - 50, 200, 32);
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
+        
         ctx.fillStyle = "#ffdd66"; 
-        ctx.font = `bold 16px ${HORROR_FONT}`; 
+        ctx.font = `bold 13px ${HORROR_FONT}`; 
         ctx.textAlign = "center"; 
-        ctx.fillText(label, canvas.width / 2, canvas.height - 28);
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2);
     }
 }
 
@@ -239,6 +252,7 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.fillStyle = "#ffdd66"; 
     ctx.font = `bold 14px ${HORROR_FONT}`; 
     ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 

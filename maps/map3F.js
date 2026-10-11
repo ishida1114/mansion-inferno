@@ -1,4 +1,4 @@
-// maps/map3F.js - 真田ボス動画(3f-sanada.mp4)再生対応完全版
+// maps/map3F.js - 新ボス共通ルール（魔法陣動画＋減衰率戦闘）完全対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -130,7 +130,6 @@ function start3FRoomInquisition(gameState, context, onComplete) {
 
 function startSanadaBossSequence(gameState, context, onComplete) {
     showMessageDialog("【真田の部屋前】\n手に入れた『鉄のバール』で粗大ゴミと鎖を叩き壊した！\n重い扉が開く……！", () => {
-        // ★ 3f-sanada.mp4 動画再生演出
         playVideo("assets/images/demon/3f-sanada.mp4", () => {
             const puzzleConfig = {
                 title: "【3Fボス解読】ゴミ屋敷の狂人・真田",
@@ -147,56 +146,64 @@ function startSanadaBossSequence(gameState, context, onComplete) {
             openBossPuzzleUI(puzzleConfig, gameState, (placedSlots) => {
                 const evalResult = evaluateSanadaPuzzle(placedSlots);
 
-                if (evalResult.result === 'PERFECT') {
-                    const reward = gameState.calculateRewards ? gameState.calculateRewards(200, 800) : { exp: 200, money: 800 };
-                    gameState.player.money += reward.money;
-                    const isLvUp = gameState.gainExp(reward.exp);
-                    
-                    if (!gameState.flags) gameState.flags = {};
-                    gameState.flags.cleared3F = true;
-                    if (gameState.saveGame) gameState.saveGame();
+                // 1) パズル回答後、必ず魔法陣動画を再生
+                playVideo("assets/videos/magic-circle.mp4", () => {
+                    const floor = 3;
+                    const targetLevel = floor * 4; // 3F適正レベル = 12
+                    const playerLevel = gameState.player.level;
 
-                    const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-                    showMessageDialog(`${evalResult.message}\n\n【3Fフロアボス全滅！】\n真田の怨霊を浄化し、3階の悪臭が消え去った！\n（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, onComplete);
+                    let hpRatio = 1.0;
+                    let resultMsg = "";
 
-                } else if (evalResult.result === 'PARTIAL') {
-                    showMessageDialog(`${evalResult.message}\n弱点を突いてダメージを与えた！ 真田（HP50%）との戦闘に入る！`, () => {
+                    // 2〜4) 共通減衰ルール計算
+                    if (evalResult.result === 'PERFECT') {
+                        if (playerLevel >= targetLevel) {
+                            hpRatio = 0.2; // 適正Lv以上：8割削減 (残り20%)
+                            resultMsg = `【完全正解！】適正レベル(Lv.${targetLevel})に到達している！\n陣が眩く輝き、真田の体力を 8割削減 した！`;
+                        } else {
+                            hpRatio = 0.5; // 適正Lv未満：5割削減 (残り50%)
+                            resultMsg = `【完全正解！】魔方陣の解読に成功！\n聖なる光が吹き荒れ、真田の体力を 半減 させた！`;
+                        }
+                    } else if (evalResult.result === 'PARTIAL') {
+                        const reductionRate = Math.min(evalResult.correctCount * 0.1, 0.3); // 最大3割減
+                        hpRatio = 1.0 - reductionRate;
+                        resultMsg = `【部分正解】${evalResult.correctCount}箇所の弱点が合致！\n真田の体力を ${Math.round(reductionRate * 100)}% 削減した！`;
+                    } else {
+                        hpRatio = 1.0; // 不正解
+                        resultMsg = `【解読失敗】不完全な陣だ！ ダメージを与えられなかった！`;
+                    }
+
+                    const startHp = Math.max(1, Math.floor(ENEMIES.SANADA_3F.hp * hpRatio));
+
+                    showMessageDialog(`${resultMsg}\n真田との決戦に入る！`, () => {
                         const sanadaEnemy = {
                             name: ENEMIES.SANADA_3F.name,
-                            image: "assets/images/demon/demon5.png",
-                            hp: Math.floor(ENEMIES.SANADA_3F.hp * 0.5),
+                            image: "assets/images/demon/3f-sanada.jpg",
+                            hp: startHp,
+                            maxHp: ENEMIES.SANADA_3F.hp,
                             atk: ENEMIES.SANADA_3F.atk,
                             def: ENEMIES.SANADA_3F.def,
                             weakness: [8, 6]
                         };
-                        openCombatUI(sanadaEnemy, gameState, (combatRes) => {
-                            if (combatRes === 'win') {
-                                gameState.flags.cleared3F = true;
-                                if (gameState.saveGame) gameState.saveGame();
-                            }
-                            onComplete();
-                        }, context);
-                    });
 
-                } else {
-                    showMessageDialog(`${evalResult.message}\n魔方陣が解除できず、真田が襲いかかってきた！`, () => {
-                        const sanadaEnemy = {
-                            name: ENEMIES.SANADA_3F.name,
-                            image: "assets/images/demon/demon5.png",
-                            hp: ENEMIES.SANADA_3F.hp,
-                            atk: ENEMIES.SANADA_3F.atk,
-                            def: ENEMIES.SANADA_3F.def,
-                            weakness: [8, 6]
-                        };
                         openCombatUI(sanadaEnemy, gameState, (combatRes) => {
                             if (combatRes === 'win') {
+                                if (!gameState.flags) gameState.flags = {};
                                 gameState.flags.cleared3F = true;
                                 if (gameState.saveGame) gameState.saveGame();
+
+                                const reward = gameState.calculateRewards ? gameState.calculateRewards(200, 800) : { exp: 200, money: 800 };
+                                gameState.player.money += reward.money;
+                                const isLvUp = gameState.gainExp(reward.exp);
+                                
+                                const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
+                                showMessageDialog(`【3Fフロアボス討滅！】\n真田の怨霊を浄化し、3階の悪臭が消え去った！\n（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, onComplete);
+                            } else {
+                                onComplete();
                             }
-                            onComplete();
                         }, context);
                     });
-                }
+                });
             });
         });
     });
