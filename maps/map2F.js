@@ -1,9 +1,10 @@
-// maps/map2F.js - 誤保護時の戦闘移行修正完全版
+// maps/map2F.js - 2F雑魚敵3種エンカウントデータ参照完全修正版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI, openInquisitionUI 
 } from '../ui.js';
+import { ENEMIES, evaluateKageyamaPuzzle } from '../enemies.js';
 
 export const playerStart2F = { x: 1, y: 1, dir: 2 };
 
@@ -28,6 +29,19 @@ const kageyamaPuzzleConfig = {
         { id: "slot4", label: "④足元<br>(下)", gridPos: "grid-area: 3 / 2;" }
     ]
 };
+
+// ★ ENEMIESから2F雑魚敵3種をランダム抽出
+export function check2FRandomEncounter(gameState, onEncounter) {
+    if (gameState.currentFloor !== 2) return false;
+    if (Math.random() < 0.20) {
+        const demonKeys = ['DEVIL1_2F', 'DEVIL2_2F', 'DEVIL3_2F'];
+        const chosenKey = demonKeys[Math.floor(Math.random() * demonKeys.length)];
+        const enemyData = ENEMIES[chosenKey] || ENEMIES['DEVIL1_2F'];
+        if (onEncounter) onEncounter({ ...enemyData });
+        return true;
+    }
+    return false;
+}
 
 export function handleEvent2F(targetCell, gameState, context) {
     if (targetCell === 4) {
@@ -96,9 +110,9 @@ export function handleEvent2F(targetCell, gameState, context) {
                 const randFace = humanImages[Math.floor(Math.random() * humanImages.length)];
 
                 const demonList = [
-                    { name: "2階の不審な住人", realImage: "assets/images/demon/demon1.png", weakness: 3 },
-                    { name: "不気味な笑顔の住人", realImage: "assets/images/demon/demon2.png", weakness: 4 },
-                    { name: "言葉遣いがおかしい住民", realImage: "assets/images/demon/demon3.png", weakness: 5 }
+                    { name: ENEMIES.DEVIL1_2F.name, realImage: ENEMIES.DEVIL1_2F.image, weakness: ENEMIES.DEVIL1_2F.weaknessCard },
+                    { name: ENEMIES.DEVIL2_2F.name, realImage: ENEMIES.DEVIL2_2F.image, weakness: ENEMIES.DEVIL2_2F.weaknessCard },
+                    { name: ENEMIES.DEVIL3_2F.name, realImage: ENEMIES.DEVIL3_2F.image, weakness: ENEMIES.DEVIL3_2F.weaknessCard }
                 ];
                 const randDemon = demonList[Math.floor(Math.random() * demonList.length)];
 
@@ -124,7 +138,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                             gameState.clearedRooms[roomKey] = true;
                             onComplete();
                         } else if (result === "demon_ambush") {
-                            // ★ 誤保護時の確定不意打ち攻撃（ダメージ10追加）
                             gameState.player.hp = Math.max(1, gameState.player.hp - 10);
                             const demonEnemy = {
                                 name: entity.name,
@@ -248,20 +261,4 @@ function handleKageyamaWin(gameState, onComplete) {
         gameState.gainExp(200);
         onComplete();
     });
-}
-
-export function check2FRandomEncounter(gameState, onEncounter) {
-    if (Math.random() < 0.20) {
-        const demonNum = Math.floor(Math.random() * 3) + 1;
-        const enemy = {
-            name: `2階の徘徊悪魔 (${demonNum})`,
-            image: `assets/images/demon/demon${demonNum}.png`,
-            hp: 30,
-            atk: 8,
-            def: 2
-        };
-        if (onEncounter) onEncounter(enemy);
-        return true;
-    }
-    return false;
 }

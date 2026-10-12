@@ -1,4 +1,4 @@
-// enemies.js - 4F新アセット＆親衛隊A・B敵ステータス完全統合版
+// enemies.js - 2F雑魚敵3体（小鬼・ネズミ・ポルターガイスト）追加統合版
 
 export const ENEMIES = {
   // 1F 雑魚
@@ -13,21 +13,44 @@ export const ENEMIES = {
     weaknessCard: 1,
   },
 
-  // 2F 雑魚
-  DEVIL_2F: {
-    name: '這い回る肉塊',
+  // ★ 2F 雑魚（3種正式定義）
+  DEVIL1_2F: {
+    name: '徘徊する小鬼',
+    image: 'assets/images/demon/demon1.png',
+    hp: 20,
+    atk: 6,
+    satk: 4,
+    def: 1,
+    agi: 4,
+    rewardMoney: 80,
+    weaknessCard: 1,
+  },
+  DEVIL2_2F: {
+    name: '潜んでいたネズミ',
+    image: 'assets/images/demon/demon2.png',
     hp: 15,
     atk: 5,
     satk: 3,
     def: 1,
-    agi: 4,
-    rewardMoney: 120,
+    agi: 6,
+    rewardMoney: 70,
     weaknessCard: 3,
+  },
+  DEVIL3_2F: {
+    name: 'ポルターガイスト',
+    image: 'assets/images/demon/demon3.png',
+    hp: 25,
+    atk: 7,
+    satk: 5,
+    def: 2,
+    agi: 5,
+    rewardMoney: 100,
+    weaknessCard: 2,
   },
 
   // 3F 雑魚
   DEVIL4_3F: {
-    name: '悪魔の赤ちゃん',
+    name: '悪魔の食卓',
     image: 'assets/images/demon/demon4.png',
     hp: 42,
     atk: 13,
@@ -49,7 +72,7 @@ export const ENEMIES = {
     weaknessCard: 6,
   },
   DEVIL6_3F: {
-    name: '腐敗蟲',
+    name: '腐敗臭のする蟲',
     image: 'assets/images/demon/demon6.png',
     hp: 36,
     atk: 14,
@@ -180,10 +203,10 @@ export const ENEMIES = {
     puzzle: {
       openSlots: [1, 3, 5, 7],
       correctSolution: {
-        1: 2, // ①上（惑わしの瞳） ＝ 真実の鏡 (2)
-        3: 1, // ②左（色香の腕）   ＝ 聖水 (1)
-        5: 5, // ③右（誘惑の腕）   ＝ 聖書 (5)
-        7: 3, // ④下（執着の足）   ＝ 浄化の塩 (3)
+        1: 2,
+        3: 1,
+        5: 5,
+        7: 3,
       },
       targetSum: 11
     }
