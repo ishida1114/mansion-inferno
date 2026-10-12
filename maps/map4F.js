@@ -1,25 +1,28 @@
-// maps/map4F.js - リナパズル完全正解時のみ魔方陣動画再生対応版
+// maps/map4F.js - マップデザイン刷新＆査問部屋（ヒント獲得）追加完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
-    playVideo, openShopUI, openCombatUI, openBossPuzzleUI, playFloorTransition 
+    playFloorTransition, playVideo, openShopUI, openCombatUI, openInquisitionUI, openBossPuzzleUI 
 } from '../ui.js';
 import { ENEMIES, evaluateRinaPuzzle } from '../enemies.js';
 
-export const playerStart4F = { x: 5, y: 9, dir: 0 };
+// 4Fスタート位置（x: 5, y: 8, 北向き）
+export const playerStart4F = { x: 5, y: 8, dir: 0 };
 
+// 1:壁 / 0:通路 / 4:3F下り階段 / 5:5F上り階段(結界) / 3:ボス(リナ) 
+// 2:親衛隊A部屋 / 6:親衛隊B部屋 / 8:査問部屋1 / 9:査問部屋2
 export const map4F = [
-    [1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1],
-    [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1],
-    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    [1, 0, 6, 0, 1, 0, 1, 0, 0, 0, 1],
-    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1],
-    [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
-    [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 4, 1, 1, 1, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    [1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1], // y=0: 5F階段(x:5, y:0)
+    [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1], // y=1: リナボス部屋(x:1, y:1), 親衛隊A(x:9, y:1)
+    [1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1], // y=2
+    [1, 0, 0, 0, 1, 8, 1, 0, 0, 0, 1], // y=3: 査問部屋1(x:5, y:3)
+    [1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1], // y=4
+    [1, 6, 1, 0, 0, 0, 0, 0, 1, 9, 1], // y=5: 親衛隊B(x:1, y:5), 査問部屋2(x:9, y:5)
+    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], // y=6
+    [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1], // y=7
+    [1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1], // y=8
+    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], // y=9: 3F下り階段(x:5, y:9)
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  // y=10
 ];
 
 export function check4FRandomEncounter(gameState, onEncounter) {
@@ -33,6 +36,7 @@ export function check4FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent4F(targetCell, gameState, context) {
+    // 4: 3Fへ降りる非常階段
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
@@ -47,6 +51,7 @@ export function handleEvent4F(targetCell, gameState, context) {
         };
     }
 
+    // 5: 5Fへ登る非常階段（リナ討滅で解放）
     if (targetCell === 5) {
         if (!gameState.flags || !gameState.flags.cleared4F) {
             return {
@@ -65,18 +70,28 @@ export function handleEvent4F(targetCell, gameState, context) {
         }
     }
 
+    // 2: ギミック部屋A（リナ親衛隊A・元富裕層パパ）
     if (targetCell === 2) {
         return {
             run: (onComplete) => startShineiAEvent(gameState, context, onComplete)
         };
     }
 
+    // 6: ギミック部屋B（リナ親衛隊B・ガチ恋ファン）
     if (targetCell === 6) {
         return {
             run: (onComplete) => startShineiBEvent(gameState, context, onComplete)
         };
     }
 
+    // 8, 9: 査問部屋（ヒント入手場所）
+    if (targetCell === 8 || targetCell === 9) {
+        return {
+            run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete)
+        };
+    }
+
+    // 3: 4Fボス部屋（リナ）
     if (targetCell === 3) {
         if (gameState.flags && gameState.flags.cleared4F) {
             return {
@@ -99,6 +114,83 @@ export function handleEvent4F(targetCell, gameState, context) {
     }
 
     return null;
+}
+
+// ★ 4F査問部屋（住人救出 ➔ リナの解読ヒント入手）
+function start4FRoomInquisition(gameState, context, onComplete) {
+    const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+    const vec = dirVectors[gameState.player.dir];
+    const frontX = gameState.player.x + vec.x;
+    const frontY = gameState.player.y + vec.y;
+    const roomKey = `4F_${frontX}_${frontY}`;
+
+    if (!gameState.clearedRooms) gameState.clearedRooms = {};
+
+    if (gameState.clearedRooms[roomKey]) {
+        showMessageDialog("【住人の部屋】\nこの部屋にはもう誰もいない……。", onComplete);
+        return;
+    }
+
+    const grantRinaHint = (messageTitle, callback) => {
+        if (!gameState.bossHints) gameState.bossHints = [];
+        const hintMsg = "【4F住人の証言】リナの魔方陣は、上（瞳）に『真実の鏡(2)』、右（腕）に『聖書(5)』を配置して誘惑を打ち破るんだ！";
+        if (!gameState.bossHints.includes(hintMsg)) {
+            gameState.bossHints.push(hintMsg);
+        }
+        showMessageDialog(`${messageTitle}\n『リナ攻略メモ』がスマホの悪魔手記に記録された！`, callback);
+    };
+
+    const isRealHuman = Math.random() < 0.5;
+
+    if (isRealHuman) {
+        const entity = {
+            type: "human",
+            name: "マンションの住人",
+            faceImage: "assets/images/human1.png"
+        };
+        openInquisitionUI(entity, gameState, (res) => {
+            if (res === "finish" || res === "combat_win" || res === "kill_human") {
+                gameState.clearedRooms[roomKey] = true;
+                grantRinaHint("【住人を保護した】", onComplete);
+            } else {
+                onComplete();
+            }
+        }, context);
+    } else {
+        const entity = {
+            type: "demon",
+            name: "マンションの住人",
+            faceImage: "assets/images/human1.png",
+            realImage: "assets/images/demon/demon7.jpg",
+            weakness: 2
+        };
+        openInquisitionUI(entity, gameState, (res) => {
+            if (res === "combat_win" || res === "kill_human") {
+                gameState.clearedRooms[roomKey] = true;
+                grantRinaHint("【悪魔を討滅した】\n悪魔の残骸から手記を発見した！", onComplete);
+            } else if (res === "demon_ambush") {
+                gameState.player.hp = Math.max(1, gameState.player.hp - 10);
+                const demonEnemy = {
+                    name: entity.name,
+                    image: entity.realImage,
+                    hp: 40,
+                    atk: 14,
+                    def: 2,
+                    weakness: [entity.weakness]
+                };
+                openCombatUI(demonEnemy, gameState, (cRes) => {
+                    if (cRes === "win") {
+                        gameState.clearedRooms[roomKey] = true;
+                        grantRinaHint("【悪魔を討滅した】\n悪魔の残骸から手記を発見した！", onComplete);
+                    } else {
+                        onComplete();
+                    }
+                }, context);
+            } else {
+                onComplete();
+            }
+        }, context);
+    }
 }
 
 function startShineiAEvent(gameState, context, onComplete) {
@@ -251,7 +343,6 @@ function startRinaBossSequence(gameState, context, onComplete) {
                         });
                     };
 
-                    // ★ 全正解時のみ動画再生
                     if (evalResult.result === 'PERFECT') {
                         playVideo("assets/videos/magic-circle.mp4", applyDamageAndCombat);
                     } else {
