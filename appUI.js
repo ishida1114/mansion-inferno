@@ -1,4 +1,4 @@
-// appUI.js - ヒント展開バグ（\${hint}）完全修復版
+// appUI.js - 全機能完全維持 ＆ レベルアップ必要経験値ヘッダー追加統合版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -30,8 +30,8 @@ if (!document.getElementById("app-style-element")) {
             font-family: 'Shippori Mincho', serif; color: #ddd; position: relative;
         }
         .app-header {
-            background: linear-gradient(180deg, #220000, #000); padding: 8px 10px;
-            font-size: 0.78em; display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(180deg, #220000, #000); padding: 8px 8px;
+            font-size: 0.75em; display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid #550000; color: #aaa;
         }
         .app-header span { font-weight: bold; color: #ffdd66; }
@@ -97,14 +97,19 @@ export class AppUI {
     }
 
     const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
+    // ★ 必要経験値の計算
+    const nextExp = Math.max(0, (gameState.player.maxExp || 100) - (gameState.player.exp || 0));
 
     appContainer.innerHTML = `
       <div class="smartphone">
         <div class="app-header">
-          <span>[Lv.${gameState.player.level}]</span>
+          <div>
+            <span>[Lv.${gameState.player.level}]</span>
+            <span style="color:#aaa; font-weight:normal; font-size:0.85em;">(残:${nextExp})</span>
+          </div>
           <span>HP:${gameState.player.hp}/${gameState.player.maxHp}</span>
           <span>罪:${gameState.player.sin}</span>
-          <span>使い魔:${familiarPercent}%</span>
+          <span>使:${familiarPercent}%</span>
           <span class="app-close-x" id="btn-app-close-x" title="閉じる">✕</span>
         </div>
 
@@ -224,7 +229,7 @@ export class AppUI {
           const isAllowed = hasGun && (num <= pLevel);
           return `
             <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
-              <img src="assets/images/cards/${num}card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}Card.png';" />
+              <img src="assets/images/cards/\${num}card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}Card.png';" />
               <div style="font-size: 0.7em; font-weight:bold;">【${num}】${isAllowed ? '' : '<br><span style="color:#ff4444;">ロック</span>'}</div>
             </div>
           `;
@@ -264,7 +269,6 @@ export class AppUI {
     `;
   }
 
-  // ★ 悪魔手記（\${hint}を展開する完全修復処理）
   renderNotesView() {
     const hints = gameState.bossHints || [];
     let hintsHTML = "";

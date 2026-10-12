@@ -1,4 +1,4 @@
-// renderer.js - フォグ・オブ・ウォー（未踏破黒塗り）対応版
+// renderer.js - フォグ・オブ・ウォー ＆ 2F階段「1階へ降りる」表示修正版
 
 import { gameState } from './gameState.js';
 
@@ -110,7 +110,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     ctx.restore();
                 }
             } else {
-                // ★ 未踏破（黒塗り）
                 const clip = leftClips[depth];
                 ctx.fillStyle = "#000";
                 ctx.beginPath(); 
@@ -137,7 +136,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     ctx.restore();
                 }
             } else {
-                // ★ 未踏破（黒塗り）
                 const clip = rightClips[depth];
                 ctx.fillStyle = "#000";
                 ctx.beginPath(); 
@@ -168,7 +166,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     }
                 }
             } else {
-                // ★ 未踏破（漆黒）
                 ctx.fillStyle = "#000";
                 ctx.fillRect(b.x, b.y, b.w, b.h);
             }
@@ -187,6 +184,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
     ctx.fillText("[ ESC ] アプリ  |  [ F2 ] デバッグ", 20, canvas.height - 13);
 }
 
+// ★ 階段（セル4）の表示判定修正
 function drawActionHint(ctx, canvas, player, currentMap) {
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
@@ -195,8 +193,12 @@ function drawActionHint(ctx, canvas, player, currentMap) {
         let label = "[ SPACE ] 調べる";
         
         if (target === 4) {
-            const nextFloor = (gameState.currentFloor || 1) + 1;
-            label = `[ SPACE ] ${nextFloor}階へ登る`;
+            if (gameState.currentFloor === 2) {
+                label = "[ SPACE ] 1階へ降りる";
+            } else {
+                const nextFloor = (gameState.currentFloor || 1) + 1;
+                label = `[ SPACE ] ${nextFloor}階へ登る`;
+            }
         } else if (target === 7) {
             label = "[ SPACE ] エレベーターに乗る";
         } else if (target === 2 && gameState.currentFloor === 1) {
@@ -253,11 +255,10 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 
-// ★ ミニマップの描画を「踏破済みのマスだけ」に限定
 function drawMiniMap(ctx, player, currentMap, currentFloor) {
     if (!gameState.hasExorcistInherited) return; 
     const size = 10, margin = 10;
-    const mapW = currentMap[0].length * size, mapH = currentMap.length * size;
+    mapW = currentMap[0].length * size, mapH = currentMap.length * size;
     
     ctx.fillStyle = "rgba(0, 0, 0, 0.75)"; 
     ctx.fillRect(margin, margin, mapW + 6, mapH + 6);
@@ -267,14 +268,12 @@ function drawMiniMap(ctx, player, currentMap, currentFloor) {
 
     for (let y = 0; y < currentMap.length; y++) {
         for (let x = 0; x < currentMap[y].length; x++) {
-            // ★ 踏破済みのマスのみ描画
             if (gameState.isVisited(currentFloor, x, y)) {
                 const cell = currentMap[y][x];
                 if (cell !== 0) {
                     ctx.fillStyle = cell === 1 ? "#444" : (cell === 8 || cell === 9 ? "#cc0000" : "#8a2be2");
                     ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
                 } else {
-                    // 通路マス（0）も、踏破済みなら薄く描画して道をわかりやすくする
                     ctx.fillStyle = "#222";
                     ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
                 }

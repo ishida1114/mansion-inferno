@@ -1,14 +1,15 @@
-// maps/map1F.js - アプリ取得前の集合ポストガード対応版
+// maps/map1F.js - エレベーター（セル7）設置＆動作統合版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
-    playVideo, openShopUI 
+    playVideo, openShopUI, playFloorTransition 
 } from '../ui.js';
 
 export const playerStart1F = { x: 7, y: 1, dir: 0 };
 
+// 1: 壁 / 0: 通路 / 7: エレベーター(x:6, y:0) / 4: 非常階段(x:7, y:0) / 2: コンビニ / 3: 血の池 / 5: 集合ポスト / 6: 出口
 export const map1F = [
-    [1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1], 
+    [1, 1, 1, 1, 1, 1, 7, 4, 1, 1, 1, 1, 1, 1, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
     [1, 0, 1, 2, 1, 0, 1, 3, 1, 0, 1, 5, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
@@ -18,6 +19,28 @@ export const map1F = [
 ];
 
 export function handleEvent1F(targetCell, gameState, context) {
+    // 7: エレベーター
+    if (targetCell === 7) {
+        if (!gameState.hasElevatorKey) {
+            return { 
+                run: (onComplete) => showMessageDialog("【エレベーター】\n重厚な鍵がかかっていて動かない……。\n動かすにはフロアボスが持っている『エレベーターキー』が必要のようだ。", onComplete) 
+            };
+        } else {
+            return { 
+                run: (onComplete) => {
+                    showMessageDialog("【エレベーター】\nエレベーターキーを差し込んだ。\n3階へ直行しますか？", () => {
+                        gameState.lastTransitMethod = 'elevator';
+                        playFloorTransition(3, () => {
+                            context.changeFloor(3);
+                            onComplete();
+                        });
+                    });
+                } 
+            };
+        }
+    }
+
+    // 4: 非常階段（2F扉）
     if (targetCell === 4) {
         if (!gameState.hasKey2F) {
             return { 
@@ -30,6 +53,7 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
+    // 2: コンビニ
     if (targetCell === 2) {
         if (!gameState.hasMetGrandma) {
             return { run: (onComplete) => startGrandmaEvent(gameState, onComplete) };
@@ -40,6 +64,7 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
+    // 3: 血の池
     if (targetCell === 3) {
         if (!gameState.hasExorcistInherited) {
             return { run: (onComplete) => startExorcistSequence(gameState, context.redraw, onComplete) };
@@ -50,11 +75,12 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // ★ 5: 集合ポスト（アプリ入手チェック追加）
+    // 5: 集合ポスト
     if (targetCell === 5) {
         return { run: (onComplete) => startPostEvent(gameState, onComplete) };
     }
 
+    // 6: エントランス扉
     if (targetCell === 6) {
         return { 
             run: (onComplete) => showMessageDialog("【エントランス扉】\nガラスの向こうには漆黒の霧が立ち込めている……。\n不思議な力で強く封じられていて、扉はびくともしない。", onComplete) 
@@ -64,7 +90,6 @@ export function handleEvent1F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ アプリ入手前はヒント動画を見せないガード処理
 function startPostEvent(gameState, onComplete) {
     if (!gameState.hasExorcistInherited) {
         showMessageDialog("【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n……『悪魔辞典アプリ』を持っていないため、まだ調べる意味はなさそうだ。\n（※まずは中庭の血の池を調べよう）", onComplete);
