@@ -1,4 +1,4 @@
-// main.js - テストモード（F2デバッグワープ機能）追加版
+// main.js - ユーザー様稼働コードベース ＋ 4Fテストワープ設定追加 完全版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -281,7 +281,7 @@ function toggleDebugUI() {
             <button class="debug-warp-btn" data-floor="1" style="background:#333; color:#fff; border:1px solid #777; padding:4px 8px; cursor:pointer; font-size:11px;">1Fワープ</button>
             <button class="debug-warp-btn" data-floor="2" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">2Fワープ(Lv5)</button>
             <button class="debug-warp-btn" data-floor="3" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">3Fワープ(Lv10)</button>
-            <button class="debug-warp-btn" data-floor="4" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">4Fワープ(Lv15)</button>
+            <button class="debug-warp-btn" data-floor="4" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">4Fテスト開始(3F前)</button>
         </div>
       `;
       overlay.classList.remove('hidden');
@@ -343,6 +343,7 @@ function debugJumpToFloor(floor) {
     gameState.player.y = playerStart3F.y;
     gameState.player.dir = playerStart3F.dir;
   } else if (floor === 4) {
+    // ★ 4Fテスト開始時は「3Fの4F行き階段前」から開始（フラグ未クリア）
     gameState.player.level = 15;
     gameState.player.maxHp = 120;
     gameState.player.hp = 120;
@@ -353,15 +354,20 @@ function debugJumpToFloor(floor) {
     gameState.hasElevatorKey = true;
     gameState.flags.cleared2F = true;
     gameState.flags.cleared3F = true;
-    gameState.flags.hasBrandBag = true;    // ブランドバッグ所有
-    gameState.flags.hasChampagne = true;   // 高級シャンパン所有
-    gameState.flags.defeatedShineiA = true;
-    gameState.flags.defeatedShineiB = true;
-    gameState.currentFloor = 4;
-    gameState.currentMap = map4F;
-    gameState.player.x = playerStart4F.x;
-    gameState.player.y = playerStart4F.y;
-    gameState.player.dir = playerStart4F.dir;
+    
+    // 4Fのフラグは全てリセット
+    gameState.flags.hasBrandBag = false;   
+    gameState.flags.hasChampagne = false;  
+    gameState.flags.defeatedShineiA = false;
+    gameState.flags.defeatedShineiB = false;
+    gameState.flags.cleared4F = false;
+
+    // 現在地を「3Fマップの x:5, y:1, 北向き(dir:0)」にセット
+    gameState.currentFloor = 3;
+    gameState.currentMap = map3F;
+    gameState.player.x = 5;
+    gameState.player.y = 1;
+    gameState.player.dir = 0;
   }
 
   gameState.updateEquippedCards();

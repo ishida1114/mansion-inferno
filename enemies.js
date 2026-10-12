@@ -1,4 +1,4 @@
-// enemies.js - 2F雑魚敵3体（小鬼・ネズミ・ポルターガイスト）追加統合版
+// enemies.js - ユーザー修正データ・フォーマット完全保持 ＆ ステータス強化版
 
 export const ENEMIES = {
   // 1F 雑魚
@@ -13,7 +13,7 @@ export const ENEMIES = {
     weaknessCard: 1,
   },
 
-  // ★ 2F 雑魚（3種正式定義）
+  // 2F 雑魚
   DEVIL1_2F: {
     name: '徘徊する小鬼',
     image: 'assets/images/demon/demon1.png',
@@ -87,46 +87,46 @@ export const ENEMIES = {
   DEVIL7_4F: {
     name: 'リナちゃんのスマホ',
     image: 'assets/images/demon/demon7.png',
-    hp: 50,
-    atk: 18,
-    satk: 12,
-    def: 2,
-    agi: 7,
-    rewardMoney: 220,
+    hp: 110,
+    atk: 32,
+    satk: 18,
+    def: 3,
+    agi: 9,
+    rewardMoney: 300,
     weaknessCard: 2,
   },
   DEVIL8_4F: {
     name: '悪魔の赤ちゃん',
     image: 'assets/images/demon/demon8.png',
-    hp: 80,
-    atk: 20,
-    satk: 10,
-    def: 3,
-    agi: 6,
-    rewardMoney: 260,
+    hp: 140,
+    atk: 35,
+    satk: 20,
+    def: 4,
+    agi: 8,
+    rewardMoney: 330,
     weaknessCard: 5,
   },
   DEVIL9_4F: {
     name: '偽りの美貌',
     image: 'assets/images/demon/demon9.png',
-    hp: 45,
-    atk: 19,
-    satk: 14,
-    def: 1,
-    agi: 9,
-    rewardMoney: 240,
+    hp: 100,
+    atk: 38,
+    satk: 22,
+    def: 2,
+    agi: 10,
+    rewardMoney: 310,
     weaknessCard: 1,
   },
 
-  // 4F リナ親衛隊A（元・富裕層パパ）
+  // 4F リナ親衛隊A（狂乱の元富裕層）
   SHINEI_A_4F: {
     name: 'リナ親衛隊A（狂乱の元富裕層）',
     image: 'assets/images/demon/shineia.png',
-    hp: 75,
-    atk: 17,
-    def: 2,
-    agi: 5,
-    rewardMoney: 350,
+    hp: 250,
+    atk: 40,
+    def: 4,
+    agi: 7,
+    rewardMoney: 600,
     weaknessCard: 2,
   },
 
@@ -134,11 +134,11 @@ export const ENEMIES = {
   SHINEI_B_4F: {
     name: 'リナ親衛隊B（狂信的ガチ恋）',
     image: 'assets/images/demon/shineib.png',
-    hp: 90,
-    atk: 19,
-    def: 3,
-    agi: 6,
-    rewardMoney: 400,
+    hp: 280,
+    atk: 45,
+    def: 5,
+    agi: 8,
+    rewardMoney: 700,
     weaknessCard: 5,
   },
 
@@ -192,21 +192,21 @@ export const ENEMIES = {
     name: '色欲のパパ活女子・リナ',
     video: 'assets/images/demon/4f-rina.mp4',
     image: 'assets/images/demon/4f-rina.jpg',
-    hp: 150,
-    atk: 22,
-    satk: 15,
-    def: 4,
-    agi: 8,
-    rewardMoney: 1200,
+    hp: 500,
+    atk: 60,
+    satk: 35,
+    def: 8,
+    agi: 10,
+    rewardMoney: 2000,
     baseLevel: 15,
 
     puzzle: {
       openSlots: [1, 3, 5, 7],
       correctSolution: {
-        1: 2,
-        3: 1,
-        5: 5,
-        7: 3,
+        1: 2, // ①上（惑わしの瞳） ＝ 真実の鏡 (2)
+        3: 1, // ②左（色香の腕）   ＝ 聖水 (1)
+        5: 5, // ③右（誘惑の腕）   ＝ 聖書 (5)
+        7: 3, // ④下（執着の足）   ＝ 浄化の塩 (3)
       },
       targetSum: 11
     }

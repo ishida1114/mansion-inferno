@@ -1,4 +1,4 @@
-// maps/map4F.js - マップデザイン刷新＆査問部屋（ヒント獲得）追加完全版
+// maps/map4F.js - ユーザー様稼働コードベース ＋ ボスHP強化(500) 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -217,7 +217,7 @@ function startShineiAEvent(gameState, context, onComplete) {
                 gameState.flags.hasBrandBag = true;
 
                 showConversationDialog("assets/images/demon/shineia.png", "【リナ親衛隊A】\n「苦しかったけど、楽しかった、リナちゃんに貢いでる時だけが生きてる感じがした、解放されて寂しくなる。。。（息絶えた）」", () => {
-                    showItemAcquiredModal("assets/images/cards/1Card.png", "高級ブランドバッグ", "【貢ぎ物キーアイテム】\nリナ親衛隊Aが大事に抱え込んでいた『高級ブランドバッグ』を手に入れた！", onComplete);
+                    showItemAcquiredModal("assets/images/present.png", "高級ブランドバッグ", "【貢ぎ物キーアイテム】\nリナ親衛隊Aが大事に抱え込んでいた『高級ブランドバッグ』を手に入れた！", onComplete);
                 });
             } else {
                 onComplete();
@@ -250,7 +250,7 @@ function startShineiBEvent(gameState, context, onComplete) {
                 gameState.flags.hasChampagne = true;
 
                 showConversationDialog("assets/images/demon/shineib.png", "【リナ親衛隊B】\n「リナちゃんが俺だけじゃないなんて知ってたよ、でもリナちゃんはたくさんいないと寂しさが埋まらないんだ、それは俺だけが知ってるんだ。。。（息絶えた）」", () => {
-                    showItemAcquiredModal("assets/images/cards/1Card.png", "高級シャンパン", "【貢ぎ物キーアイテム】\nリナ親衛隊Bが祭壇に捧げていた『高級シャンパン』を手に入れた！", onComplete);
+                    showItemAcquiredModal("assets/images/present.png", "高級シャンパン", "【貢ぎ物キーアイテム】\nリナ親衛隊Bが祭壇に捧げていた『高級シャンパン』を手に入れた！", onComplete);
                 });
             } else {
                 onComplete();
@@ -303,7 +303,8 @@ function startRinaBossSequence(gameState, context, onComplete) {
                             resultMsg = `【解読失敗】不完全な陣だ！ ダメージを与えられなかった！`;
                         }
 
-                        const baseHp = ENEMIES.RINA_4F ? ENEMIES.RINA_4F.hp : 150;
+                        // ★ ボスHPハードコードの無双対策強化 (150 -> 500)
+                        const baseHp = ENEMIES.RINA_4F ? ENEMIES.RINA_4F.hp : 500;
                         const startHp = Math.max(1, Math.floor(baseHp * hpRatio));
 
                         showMessageDialog(`${resultMsg}\nリナとの決戦に入る！`, () => {

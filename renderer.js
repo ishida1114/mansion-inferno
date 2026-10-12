@@ -1,4 +1,4 @@
-// renderer.js - 視界内の壁描画バグ（黒塗り浮き上がり）修正完全版
+// renderer.js - 4F専用ピンクフィルターエフェクト搭載版
 
 import { gameState } from './gameState.js';
 
@@ -93,7 +93,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir], lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
         const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir], rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
-        // ★ 左側側壁（視界に入っていれば描画）
+        // 左側側壁
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
             const imgKey = "left" + depth;
             const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
@@ -104,12 +104,17 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
                 ctx.closePath(); ctx.clip();
                 ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
+                // ★ 4F限定 ピンクフィルター
+                if (currentFloor === 4) {
+                    ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
                 applyDepthShadow(ctx, clip, depth); 
                 ctx.restore();
             }
         }
 
-        // ★ 右側側壁（視界に入っていれば描画）
+        // 右側側壁
         if (currentMap[rY] && currentMap[rY][rX] !== 0) {
             const imgKey = "right" + depth;
             const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
@@ -120,12 +125,17 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
                 ctx.closePath(); ctx.clip();
                 ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
+                // ★ 4F限定 ピンクフィルター
+                if (currentFloor === 4) {
+                    ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
                 applyDepthShadow(ctx, clip, depth); 
                 ctx.restore();
             }
         }
 
-        // ★ 正面（視界に入っていれば描画）
+        // 正面
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;
@@ -136,6 +146,11 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
 
             if (targetImg && targetImg.complete) {
                 ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
+                // ★ 4F限定 ピンクフィルター
+                if (currentFloor === 4) {
+                    ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
+                    ctx.fillRect(b.x, b.y, b.w, b.h);
+                }
                 const shadowAlpha = (depth - 1) * 0.22;
                 if (shadowAlpha > 0) {
                     ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`; 
