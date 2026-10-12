@@ -1,13 +1,15 @@
-// maps/map3F.js - 新ボス共通ルール（魔法陣動画＋減衰率戦闘）完全対応版
+// maps/map3F.js - バール所持チェック＆部屋クリア記録＆真田演出完全統合版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
-    playVideo, openShopUI, openCombatUI, openInquisitionUI, openBossPuzzleUI, playFloorTransition 
+    playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI, openInquisitionUI 
 } from '../ui.js';
 import { ENEMIES, evaluateSanadaPuzzle } from '../enemies.js';
 
+// 3Fスタート位置 (x: 5, y: 9, 北向き)
 export const playerStart3F = { x: 5, y: 9, dir: 0 };
 
+// 1: 壁 / 0: 通路 / 7: エレベーター / 4: 4F非常階段 / 2: 査問部屋 / 3: ボス部屋（真田）
 export const map3F = [
     [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1],
     [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1],
@@ -27,12 +29,13 @@ export function check3FRandomEncounter(gameState, onEncounter) {
     if (Math.random() < 0.15) {
         const demonKeys = ['DEVIL4_3F', 'DEVIL5_3F', 'DEVIL6_3F'];
         const chosenKey = demonKeys[Math.floor(Math.random() * demonKeys.length)];
-        const demonData = ENEMIES[chosenKey];
+        const demonData = ENEMIES[chosenKey] || ENEMIES['DEVIL4_3F'];
         onEncounter({ ...demonData });
     }
 }
 
 export function handleEvent3F(targetCell, gameState, context) {
+    // 7: エレベーター（1Fへ）
     if (targetCell === 7) {
         return {
             run: (onComplete) => {
@@ -47,6 +50,7 @@ export function handleEvent3F(targetCell, gameState, context) {
         };
     }
 
+    // 4: 非常階段（4Fへ）
     if (targetCell === 4) {
         if (!gameState.flags || !gameState.flags.cleared3F) {
             return {
@@ -65,25 +69,28 @@ export function handleEvent3F(targetCell, gameState, context) {
         }
     }
 
+    // 2: 査問部屋
     if (targetCell === 2) {
         return {
             run: (onComplete) => start3FRoomInquisition(gameState, context, onComplete)
         };
     }
 
+    // 3: 3Fボス部屋（真田）
     if (targetCell === 3) {
         if (gameState.flags && gameState.flags.cleared3F) {
             return {
                 run: (onComplete) => showMessageDialog("【最奥の部屋】\n真田は討滅され、毒気と腐敗ゴミは静まり返っている……。", onComplete)
             };
         }
-        
+
+        // ★ 鉄のバールを持っていないと入れないガードを追加
         if (!gameState.flags || !gameState.flags.hasSanadaRoomKey) {
             return {
-                run: (onComplete) => showMessageDialog("【真田の部屋の前】\n頑丈な鎖と粗大ゴミの山で固く封鎖されている！\n無理やりこじ開けるには『鉄のバール』が必要だ……。\n（※3Fの部屋に捕らわれている住人を救出しよう）", onComplete)
+                run: (onComplete) => showMessageDialog("【最奥の部屋】\n山積みの巨大な粗大ゴミで扉が固く塞がれている……！\n撤去するには強固な工具（バールなど）が必要そうだ。", onComplete)
             };
         }
-
+        
         return {
             run: (onComplete) => startSanadaBossSequence(gameState, context, onComplete)
         };
@@ -92,7 +99,21 @@ export function handleEvent3F(targetCell, gameState, context) {
     return null;
 }
 
+// ★ 査問部屋処理（部屋クリアフラグの管理を追加）
 function start3FRoomInquisition(gameState, context, onComplete) {
+    const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+    const vec = dirVectors[gameState.player.dir];
+    const frontX = gameState.player.x + vec.x;
+    const frontY = gameState.player.y + vec.y;
+    const roomKey = `3F_${frontX}_${frontY}`;
+
+    if (!gameState.clearedRooms) gameState.clearedRooms = {};
+
+    if (gameState.clearedRooms[roomKey]) {
+        showMessageDialog("【住人の部屋】\nこの部屋にはもう誰もいない……。", onComplete);
+        return;
+    }
+
     const isRealHuman = Math.random() < 0.5;
 
     if (isRealHuman) {
@@ -102,7 +123,8 @@ function start3FRoomInquisition(gameState, context, onComplete) {
             faceImage: "assets/images/human1.png"
         };
         openInquisitionUI(entity, gameState, (res) => {
-            if (res === "finish") {
+            if (res === "finish" || res === "combat_win" || res === "kill_human") {
+                gameState.clearedRooms[roomKey] = true;
                 if (!gameState.flags) gameState.flags = {};
                 gameState.flags.hasSanadaRoomKey = true;
 
@@ -123,13 +145,17 @@ function start3FRoomInquisition(gameState, context, onComplete) {
             weakness: 8
         };
         openInquisitionUI(entity, gameState, (res) => {
+            if (res === "combat_win" || res === "kill_human") {
+                gameState.clearedRooms[roomKey] = true;
+            }
             onComplete();
         }, context);
     }
 }
 
+// ★ 真田ボス戦前会話ダイアログ＆演出統合版
 function startSanadaBossSequence(gameState, context, onComplete) {
-    showMessageDialog("【真田の部屋前】\n手に入れた『鉄のバール』で粗大ゴミと鎖を叩き壊した！\n重い扉が開く……！", () => {
+    showConversationDialog("assets/images/demon/3f-sanada.jpg", "【ゴミ屋敷の狂人・真田】\n「え？ 2Fの中学生の父親？ 知らねえよ、食えんのかよ、うちのBBAが不味かったからな、お前で口直ししてやるよ」", () => {
         playVideo("assets/images/demon/3f-sanada.mp4", () => {
             const puzzleConfig = {
                 title: "【3Fボス解読】ゴミ屋敷の狂人・真田",
@@ -146,43 +172,42 @@ function startSanadaBossSequence(gameState, context, onComplete) {
             openBossPuzzleUI(puzzleConfig, gameState, (placedSlots) => {
                 const evalResult = evaluateSanadaPuzzle(placedSlots);
 
-                // 1) パズル回答後、必ず魔法陣動画を再生
                 playVideo("assets/videos/magic-circle.mp4", () => {
                     const floor = 3;
-                    const targetLevel = floor * 4; // 3F適正レベル = 12
+                    const targetLevel = (floor - 1) * 5; // 3F適正レベル = 10
                     const playerLevel = gameState.player.level;
 
                     let hpRatio = 1.0;
                     let resultMsg = "";
 
-                    // 2〜4) 共通減衰ルール計算
                     if (evalResult.result === 'PERFECT') {
                         if (playerLevel >= targetLevel) {
-                            hpRatio = 0.2; // 適正Lv以上：8割削減 (残り20%)
-                            resultMsg = `【完全正解！】適正レベル(Lv.${targetLevel})に到達している！\n陣が眩く輝き、真田の体力を 8割削減 した！`;
+                            hpRatio = 0.2;
+                            resultMsg = `【完全正解！】適正レベル(Lv.${targetLevel})到達！\n陣が眩く輝き、真田の体力を 8割削減 した！`;
                         } else {
-                            hpRatio = 0.5; // 適正Lv未満：5割削減 (残り50%)
+                            hpRatio = 0.5;
                             resultMsg = `【完全正解！】魔方陣の解読に成功！\n聖なる光が吹き荒れ、真田の体力を 半減 させた！`;
                         }
                     } else if (evalResult.result === 'PARTIAL') {
-                        const reductionRate = Math.min(evalResult.correctCount * 0.1, 0.3); // 最大3割減
+                        const reductionRate = Math.min(evalResult.correctCount * 0.1, 0.3);
                         hpRatio = 1.0 - reductionRate;
                         resultMsg = `【部分正解】${evalResult.correctCount}箇所の弱点が合致！\n真田の体力を ${Math.round(reductionRate * 100)}% 削減した！`;
                     } else {
-                        hpRatio = 1.0; // 不正解
+                        hpRatio = 1.0;
                         resultMsg = `【解読失敗】不完全な陣だ！ ダメージを与えられなかった！`;
                     }
 
-                    const startHp = Math.max(1, Math.floor(ENEMIES.SANADA_3F.hp * hpRatio));
+                    const baseHp = ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.hp : 110;
+                    const startHp = Math.max(1, Math.floor(baseHp * hpRatio));
 
                     showMessageDialog(`${resultMsg}\n真田との決戦に入る！`, () => {
                         const sanadaEnemy = {
-                            name: ENEMIES.SANADA_3F.name,
+                            name: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.name : "ゴミ屋敷の狂人・真田",
                             image: "assets/images/demon/3f-sanada.jpg",
                             hp: startHp,
-                            maxHp: ENEMIES.SANADA_3F.hp,
-                            atk: ENEMIES.SANADA_3F.atk,
-                            def: ENEMIES.SANADA_3F.def,
+                            maxHp: baseHp,
+                            atk: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.atk : 18,
+                            def: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.def : 3,
                             weakness: [8, 6]
                         };
 
@@ -191,6 +216,11 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                                 if (!gameState.flags) gameState.flags = {};
                                 gameState.flags.cleared3F = true;
                                 if (gameState.saveGame) gameState.saveGame();
+
+                                // ★ ボス部屋の前（安全な通路位置）へ移動
+                                gameState.player.x = 3;
+                                gameState.player.y = 1;
+                                gameState.player.dir = 1;
 
                                 const reward = gameState.calculateRewards ? gameState.calculateRewards(200, 800) : { exp: 200, money: 800 };
                                 gameState.player.money += reward.money;

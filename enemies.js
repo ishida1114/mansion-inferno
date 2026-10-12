@@ -27,7 +27,7 @@ export const ENEMIES = {
 
   // 3F 雑魚
   DEVIL4_3F: {
-    name: '悪魔の赤ちゃん',
+    name: '悪魔の食卓',
     image: 'assets/images/demon/demon4.png',
     hp: 42,
     atk: 13,

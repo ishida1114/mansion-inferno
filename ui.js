@@ -1,4 +1,5 @@
-// ui.js - 査問完全人間擬態ブラフ対応・移動完全遮断・自動クロマキー統合版
+// ui.js - 戦闘スピード遅延・敵HP0確実開示・査問ブラフ統合完全版
+
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 
@@ -345,6 +346,7 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { window.lastDialogCloseTime = Date.now(); shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
+// ★ 戦闘UI（テキスト表示スピード微減速 ＆ HP0確実表示・タメ演出版）
 export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -408,9 +410,10 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             showMessageDialog(respawnMsg, () => {
                 if (onResult) onResult("defeat");
             });
-        }, 1500); 
+        }, 1800); 
     };
 
+    // ★ 敵ターンのウエイト時間を 1.6 秒へ調整（テンポ緩和）
     const enemyTurn = (actionMessage) => {
         log.innerText = actionMessage;
 
@@ -442,7 +445,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     escapeBtn.disabled = false;
                 }
             }
-        }, 1000);
+        }, 1600);
     };
 
     attackBtn.onclick = () => {
@@ -464,7 +467,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         itemBtn.disabled = true;
         escapeBtn.disabled = true;
 
-        log.innerText = "Vox Sacraラミナカードが神聖な言葉を集束し銃が弾丸として放つ";
+        log.innerText = "Vox Sacra……装填したラミナカードが神聖な言葉を集束し、弾丸となって放たれる！";
 
         setTimeout(() => {
             let baseDamage = equippedCards.reduce((sum, num) => sum + num, 0) * 4;
@@ -475,11 +478,14 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             const netDamage = Math.max(1, Math.floor((baseDamage - enemyDef) * randomFactor));
 
             enemyHp = Math.max(0, enemyHp - netDamage);
-            enemyHpText.innerText = `敵HP: ${enemyHp}`;
-
+            
             const shotMsg = `Vox Sacraの射撃！${isWeaknessHit ? '（弱点特効！）' : ''} 悪魔に ${netDamage} ダメージ！`;
 
+            // ★ 敵HPが0の場合：確実に「敵HP: 0」とログを開示し、1.5秒タメを置いてからクリア画面へ移行
             if (enemyHp <= 0) {
+                enemyHpText.innerText = `敵HP: 0`;
+                log.innerText = `${shotMsg}\n\n【討滅】${enemy.name} の体力を削りきった！`;
+                
                 setTimeout(() => {
                     ui.remove();
                     const reward = gameState.calculateRewards ? gameState.calculateRewards(50, 150) : { exp: 50, money: 150 };
@@ -490,12 +496,13 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
                         if (onResult) onResult("win");
                     });
-                }, 1000);
+                }, 1500);
                 return;
             }
 
+            enemyHpText.innerText = `敵HP: ${enemyHp}`;
             enemyTurn(shotMsg);
-        }, 800);
+        }, 1000);
     };
 
     itemBtn.onclick = () => {
@@ -586,9 +593,9 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                         itemBtn.disabled = false;
                         escapeBtn.disabled = false;
                     }
-                }, 1000);
+                }, 1400);
             }
-        }, 1000);
+        }, 1200);
     };
 }
 
@@ -659,7 +666,6 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     const protectBtn = document.getElementById("btn-protect");
     const log = document.getElementById("inq-log");
 
-    // ★ 悪魔ブラフ（擬態）対応版メッセージ生成ロジック
     function getReactionMessage(cardNum, entity) {
         if (entity.type === "human") {
             const humanMsg = [
@@ -674,13 +680,10 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
             const diff = Math.abs(parseInt(cardNum) - targetWeakness);
 
             if (diff === 0) {
-                // ★ 弱点ドンピシャ：耐え切れずに本性が露出
                 return "「ぐぐっ……！？ ぐあああっ！！」\n相手の瞳が一瞬赤くうごめき、肌から不気味な煙が立ち上った！";
             } else if (diff <= 2) {
-                // ★ 弱点に近い：苦痛を隠そうとして反応が引きつる
                 return "「……くっ……！？」\n平然を装おうとしているが、不自然に口元を引きつらせて身体を硬直させた……。";
             } else {
-                // ★ 弱点から遠い：高確率(60%)で人間に擬態して全く同じ反応(ブラフ)を返す
                 const isDisguising = Math.random() < 0.6;
                 if (isDisguising) {
                     const bluffMsg = [

@@ -1,13 +1,12 @@
-// maps/map1F.js - 1階マップデータ（7F手紙＆防具解放イベント・エレベーター安全参照統合版）
+// maps/map1F.js - アプリ取得前の集合ポストガード対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
-    playVideo, openShopUI, playFloorTransition 
+    playVideo, openShopUI 
 } from '../ui.js';
 
 export const playerStart1F = { x: 7, y: 1, dir: 0 };
 
-// 1: 壁 / 0: 通路 / 2: コンビニ / 3: 血の池 / 4: 非常階段 / 5: 集合ポスト / 6: エントランス / 7: エレベーター
 export const map1F = [
     [1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
@@ -15,11 +14,10 @@ export const map1F = [
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-    [1, 1, 1, 1, 1, 1, 7, 6, 1, 1, 1, 1, 1, 1, 1]   // (6, 6) にエレベーター(7)
+    [1, 1, 1, 1, 1, 1, 1, 6, 1, 1, 1, 1, 1, 1, 1]  
 ];
 
 export function handleEvent1F(targetCell, gameState, context) {
-    // 4: 非常階段（2Fへ）
     if (targetCell === 4) {
         if (!gameState.hasKey2F) {
             return { 
@@ -27,53 +25,21 @@ export function handleEvent1F(targetCell, gameState, context) {
             };
         } else {
             return { 
-                run: (onComplete) => {
-                    gameState.lastTransitMethod = 'stair';
-                    playFloorTransition(2, () => {
-                        context.changeFloor(2);
-                        onComplete();
-                    });
-                } 
+                run: (onComplete) => { context.changeFloor(2); onComplete(); } 
             };
         }
     }
 
-    // 7: エレベーター（エントランス横 x:6, y:6）
-    if (targetCell === 7) {
-        const isCleared2F = gameState.flags && gameState.flags.cleared2F;
-        if (!isCleared2F && !gameState.hasElevatorKey) {
-            return {
-                run: (onComplete) => showMessageDialog("【エレベーター】\n「調整中」の張り紙が貼られている……。\n起動させるにはフロアボスを倒して『エレベーターキー』を手に入れる必要がある。", onComplete)
-            };
-        } else {
-            return {
-                run: (onComplete) => {
-                    showMessageDialog("【エレベーター】\n3階へ上がりますか？", () => {
-                        gameState.lastTransitMethod = 'elevator';
-                        playFloorTransition(3, () => {
-                            context.changeFloor(3);
-                            onComplete();
-                        });
-                    });
-                }
-            };
-        }
-    }
-
-    // 2: コンビニ（会話分岐＆後半防具解放＆ショップ）
     if (targetCell === 2) {
         if (!gameState.hasMetGrandma) {
             return { run: (onComplete) => startGrandmaEvent(gameState, onComplete) };
         } else if (gameState.hasModelGun && !gameState.hasTalkedStudentInCVS) {
             return { run: (onComplete) => startStudentInCvsEvent(gameState, onComplete) };
-        } else if (gameState.flags && gameState.flags.postedArmorLetter && !gameState.flags.unlockedAdvancedArmor) {
-            return { run: (onComplete) => startUnlockArmorEvent(gameState, onComplete) };
         } else {
             return { run: (onComplete) => openShopUI(onComplete) };
         }
     }
 
-    // 3: 血の池
     if (targetCell === 3) {
         if (!gameState.hasExorcistInherited) {
             return { run: (onComplete) => startExorcistSequence(gameState, context.redraw, onComplete) };
@@ -84,57 +50,29 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // 5: 集合ポスト（通常のヒント手紙 ＆ 7Fクリア後の防具要請手紙投函）
+    // ★ 5: 集合ポスト（アプリ入手チェック追加）
     if (targetCell === 5) {
         return { run: (onComplete) => startPostEvent(gameState, onComplete) };
     }
 
-    // 6: エントランス
     if (targetCell === 6) {
         return { 
-            run: (onComplete) => showConversationDialog(
-                "assets/images/entrance.png", 
-                "【1F エントランス】\n不気味な静寂に包まれたマンションの入口……。\n外への扉は固く閉ざされ、異様な気配が漂っている。", 
-                onComplete
-            )
+            run: (onComplete) => showMessageDialog("【エントランス扉】\nガラスの向こうには漆黒の霧が立ち込めている……。\n不思議な力で強く封じられていて、扉はびくともしない。", onComplete) 
         };
     }
 
     return null;
 }
 
+// ★ アプリ入手前はヒント動画を見せないガード処理
 function startPostEvent(gameState, onComplete) {
+    if (!gameState.hasExorcistInherited) {
+        showMessageDialog("【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n……『悪魔辞典アプリ』を持っていないため、まだ調べる意味はなさそうだ。\n（※まずは中庭の血の池を調べよう）", onComplete);
+        return;
+    }
     playVideo("assets/videos/post.mp4", () => {
-        if (gameState.flags && gameState.flags.cleared7F && !gameState.flags.postedArmorLetter) {
-            showMessageDialog("【1階 集合ポスト】\n7階以降の凶悪な悪魔に対抗するため、おばあさん宛てに『より頑丈な防具の調達依頼』の手紙を投函した！\n\n（※コンビニのおばあさんに話しかけてみよう）", () => {
-                gameState.flags.postedArmorLetter = true;
-                if (gameState.saveGame) gameState.saveGame();
-                onComplete();
-            });
-            return;
-        }
-
-        const letterText = "【ポストに入っていた古びた手紙】\n『影山は気味の悪い視線で部屋を覗き込んでくる。奴の顔（上段①）に「真実の鏡（2）」を向けろ。そして足元（下段④）に「浄化の塩（3）」を撒けば、身動きが取れなくなるはずだ……』";
-        
-        if (!gameState.bossHints) gameState.bossHints = [];
-        if (!gameState.bossHints.includes("【集合ポストの手紙】影山の顔(上①)には「真実の鏡(2)」、足元(下④)には「浄化の塩(3)」を配置する。")) {
-            gameState.bossHints.push("【集合ポストの手紙】影山の顔(上①)には「真実の鏡(2)」、足元(下④)には「浄化の塩(3)」を配置する。");
-        }
-
-        showMessageDialog(`【1階 集合ポスト】\n${letterText}\n（スマホの悪魔手記にヒントが保存された！）`, onComplete);
+        showMessageDialog("【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。", onComplete);
     });
-}
-
-function startUnlockArmorEvent(gameState, onComplete) {
-    showConversationDialog(
-        "assets/images/grandma.jpg", 
-        "【謎のおばあさん】\n「ヒヒヒ……ポストの手紙は受け取ったよ。\n表の世界のツテを使って『訳ありの高級防具』を仕入れておいたからねぇ……気をつけて行くんだよ。」", 
-        () => {
-            gameState.flags.unlockedAdvancedArmor = true;
-            if (gameState.saveGame) gameState.saveGame();
-            openShopUI(onComplete);
-        }
-    );
 }
 
 function startStudentInCvsEvent(gameState, onComplete) {
@@ -156,9 +94,9 @@ function startGrandmaEvent(gameState, onComplete) {
 function startExorcistSequence(gameState, redraw, onComplete) {
     showMessageDialog("【血の池】\nマンションの中庭に血の池が湧き、底から無数の人ならざる者がこの世に出ようともがいている……", () => {
         playVideo("assets/videos/BloodPond.mp4", () => playVideo("assets/videos/exorcist.mp4", () => {
-            showMessageDialog("【瀕死のエクソシスト】\n「そ、そこのひと…」\n「悪魔にやられました、ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……自由に使ってください……」", () => {
+            showMessageDialog("【瀕死のエクソシスト】\n「そ、そこのひと…」\n「悪魔にやられました、ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……そして使い魔と2階非常階段の鍵を……あなたに託します……」", () => {
                 showItemAcquiredModal("assets/images/cards/1Card.png", "退魔の札『ラミナ』一式", "『悪魔辞典アプリ』『使い魔（Lv.15から）』『2F非常階段の鍵』\nそして『1〜9番のラミナ全9枚』を受け継いだ！", () => {
-                    showMessageDialog("【衝撃の光景】\n話し終えた直後、無数の黒い腕が池から伸び、神父が引きずり込まれた……。あまりのことに驚いて、身体が硬直し、見ていることしかできなかった…。", () => {
+                    showMessageDialog("【衝撃の光景】\n話し終えた直後、無数の黒い腕が池から伸び、神父が引きずり込まれた……。あまりに驚いて、見ているしかなかった", () => {
                         gameState.hasExorcistInherited = true; 
                         gameState.hasKey2F = true; 
                         gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];

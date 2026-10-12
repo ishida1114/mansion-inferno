@@ -1,11 +1,14 @@
-// maps/map2F.js - 徘徊悪魔画像ランダム化対応版
+// maps/map2F.js - モデルガン取得チュートリアル＆影山演出完全復元統合版
+
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
-    playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI 
+    playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI, openInquisitionUI 
 } from '../ui.js';
 
+// 2Fスタート位置 (x: 1, y: 1, 南向き)
 export const playerStart2F = { x: 1, y: 1, dir: 2 };
 
+// 1: 壁 / 0: 通路 / 4: 1F非常階段 / 2: 教え子の部屋 / 3: 一般査問部屋 / 8: 影山の部屋
 export const map2F = [
     [1, 4, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -29,6 +32,7 @@ const kageyamaPuzzleConfig = {
 };
 
 export function handleEvent2F(targetCell, gameState, context) {
+    // 4: 1Fへ降りる非常階段
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
@@ -41,6 +45,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
+    // 2: 教え子の部屋（モデルガン＆お守り入手イベント）
     if (targetCell === 2) {
         if (!gameState.hasModelGun) {
             return {
@@ -75,6 +80,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         }
     }
 
+    // 3: 一般査問部屋
     if (targetCell === 3) {
         return {
             run: (onComplete) => {
@@ -146,10 +152,11 @@ export function handleEvent2F(targetCell, gameState, context) {
         };
     }
 
+    // 8: ボス部屋（ストーカー影山）
     if (targetCell === 8) {
         return {
             run: (onComplete) => {
-                if (gameState.flags.cleared2F) {
+                if (gameState.flags && gameState.flags.cleared2F) {
                     showMessageDialog("【2F 影山の部屋】\n部屋の中は静まり返っている……。", onComplete);
                     return;
                 }
@@ -231,15 +238,16 @@ export function handleEvent2F(targetCell, gameState, context) {
 }
 
 function handleKageyamaWin(gameState, onComplete) {
+    if (!gameState.flags) gameState.flags = {};
     gameState.flags.cleared2F = true;
     gameState.hasElevatorKey = true;
-    gameState.saveGame();
+    if (gameState.saveGame) gameState.saveGame();
 
     gameState.player.x = 5;
     gameState.player.y = 4;
     gameState.player.dir = 1;
 
-    showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァッ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
+    showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
         gameState.player.money += 500;
         gameState.gainExp(200);
         onComplete();
@@ -251,7 +259,6 @@ export function check2FRandomEncounter(gameState, onEncounter) {
         const demonNum = Math.floor(Math.random() * 3) + 1;
         const enemy = {
             name: `2階の徘徊悪魔 (${demonNum})`,
-            // ★ 画像のファイル名を番号に合わせて動的に変更
             image: `assets/images/demon/demon${demonNum}.png`,
             hp: 30,
             atk: 8,
