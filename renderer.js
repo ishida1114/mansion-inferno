@@ -1,4 +1,5 @@
-// renderer.js - アクションヒント上部移動（ミニマップ右横）＆階層動的連動完全対応版
+// renderer.js - フォグ・オブ・ウォー（未踏破黒塗り）対応版
+
 import { gameState } from './gameState.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
@@ -42,7 +43,6 @@ export function initRenderer(onReady) {
     }
 }
 
-// 消失点(300, 200)に基づく完全パースポリゴンクリップ
 const leftClips = { 
     1: [{x:0, y:0}, {x:150, y:100}, {x:150, y:300}, {x:0, y:400}], 
     2: [{x:150, y:100}, {x:225, y:150}, {x:225, y:250}, {x:150, y:300}], 
@@ -68,13 +68,11 @@ export class Renderer {
     constructor() {
         initRenderer();
     }
-
     render() {
         const canvas = document.getElementById("game-canvas") || document.getElementById("gameCanvas");
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (!ctx || !gameState.currentMap) return;
-
         draw(gameState.player, gameState.currentMap, gameState.currentFloor, ctx, canvas);
     }
 }
@@ -95,73 +93,89 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir], lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
         const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir], rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
-        // 左側側壁描画
+        // 左側側壁
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
-            const imgKey = "left" + depth;
-            const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
-            if (targetImg && targetImg.complete) {
+            const isVis = gameState.isVisited(currentFloor, lX, lY);
+            if (isVis) {
+                const imgKey = "left" + depth;
+                const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
+                if (targetImg && targetImg.complete) {
+                    const clip = leftClips[depth];
+                    ctx.save(); ctx.beginPath(); 
+                    ctx.moveTo(clip[0].x, clip[0].y); ctx.lineTo(clip[1].x, clip[1].y); 
+                    ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
+                    ctx.closePath(); ctx.clip();
+                    ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
+                    applyDepthShadow(ctx, clip, depth); 
+                    ctx.restore();
+                }
+            } else {
+                // ★ 未踏破（黒塗り）
                 const clip = leftClips[depth];
-                ctx.save(); 
+                ctx.fillStyle = "#000";
                 ctx.beginPath(); 
-                ctx.moveTo(clip[0].x, clip[0].y); 
-                ctx.lineTo(clip[1].x, clip[1].y); 
-                ctx.lineTo(clip[2].x, clip[2].y); 
-                ctx.lineTo(clip[3].x, clip[3].y); 
-                ctx.closePath(); 
-                ctx.clip();
-                ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
-                applyDepthShadow(ctx, clip, depth); 
-                ctx.restore();
+                ctx.moveTo(clip[0].x, clip[0].y); ctx.lineTo(clip[1].x, clip[1].y); 
+                ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
+                ctx.closePath(); ctx.fill();
             }
         }
 
-        // 右側側壁描画
+        // 右側側壁
         if (currentMap[rY] && currentMap[rY][rX] !== 0) {
-            const imgKey = "right" + depth;
-            const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
-            if (targetImg && targetImg.complete) {
+            const isVis = gameState.isVisited(currentFloor, rX, rY);
+            if (isVis) {
+                const imgKey = "right" + depth;
+                const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
+                if (targetImg && targetImg.complete) {
+                    const clip = rightClips[depth];
+                    ctx.save(); ctx.beginPath(); 
+                    ctx.moveTo(clip[0].x, clip[0].y); ctx.lineTo(clip[1].x, clip[1].y); 
+                    ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
+                    ctx.closePath(); ctx.clip();
+                    ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
+                    applyDepthShadow(ctx, clip, depth); 
+                    ctx.restore();
+                }
+            } else {
+                // ★ 未踏破（黒塗り）
                 const clip = rightClips[depth];
-                ctx.save(); 
+                ctx.fillStyle = "#000";
                 ctx.beginPath(); 
-                ctx.moveTo(clip[0].x, clip[0].y); 
-                ctx.lineTo(clip[1].x, clip[1].y); 
-                ctx.lineTo(clip[2].x, clip[2].y); 
-                ctx.lineTo(clip[3].x, clip[3].y); 
-                ctx.closePath(); 
-                ctx.clip();
-                ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
-                applyDepthShadow(ctx, clip, depth); 
-                ctx.restore();
+                ctx.moveTo(clip[0].x, clip[0].y); ctx.lineTo(clip[1].x, clip[1].y); 
+                ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
+                ctx.closePath(); ctx.fill();
             }
         }
 
-        // 正面壁・扉・エントランス・エレベーター描画
+        // 正面
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
-            let targetImg = images.wall;
+            const isVis = gameState.isVisited(currentFloor, fX, fY);
 
-            if (cellType === 4 && images.stairDoor && images.stairDoor.complete) {
-                targetImg = images.stairDoor;
-            } else if (cellType === 6 && images.entrance && images.entrance.complete) {
-                targetImg = images.entrance;
-            } else if (cellType === 7 && images.elevator && images.elevator.complete) {
-                targetImg = images.elevator;
-            } else if ([2, 3, 5, 8, 9].includes(cellType) && images.door && images.door.complete) {
-                targetImg = images.door;
-            }
+            if (isVis) {
+                let targetImg = images.wall;
+                if (cellType === 4 && images.stairDoor && images.stairDoor.complete) targetImg = images.stairDoor;
+                else if (cellType === 6 && images.entrance && images.entrance.complete) targetImg = images.entrance;
+                else if (cellType === 7 && images.elevator && images.elevator.complete) targetImg = images.elevator;
+                else if ([2, 3, 5, 8, 9].includes(cellType) && images.door && images.door.complete) targetImg = images.door;
 
-            if (targetImg && targetImg.complete) {
-                ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
-                const shadowAlpha = (depth - 1) * 0.22;
-                if (shadowAlpha > 0) {
-                    ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`; 
-                    ctx.fillRect(b.x, b.y, b.w, b.h);
+                if (targetImg && targetImg.complete) {
+                    ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
+                    const shadowAlpha = (depth - 1) * 0.22;
+                    if (shadowAlpha > 0) {
+                        ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`; 
+                        ctx.fillRect(b.x, b.y, b.w, b.h);
+                    }
                 }
+            } else {
+                // ★ 未踏破（漆黒）
+                ctx.fillStyle = "#000";
+                ctx.fillRect(b.x, b.y, b.w, b.h);
             }
         }
     }
 
-    drawMiniMap(ctx, player, currentMap);
+    drawMiniMap(ctx, player, currentMap, currentFloor);
     drawCompass(ctx, canvas, player, currentFloor);
     drawActionHint(ctx, canvas, player, currentMap);
 
@@ -173,7 +187,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
     ctx.fillText("[ ESC ] アプリ  |  [ F2 ] デバッグ", 20, canvas.height - 13);
 }
 
-// ★ アクションヒント描画（ミニマップ右横・階層連動テキストへ修正）
 function drawActionHint(ctx, canvas, player, currentMap) {
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
@@ -182,7 +195,6 @@ function drawActionHint(ctx, canvas, player, currentMap) {
         let label = "[ SPACE ] 調べる";
         
         if (target === 4) {
-            // 現在の階層に合わせて動的に〇階へ登る（1階なら2階へ）
             const nextFloor = (gameState.currentFloor || 1) + 1;
             label = `[ SPACE ] ${nextFloor}階へ登る`;
         } else if (target === 7) {
@@ -191,18 +203,12 @@ function drawActionHint(ctx, canvas, player, currentMap) {
             label = "[ SPACE ] コンビニに入る";
         }
 
-        // ミニマップの右隣（x: 140, y: 10）に描画
-        const boxX = 140;
-        const boxY = 10;
-        const boxW = 230;
-        const boxH = 30;
-
+        const boxX = 140, boxY = 10, boxW = 230, boxH = 30;
         ctx.fillStyle = "rgba(15, 0, 0, 0.85)"; 
         ctx.fillRect(boxX, boxY, boxW, boxH);
         ctx.strokeStyle = "#880000"; 
         ctx.lineWidth = 1; 
         ctx.strokeRect(boxX, boxY, boxW, boxH);
-        
         ctx.fillStyle = "#ffdd66"; 
         ctx.font = `bold 13px ${HORROR_FONT}`; 
         ctx.textAlign = "center"; 
@@ -220,14 +226,8 @@ function drawEnvironment(ctx, canvas) {
     ctx.lineWidth = 1;
     const cx = canvas.width / 2, cy = canvas.height / 2;
     [0, 100, 150, 225, 262].forEach(x => {
-        ctx.beginPath(); 
-        ctx.moveTo(cx - x, cy); 
-        ctx.lineTo(0 - x * 2, canvas.height); 
-        ctx.stroke();
-        ctx.beginPath(); 
-        ctx.moveTo(cx + x, cy); 
-        ctx.lineTo(canvas.width + x * 2, canvas.height); 
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - x, cy); ctx.lineTo(0 - x * 2, canvas.height); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + x, cy); ctx.lineTo(canvas.width + x * 2, canvas.height); ctx.stroke();
     });
 }
 
@@ -236,12 +236,9 @@ function applyDepthShadow(ctx, clip, depth) {
     if (shadowAlpha <= 0) return;
     ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
     ctx.beginPath(); 
-    ctx.moveTo(clip[0].x, clip[0].y); 
-    ctx.lineTo(clip[1].x, clip[1].y); 
-    ctx.lineTo(clip[2].x, clip[2].y); 
-    ctx.lineTo(clip[3].x, clip[3].y); 
-    ctx.closePath(); 
-    ctx.fill();
+    ctx.moveTo(clip[0].x, clip[0].y); ctx.lineTo(clip[1].x, clip[1].y); 
+    ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
+    ctx.closePath(); ctx.fill();
 }
 
 function drawCompass(ctx, canvas, player, currentFloor) {
@@ -256,7 +253,8 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 
-function drawMiniMap(ctx, player, currentMap) {
+// ★ ミニマップの描画を「踏破済みのマスだけ」に限定
+function drawMiniMap(ctx, player, currentMap, currentFloor) {
     if (!gameState.hasExorcistInherited) return; 
     const size = 10, margin = 10;
     const mapW = currentMap[0].length * size, mapH = currentMap.length * size;
@@ -269,10 +267,17 @@ function drawMiniMap(ctx, player, currentMap) {
 
     for (let y = 0; y < currentMap.length; y++) {
         for (let x = 0; x < currentMap[y].length; x++) {
-            const cell = currentMap[y][x];
-            if (cell !== 0) {
-                ctx.fillStyle = cell === 1 ? "#444" : (cell === 8 || cell === 9 ? "#cc0000" : "#8a2be2");
-                ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
+            // ★ 踏破済みのマスのみ描画
+            if (gameState.isVisited(currentFloor, x, y)) {
+                const cell = currentMap[y][x];
+                if (cell !== 0) {
+                    ctx.fillStyle = cell === 1 ? "#444" : (cell === 8 || cell === 9 ? "#cc0000" : "#8a2be2");
+                    ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
+                } else {
+                    // 通路マス（0）も、踏破済みなら薄く描画して道をわかりやすくする
+                    ctx.fillStyle = "#222";
+                    ctx.fillRect(margin + 3 + x * size, margin + 3 + y * size, size - 1, size - 1);
+                }
             }
         }
     }

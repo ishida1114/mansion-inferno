@@ -1,4 +1,4 @@
-// main.js - 4Fリナ進入セリフ分岐＆移動制御対応版
+// main.js - オートマッピング・正規1Fスタート・8F制完全対応統合版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -75,35 +75,18 @@ function init() {
   };
 }
 
+// ★ 正規スタート（1F・非常階段前スタート＆初期マップ開放）
 function startNewGame() {
   gameState.resetGame();
   
-  // 3Fテスト環境初期セットアップ
-  gameState.currentFloor = 3;
-  gameState.currentMap = map3F;
-  gameState.player.x = playerStart3F.x;
-  gameState.player.y = playerStart3F.y;
-  gameState.player.dir = playerStart3F.dir;
+  gameState.currentFloor = 1;
+  gameState.currentMap = map1F;
+  gameState.player.x = playerStart1F.x;
+  gameState.player.y = playerStart1F.y;
+  gameState.player.dir = playerStart1F.dir;
 
-  gameState.player.level = 4;
-  gameState.player.maxHp = 35;
-  gameState.player.hp = 35;
-  gameState.player.def = 2;
-  gameState.player.agi = 8;
-  gameState.player.money = 1000;
-
-  gameState.player.hasModelGun = true;
-  gameState.hasModelGun = true;
-  gameState.hasExorcistInherited = true;
-  gameState.hasKey2F = true;
-  gameState.hasElevatorKey = true;
-  gameState.lastTransitMethod = 'elevator';
-
-  if (!gameState.flags) gameState.flags = {};
-  gameState.flags.cleared2F = true;
-
-  gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
-  gameState.updateEquippedCards();
+  // 初期スポーン位置の周囲を開放
+  gameState.markVisited(1, map1F, playerStart1F.x, playerStart1F.y);
 
   const container = document.getElementById('app-ui-container');
   if (container) container.classList.add('hidden');
@@ -125,6 +108,11 @@ function resumeGame() {
   if (container) container.classList.add('hidden');
 
   document.getElementById('touch-controls')?.classList.remove('hidden');
+
+  // ★ ロード時も現在地のマップを開放
+  if (gameState.currentMap) {
+      gameState.markVisited(gameState.currentFloor, gameState.currentMap, gameState.player.x, gameState.player.y);
+  }
 
   if (!isRunning) {
     isRunning = true;
@@ -195,9 +183,10 @@ function interactFrontCell() {
   }
 }
 
-// ★ 移動手段に応じたフロア切替 ＆ 4F進入セリフ制御
+// ★ 移動手段に応じたフロア切替 ＆ 8F制対応
 function changeFloor(floor) {
   gameState.currentFloor = floor;
+
   if (floor === 4) {
     gameState.currentMap = map4F;
     gameState.player.x = playerStart4F.x;
@@ -205,7 +194,8 @@ function changeFloor(floor) {
     gameState.player.dir = playerStart4F.dir;
 
     if (!gameState.flags || !gameState.flags.cleared4F) {
-      showConversationDialog("assets/images/demon/rina.png", "【色欲・リナ】\n「あら、私は『色欲』のリナ、『嫉妬』と『環境汚染』は倒されたのね、私も悪魔に乗っ取られてるの、私を助けて、強いひと」", () => {
+      // ★ 『環境汚染』から『暴食』へテキスト修正
+      showConversationDialog("assets/images/demon/rina.png", "【色欲・リナ】\n「あら、私は『色欲』のリナ、『嫉妬』と『暴食』は倒されたのね、私も悪魔に乗っ取られてるの、私を助けて、強いひと」", () => {
         redraw();
       });
     } else {
@@ -240,8 +230,18 @@ function changeFloor(floor) {
       gameState.player.y = playerStart1F.y;
       gameState.player.dir = playerStart1F.dir;
     }
-    redraw();
+  } else if (floor >= 5) {
+    // 5F以降の実装準備用ダミー枠
+    showMessageDialog(`【${floor}階】\n重い扉の向こうから邪悪な気配が漂っている……（※開発中）`, () => {
+      redraw();
+    });
   }
+
+  // ★ 階層移動直後に足元を開放
+  if (gameState.currentMap) {
+    gameState.markVisited(floor, gameState.currentMap, gameState.player.x, gameState.player.y);
+  }
+  redraw();
 }
 
 function toggleAppUI() {
@@ -315,6 +315,7 @@ function checkEncounterAfterMove() {
   }
 }
 
+// ★ 前進（一歩歩くたびにマップ開放処理を実行）
 function moveForward() {
   const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
   const vec = dirVectors[gameState.player.dir];
@@ -324,10 +325,12 @@ function moveForward() {
   if (map && map[nextY] && map[nextY][nextX] === 0) {
     gameState.player.x = nextX;
     gameState.player.y = nextY;
+    gameState.markVisited(gameState.currentFloor, map, nextX, nextY); // ★ 足元のマップを開放
     checkEncounterAfterMove();
   }
 }
 
+// ★ 後退（一歩歩くたびにマップ開放処理を実行）
 function moveBackward() {
   const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
   const vec = dirVectors[gameState.player.dir];
@@ -337,6 +340,7 @@ function moveBackward() {
   if (map && map[nextY] && map[nextY][nextX] === 0) {
     gameState.player.x = nextX;
     gameState.player.y = nextY;
+    gameState.markVisited(gameState.currentFloor, map, nextX, nextY); // ★ 足元のマップを開放
     checkEncounterAfterMove();
   }
 }

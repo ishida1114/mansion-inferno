@@ -1,4 +1,4 @@
-// gameState.js - ステータス・ソフトキャップ・7F防具解放フラグ統合完全版
+// gameState.js - 全機能（闇の契約・ステータス成長・7Fフラグ）フル保持 ＆ 8F黒塗りマップ完全統合版
 
 export const gameState = {
   player: {
@@ -44,16 +44,19 @@ export const gameState = {
     cleared7F: false,             // 7Fボス撃破
     postedArmorLetter: false,     // ポストに強防具要請の手紙を投函
     unlockedAdvancedArmor: false, // ショップに後半防具④〜⑥が並ぶ
-    hasCat: false,
+    hasCat: false,                // Lv15で使い魔実体化
   },
 
   lastTransitMethod: 'stair',
   lastLostMoney: 0,
 
-  // ★ フロア別レベルキャップの取得 (2F: 4, 3F: 8, 4F: 12 ... 13F: 52)
+  // ★ オートマッピング用踏破記録
+  visitedMaps: {},
+
+  // ★ 8F制・5刻み仕様のレベルキャップ取得 (2F: 5, 3F: 10, 4F: 15, 5F: 20, 6F: 25, 7F: 30, 8F: 35)
   getFloorLevelCap(floor = this.currentFloor) {
     if (floor <= 1) return 999;
-    return floor * 4;
+    return (floor - 1) * 5;
   },
 
   // ★ 獲得報酬（EXP・お金）へのソフトキャップ（10%減衰）適用計算
@@ -65,6 +68,30 @@ export const gameState = {
       return { exp: cappedExp, money: cappedMoney, isCapped: true };
     }
     return { exp: baseExp, money: baseMoney, isCapped: false };
+  },
+
+  // ★ マップ開放処理（プレイヤーの足元と周囲1マスを開放）
+  markVisited(floor, mapData, px, py) {
+    if (!this.visitedMaps[floor]) {
+      this.visitedMaps[floor] = Array(mapData.length).fill(0).map(() => Array(mapData[0].length).fill(false));
+    }
+    const visited = this.visitedMaps[floor];
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = px + dx;
+        const ny = py + dy;
+        if (ny >= 0 && ny < mapData.length && nx >= 0 && nx < mapData[0].length) {
+          visited[ny][nx] = true;
+        }
+      }
+    }
+  },
+
+  // ★ 指定マスの既知判定
+  isVisited(floor, x, y) {
+    if (!this.visitedMaps || !this.visitedMaps[floor]) return false;
+    if (y < 0 || y >= this.visitedMaps[floor].length || x < 0 || x >= this.visitedMaps[floor][0].length) return false;
+    return this.visitedMaps[floor][y][x];
   },
 
   updateEquippedCards() {
@@ -120,7 +147,7 @@ export const gameState = {
     this.updateEquippedCards();
   },
 
-  // 死亡時処理
+  // ★ 死亡時処理（闇の契約用 lostMoney 保持機能付き）
   handlePlayerDeath() {
     const lostRate = Math.random() * 0.5;
     const lostMoney = Math.floor(this.player.money * lostRate);
@@ -153,6 +180,7 @@ export const gameState = {
     return respawnMsg;
   },
 
+  // ★ 闇の契約（全額回収 ＆ Sin+15）
   contractRecovery() {
     if (this.lastLostMoney <= 0) return { success: false, msg: "回収できるお金はありません。" };
     
@@ -210,6 +238,7 @@ export const gameState = {
     this.clearedRooms = {};
     this.bossHints = [];
     this.inventory.items = [];
+    this.visitedMaps = {};
     
     this.flags = {
       cleared2F: false,
@@ -237,6 +266,7 @@ export const gameState = {
       const data = localStorage.getItem('mansion_inferno_save');
       if (data) {
         Object.assign(this, JSON.parse(data));
+        if (!this.visitedMaps) this.visitedMaps = {};
         return true;
       }
       return false;
