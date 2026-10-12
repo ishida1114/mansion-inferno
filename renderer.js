@@ -1,4 +1,4 @@
-// renderer.js - 4F用セルヒント案内（セル4: 3階へ降りる / セル5: 5階へ登る）対応版
+// renderer.js - 視界内の壁描画バグ（黒塗り浮き上がり）修正完全版
 
 import { gameState } from './gameState.js';
 
@@ -93,81 +93,54 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         const lX = player.x + dx[player.dir] * forwardOffset + dx[leftDir], lY = player.y + dy[player.dir] * forwardOffset + dy[leftDir];
         const rX = player.x + dx[player.dir] * forwardOffset + dx[rightDir], rY = player.y + dy[player.dir] * forwardOffset + dy[rightDir];
 
-        // 左側側壁
+        // ★ 左側側壁（視界に入っていれば描画）
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
-            const isVis = gameState.isVisited(currentFloor, lX, lY);
-            if (isVis) {
-                const imgKey = "left" + depth;
-                const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
-                if (targetImg && targetImg.complete) {
-                    const clip = leftClips[depth];
-                    ctx.save(); ctx.beginPath(); 
-                    ctx.moveTo(clip[0].x, clip[0].y); ctx.lineTo(clip[1].x, clip[1].y); 
-                    ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
-                    ctx.closePath(); ctx.clip();
-                    ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
-                    applyDepthShadow(ctx, clip, depth); 
-                    ctx.restore();
-                }
-            } else {
+            const imgKey = "left" + depth;
+            const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
+            if (targetImg && targetImg.complete) {
                 const clip = leftClips[depth];
-                ctx.fillStyle = "#000";
-                ctx.beginPath(); 
+                ctx.save(); ctx.beginPath(); 
                 ctx.moveTo(clip[0].x, clip[0].y); ctx.lineTo(clip[1].x, clip[1].y); 
                 ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
-                ctx.closePath(); ctx.fill();
+                ctx.closePath(); ctx.clip();
+                ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
+                applyDepthShadow(ctx, clip, depth); 
+                ctx.restore();
             }
         }
 
-        // 右側側壁
+        // ★ 右側側壁（視界に入っていれば描画）
         if (currentMap[rY] && currentMap[rY][rX] !== 0) {
-            const isVis = gameState.isVisited(currentFloor, rX, rY);
-            if (isVis) {
-                const imgKey = "right" + depth;
-                const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
-                if (targetImg && targetImg.complete) {
-                    const clip = rightClips[depth];
-                    ctx.save(); ctx.beginPath(); 
-                    ctx.moveTo(clip[0].x, clip[0].y); ctx.lineTo(clip[1].x, clip[1].y); 
-                    ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
-                    ctx.closePath(); ctx.clip();
-                    ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
-                    applyDepthShadow(ctx, clip, depth); 
-                    ctx.restore();
-                }
-            } else {
+            const imgKey = "right" + depth;
+            const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
+            if (targetImg && targetImg.complete) {
                 const clip = rightClips[depth];
-                ctx.fillStyle = "#000";
-                ctx.beginPath(); 
+                ctx.save(); ctx.beginPath(); 
                 ctx.moveTo(clip[0].x, clip[0].y); ctx.lineTo(clip[1].x, clip[1].y); 
                 ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
-                ctx.closePath(); ctx.fill();
+                ctx.closePath(); ctx.clip();
+                ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
+                applyDepthShadow(ctx, clip, depth); 
+                ctx.restore();
             }
         }
 
-        // 正面
+        // ★ 正面（視界に入っていれば描画）
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
-            const isVis = gameState.isVisited(currentFloor, fX, fY);
+            let targetImg = images.wall;
+            if ((cellType === 4 || cellType === 5) && images.stairDoor && images.stairDoor.complete) targetImg = images.stairDoor;
+            else if (cellType === 6 && images.entrance && images.entrance.complete) targetImg = images.entrance;
+            else if (cellType === 7 && images.elevator && images.elevator.complete) targetImg = images.elevator;
+            else if ([2, 3, 5, 6, 8, 9].includes(cellType) && images.door && images.door.complete) targetImg = images.door;
 
-            if (isVis) {
-                let targetImg = images.wall;
-                if ((cellType === 4 || cellType === 5) && images.stairDoor && images.stairDoor.complete) targetImg = images.stairDoor;
-                else if (cellType === 6 && images.entrance && images.entrance.complete) targetImg = images.entrance;
-                else if (cellType === 7 && images.elevator && images.elevator.complete) targetImg = images.elevator;
-                else if ([2, 3, 5, 6, 8, 9].includes(cellType) && images.door && images.door.complete) targetImg = images.door;
-
-                if (targetImg && targetImg.complete) {
-                    ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
-                    const shadowAlpha = (depth - 1) * 0.22;
-                    if (shadowAlpha > 0) {
-                        ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`; 
-                        ctx.fillRect(b.x, b.y, b.w, b.h);
-                    }
+            if (targetImg && targetImg.complete) {
+                ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
+                const shadowAlpha = (depth - 1) * 0.22;
+                if (shadowAlpha > 0) {
+                    ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`; 
+                    ctx.fillRect(b.x, b.y, b.w, b.h);
                 }
-            } else {
-                ctx.fillStyle = "#000";
-                ctx.fillRect(b.x, b.y, b.w, b.h);
             }
         }
     }
@@ -184,7 +157,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
     ctx.fillText("[ ESC ] アプリ  |  [ F2 ] デバッグ", 20, canvas.height - 13);
 }
 
-// ★ 各フロア階段案内の正確な分岐
 function drawActionHint(ctx, canvas, player, currentMap) {
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;

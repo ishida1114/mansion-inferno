@@ -1,4 +1,4 @@
-// maps/map2F.js - 2F雑魚敵3種エンカウントデータ参照完全修正版
+// maps/map2F.js - 影山パズル完全正解時のみ魔方陣動画再生対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -30,7 +30,6 @@ const kageyamaPuzzleConfig = {
     ]
 };
 
-// ★ ENEMIESから2F雑魚敵3種をランダム抽出
 export function check2FRandomEncounter(gameState, onEncounter) {
     if (gameState.currentFloor !== 2) return false;
     if (Math.random() < 0.20) {
@@ -189,10 +188,10 @@ export function handleEvent2F(targetCell, gameState, context) {
                                     def: 2 
                                 };
 
-                                if (isPerfect) {
-                                    playVideo("assets/videos/magic-circle.mp4", () => {
-                                        const pLevel = gameState.player.level;
+                                const applyDamageAndCombat = () => {
+                                    const pLevel = gameState.player.level;
 
+                                    if (isPerfect) {
                                         if (pLevel >= 5) {
                                             kageyamaEnemy.name = "覗き魔・影山 (瀕死)";
                                             kageyamaEnemy.hp = Math.max(12, Math.floor(120 * 0.1));
@@ -223,17 +222,24 @@ export function handleEvent2F(targetCell, gameState, context) {
                                                 }, context);
                                             });
                                         }
-                                    });
-                                } else {
-                                    let matchCount = (isFaceCorrect ? 1 : 0) + (isFootCorrect ? 1 : 0) + (isArmsCorrect ? 2 : 0);
-                                    kageyamaEnemy.hp = Math.max(60, 120 - (matchCount * 15));
+                                    } else {
+                                        let matchCount = (isFaceCorrect ? 1 : 0) + (isFootCorrect ? 1 : 0) + (isArmsCorrect ? 2 : 0);
+                                        kageyamaEnemy.hp = Math.max(60, 120 - (matchCount * 15));
 
-                                    showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: ${matchCount}/4）\n影山が怒り狂って襲いかかってきた！`, () => {
-                                        openCombatUI(kageyamaEnemy, gameState, (res) => {
-                                            if (res === "win") handleKageyamaWin(gameState, onComplete);
-                                            else onComplete();
-                                        }, context);
-                                    });
+                                        showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: ${matchCount}/4）\n影山が怒り狂って襲いかかってきた！`, () => {
+                                            openCombatUI(kageyamaEnemy, gameState, (res) => {
+                                                if (res === "win") handleKageyamaWin(gameState, onComplete);
+                                                else onComplete();
+                                            }, context);
+                                        });
+                                    }
+                                };
+
+                                // ★ 全正解時のみ動画再生
+                                if (isPerfect) {
+                                    playVideo("assets/videos/magic-circle.mp4", applyDamageAndCombat);
+                                } else {
+                                    applyDamageAndCombat();
                                 }
                             });
                         }

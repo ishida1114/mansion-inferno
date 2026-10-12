@@ -1,4 +1,4 @@
-// maps/map4F.js - 親衛隊A・B戦・貢ぎ物解読・リナ決戦完全対応版
+// maps/map4F.js - リナパズル完全正解時のみ魔方陣動画再生対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -6,10 +6,8 @@ import {
 } from '../ui.js';
 import { ENEMIES, evaluateRinaPuzzle } from '../enemies.js';
 
-// 4Fスタート位置 (x: 5, y: 9, 北向き)
 export const playerStart4F = { x: 5, y: 9, dir: 0 };
 
-// 1:壁 / 0:通路 / 4:3F下り階段 / 5:5F上り階段(結界) / 2:親衛隊A部屋 / 6:親衛隊B部屋 / 3:ボス部屋(リナ)
 export const map4F = [
     [1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1],
     [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1],
@@ -35,7 +33,6 @@ export function check4FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent4F(targetCell, gameState, context) {
-    // 4: 3Fへ降りる非常階段
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
@@ -50,7 +47,6 @@ export function handleEvent4F(targetCell, gameState, context) {
         };
     }
 
-    // 5: 5Fへ登る非常階段（リナ討滅で解放）
     if (targetCell === 5) {
         if (!gameState.flags || !gameState.flags.cleared4F) {
             return {
@@ -69,21 +65,18 @@ export function handleEvent4F(targetCell, gameState, context) {
         }
     }
 
-    // 2: ギミック部屋A（リナ親衛隊A・元富裕層パパ）
     if (targetCell === 2) {
         return {
             run: (onComplete) => startShineiAEvent(gameState, context, onComplete)
         };
     }
 
-    // 6: ギミック部屋B（リナ親衛隊B・ガチ恋ファン）
     if (targetCell === 6) {
         return {
             run: (onComplete) => startShineiBEvent(gameState, context, onComplete)
         };
     }
 
-    // 3: 4Fボス部屋（リナ）
     if (targetCell === 3) {
         if (gameState.flags && gameState.flags.cleared4F) {
             return {
@@ -91,7 +84,6 @@ export function handleEvent4F(targetCell, gameState, context) {
             };
         }
 
-        // 貢ぎ物（ブランドバッグ＆高級シャンパン）の所持チェック
         const hasBag = gameState.flags && gameState.flags.hasBrandBag;
         const hasChampagne = gameState.flags && gameState.flags.hasChampagne;
 
@@ -109,7 +101,6 @@ export function handleEvent4F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ 親衛隊A（通常戦闘 ＋ 絶命セリフ ＋ ブランドバッグ入手）
 function startShineiAEvent(gameState, context, onComplete) {
     if (gameState.flags && gameState.flags.defeatedShineiA) {
         showMessageDialog("【豪奢な部屋】\n衰弱しきった男が横たわっている……もう戦う気力はないようだ。", onComplete);
@@ -143,7 +134,6 @@ function startShineiAEvent(gameState, context, onComplete) {
     });
 }
 
-// ★ 親衛隊B（通常戦闘 ＋ 絶命セリフ ＋ 高級シャンパン入手）
 function startShineiBEvent(gameState, context, onComplete) {
     if (gameState.flags && gameState.flags.defeatedShineiB) {
         showMessageDialog("【密室の部屋】\n男が力尽きて倒れている……壁一面にリナの写真が貼られている。", onComplete);
@@ -177,7 +167,6 @@ function startShineiBEvent(gameState, context, onComplete) {
     });
 }
 
-// ★ リナボス決戦（動画 ➔ 会話 ➔ パズル ➔ 戦闘 ➔ 5F蛭沼への伏線セリフ）
 function startRinaBossSequence(gameState, context, onComplete) {
     showMessageDialog("【台座に貢ぎ物を設置】\n『高級ブランドバッグ』と『高級シャンパン』を台座に並べた。\n桃色の結界が霧散し、最奥の扉が開いた……！", () => {
         playVideo("assets/images/demon/4f-rina.mp4", () => {
@@ -197,9 +186,9 @@ function startRinaBossSequence(gameState, context, onComplete) {
                 openBossPuzzleUI(puzzleConfig, gameState, (placedSlots) => {
                     const evalResult = typeof evaluateRinaPuzzle === 'function' ? evaluateRinaPuzzle(placedSlots) : { result: 'FAIL', correctCount: 0 };
 
-                    playVideo("assets/videos/magic-circle.mp4", () => {
+                    const applyDamageAndCombat = () => {
                         const floor = 4;
-                        const targetLevel = (floor - 1) * 5; // 4F適正レベル = 15
+                        const targetLevel = (floor - 1) * 5;
                         const playerLevel = gameState.player.level;
 
                         let hpRatio = 1.0;
@@ -252,7 +241,6 @@ function startRinaBossSequence(gameState, context, onComplete) {
                                     
                                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
 
-                                    // ★ 浄化セリフ（5Fドクター蛭沼＆父親の伏線回収）
                                     showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「バカじゃないの、この悪魔！ 中学生の父親？ あいつはなびかないから5Fの蛭沼に渡したわ、あいつ、改造できるおもちゃを欲しがってたから。ねぇ助けてよ……お願いだから捨てないでぇぇっ…」", () => {
                                         showMessageDialog(`【4Fフロアボス討滅！】\nリナの怨霊を浄化し、甘い桃色の霧と蔦が消え去った！\n（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}\n※5階への非常階段が解禁されました！`, onComplete);
                                     });
@@ -261,7 +249,14 @@ function startRinaBossSequence(gameState, context, onComplete) {
                                 }
                             }, context);
                         });
-                    });
+                    };
+
+                    // ★ 全正解時のみ動画再生
+                    if (evalResult.result === 'PERFECT') {
+                        playVideo("assets/videos/magic-circle.mp4", applyDamageAndCombat);
+                    } else {
+                        applyDamageAndCombat();
+                    }
                 });
             });
         });

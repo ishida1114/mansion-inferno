@@ -1,4 +1,4 @@
-// maps/map3F.js - 誤保護戦闘移行 ＆ 悪魔討滅時アイテム救済完全対応版
+// maps/map3F.js - 真田パズル完全正解時のみ魔方陣動画再生対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -92,7 +92,6 @@ export function handleEvent3F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ 悪魔撃破時でもバール・ヒントを獲得できる救済ロジック追加
 function start3FRoomInquisition(gameState, context, onComplete) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
     const vec = dirVectors[gameState.player.dir];
@@ -149,7 +148,6 @@ function start3FRoomInquisition(gameState, context, onComplete) {
                 gameState.clearedRooms[roomKey] = true;
                 grantSanadaItemAndHint("【悪魔を討滅した】\n悪魔が溜め込んでいた荷物の中から……", onComplete);
             } else if (res === "demon_ambush") {
-                // ★ 誤保護時の確定不意打ち攻撃（ダメージ10追加）
                 gameState.player.hp = Math.max(1, gameState.player.hp - 10);
                 const demonEnemy = {
                     name: entity.name,
@@ -192,7 +190,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
             openBossPuzzleUI(puzzleConfig, gameState, (placedSlots) => {
                 const evalResult = evaluateSanadaPuzzle(placedSlots);
 
-                playVideo("assets/videos/magic-circle.mp4", () => {
+                const applyDamageAndCombat = () => {
                     const floor = 3;
                     const targetLevel = (floor - 1) * 5;
                     const playerLevel = gameState.player.level;
@@ -252,7 +250,14 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                             }
                         }, context);
                     });
-                });
+                };
+
+                // ★ 全正解時のみ動画再生
+                if (evalResult.result === 'PERFECT') {
+                    playVideo("assets/videos/magic-circle.mp4", applyDamageAndCombat);
+                } else {
+                    applyDamageAndCombat();
+                }
             });
         });
     });
