@@ -1,4 +1,4 @@
-// ui.js - 戦闘スピード遅延・敵HP0確実開示・査問ブラフ統合完全版
+// ui.js - 住人保護時の固定ヒントバグ修正完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -346,7 +346,6 @@ export function openShopUI(onClosed) {
     document.getElementById("closeBtn").onclick = () => { window.lastDialogCloseTime = Date.now(); shopDiv.remove(); if (onClosed) onClosed(); };
 }
 
-// ★ 戦闘UI（テキスト表示スピード微減速 ＆ HP0確実表示・タメ演出版）
 export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
@@ -413,7 +412,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }, 1800); 
     };
 
-    // ★ 敵ターンのウエイト時間を 1.6 秒へ調整（テンポ緩和）
     const enemyTurn = (actionMessage) => {
         log.innerText = actionMessage;
 
@@ -481,7 +479,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             
             const shotMsg = `Vox Sacraの射撃！${isWeaknessHit ? '（弱点特効！）' : ''} 悪魔に ${netDamage} ダメージ！`;
 
-            // ★ 敵HPが0の場合：確実に「敵HP: 0」とログを開示し、1.5秒タメを置いてからクリア画面へ移行
             if (enemyHp <= 0) {
                 enemyHpText.innerText = `敵HP: 0`;
                 log.innerText = `${shotMsg}\n\n【討滅】${enemy.name} の体力を削りきった！`;
@@ -753,18 +750,18 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         }
     };
 
+    // ★ 修正箇所：固定の影山セリフを廃止し、entityから動的にヒントメッセージを受け取る
     protectBtn.onclick = () => {
         ui.remove();
         if (entity.type === "human") {
             const reward = gameState.calculateRewards ? gameState.calculateRewards(0, 300) : { exp: 0, money: 300 };
             gameState.player.money += reward.money;
             
-            const hintText = "「助けてくれてありがとうございます……！ これはお礼です！\nあ、そういえば2F奥の影山ですが……あいつの陣を破るには『4マスの合計をピッタリ10』にしないといけないらしいです！ 腕には小さい数字から順にカードを置いてみてください！」";
-            if (!gameState.bossHints) gameState.bossHints = [];
-            gameState.bossHints.push("【2F住人の証言】影山の魔方陣は4マスの合計を「10」にする。腕(左右)には小さい数字のカードから順に配置する。");
-
+            // entity.dialogue や entity.message が指定されていればそれを使い、無ければデフォルトテキスト
+            const hintText = entity.dialogue || entity.message || "「助けてくれてありがとうございます……！ これはお礼です！」";
+            
             const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-            showMessageDialog(`【人間を保護した】\n${hintText}\n（💰${reward.money} を獲得！ / スマホの悪魔手記にヒントが保存された！）${capNotice}`, () => {
+            showMessageDialog(`【人間を保護した】\n${hintText}\n（💰${reward.money} を獲得！）${capNotice}`, () => {
                 onResult("finish");
             });
         } else {
