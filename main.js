@@ -1,4 +1,4 @@
-// main.js - 4F進入セリフダイアログに4f-rina.jpg反映版
+// main.js - テストモード（F2デバッグワープ機能）追加版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -44,6 +44,15 @@ function init() {
         resumeGame();
       } else {
         alert('保存されたセーブデータが見つかりませんでした。');
+      }
+      return;
+    }
+
+    // テストワープボタンのクリック判定
+    if (target.classList.contains('debug-warp-btn')) {
+      const floor = parseInt(target.getAttribute('data-floor'));
+      if (!isNaN(floor)) {
+        debugJumpToFloor(floor);
       }
       return;
     }
@@ -190,7 +199,6 @@ function changeFloor(floor) {
     gameState.player.dir = playerStart4F.dir;
 
     if (!gameState.flags || !gameState.flags.cleared4F) {
-      // ★ リナの会話画像に 4f-rina.jpg を適用
       showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「あら、私は『色欲』のリナ、『嫉妬』と『暴食』は倒されたのね、私も悪魔に乗っ取られてるの、私を助けて、強いひと」", () => {
         redraw();
       });
@@ -257,6 +265,7 @@ function toggleAppUI() {
   }
 }
 
+// ★ F2デバッグパネル（ワープボタン付き）
 function toggleDebugUI() {
   const overlay = document.getElementById('debug-overlay');
   const info = document.getElementById('debug-info');
@@ -264,12 +273,107 @@ function toggleDebugUI() {
     const isHidden = overlay.classList.contains('hidden');
     if (isHidden) {
       const p = gameState.player;
-      info.innerHTML = `階層: ${gameState.currentFloor}F<br>座標 (X:${p.x}, Y:${p.y})<br>向き: ${p.dir} (0:北,1:东,2:南,3:西)<br>Lv: ${p.level} | HP: ${p.hp}/${p.maxHp} | 罪: ${p.sin}`;
+      info.innerHTML = `
+        <div style="font-weight:bold; color:#ffdd66; margin-bottom:5px;">【デバッグ・テストモード】</div>
+        階層: ${gameState.currentFloor}F | 座標: (X:${p.x}, Y:${p.y}) | 向き: ${p.dir}<br>
+        Lv: ${p.level} | HP: ${p.hp}/${p.maxHp} | 💰${p.money} | Sin: ${p.sin}
+        <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="debug-warp-btn" data-floor="1" style="background:#333; color:#fff; border:1px solid #777; padding:4px 8px; cursor:pointer; font-size:11px;">1Fワープ</button>
+            <button class="debug-warp-btn" data-floor="2" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">2Fワープ(Lv5)</button>
+            <button class="debug-warp-btn" data-floor="3" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">3Fワープ(Lv10)</button>
+            <button class="debug-warp-btn" data-floor="4" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">4Fワープ(Lv15)</button>
+        </div>
+      `;
       overlay.classList.remove('hidden');
     } else {
       overlay.classList.add('hidden');
     }
   }
+}
+
+// ★ 指定階層へテストワープ＆状態自動付与関数
+function debugJumpToFloor(floor) {
+  if (!gameState.flags) gameState.flags = {};
+
+  // 全階層共通（モデルガン・アプリ・全ラミナカード付与）
+  gameState.hasExorcistInherited = true;
+  gameState.hasModelGun = true;
+  gameState.player.hasModelGun = true;
+  gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
+
+  if (floor === 1) {
+    gameState.player.level = 1;
+    gameState.player.maxHp = 20;
+    gameState.player.hp = 20;
+    gameState.player.def = 0;
+    gameState.player.agi = 5;
+    gameState.player.money = 0;
+    gameState.currentFloor = 1;
+    gameState.currentMap = map1F;
+    gameState.player.x = playerStart1F.x;
+    gameState.player.y = playerStart1F.y;
+    gameState.player.dir = playerStart1F.dir;
+  } else if (floor === 2) {
+    gameState.player.level = 5;
+    gameState.player.maxHp = 50;
+    gameState.player.hp = 50;
+    gameState.player.def = 2;
+    gameState.player.agi = 8;
+    gameState.player.money = 1000;
+    gameState.hasKey2F = true;
+    gameState.currentFloor = 2;
+    gameState.currentMap = map2F;
+    gameState.player.x = playerStart2F.x;
+    gameState.player.y = playerStart2F.y;
+    gameState.player.dir = playerStart2F.dir;
+  } else if (floor === 3) {
+    gameState.player.level = 10;
+    gameState.player.maxHp = 80;
+    gameState.player.hp = 80;
+    gameState.player.def = 4;
+    gameState.player.agi = 10;
+    gameState.player.money = 3000;
+    gameState.hasKey2F = true;
+    gameState.hasElevatorKey = true;
+    gameState.flags.cleared2F = true;
+    gameState.flags.hasSanadaRoomKey = true; // 鉄のバール所有
+    gameState.currentFloor = 3;
+    gameState.currentMap = map3F;
+    gameState.player.x = playerStart3F.x;
+    gameState.player.y = playerStart3F.y;
+    gameState.player.dir = playerStart3F.dir;
+  } else if (floor === 4) {
+    gameState.player.level = 15;
+    gameState.player.maxHp = 120;
+    gameState.player.hp = 120;
+    gameState.player.def = 6;
+    gameState.player.agi = 12;
+    gameState.player.money = 5000;
+    gameState.hasKey2F = true;
+    gameState.hasElevatorKey = true;
+    gameState.flags.cleared2F = true;
+    gameState.flags.cleared3F = true;
+    gameState.flags.hasBrandBag = true;    // ブランドバッグ所有
+    gameState.flags.hasChampagne = true;   // 高級シャンパン所有
+    gameState.flags.defeatedShineiA = true;
+    gameState.flags.defeatedShineiB = true;
+    gameState.currentFloor = 4;
+    gameState.currentMap = map4F;
+    gameState.player.x = playerStart4F.x;
+    gameState.player.y = playerStart4F.y;
+    gameState.player.dir = playerStart4F.dir;
+  }
+
+  gameState.updateEquippedCards();
+  if (gameState.currentMap) {
+    gameState.markVisited(floor, gameState.currentMap, gameState.player.x, gameState.player.y);
+  }
+
+  // デバッグUIの数値を更新
+  toggleDebugUI();
+  toggleDebugUI();
+
+  redraw();
 }
 
 function checkEncounterAfterMove() {
