@@ -1,4 +1,4 @@
-// enemies.js - 敵ステータス・3F〜12F共通ボス判定ロジック完全版
+// enemies.js - 敵ステータス・ボス判定ロジック完全版（4Fリナ追加対応）
 
 export const ENEMIES = {
   // 1F 雑魚
@@ -60,6 +60,41 @@ export const ENEMIES = {
     weaknessCard: 3,
   },
 
+  // 4F 雑魚
+  DEVIL7_4F: {
+    name: '誘惑の淫魔',
+    image: 'assets/images/demon/demon4.png',
+    hp: 50,
+    atk: 18,
+    satk: 12,
+    def: 2,
+    agi: 7,
+    rewardMoney: 220,
+    weaknessCard: 2,
+  },
+  DEVIL8_4F: {
+    name: '執着の影',
+    image: 'assets/images/demon/demon5.png',
+    hp: 80,
+    atk: 20,
+    satk: 10,
+    def: 3,
+    agi: 6,
+    rewardMoney: 260,
+    weaknessCard: 5,
+  },
+  DEVIL9_4F: {
+    name: '偽りの美貌',
+    image: 'assets/images/demon/demon6.png',
+    hp: 45,
+    atk: 19,
+    satk: 14,
+    def: 1,
+    agi: 9,
+    rewardMoney: 240,
+    weaknessCard: 1,
+  },
+
   // 2F フロアボス：ストーカー影山
   KAGEYAMA_2F: {
     name: 'ストーカー影山',
@@ -70,7 +105,7 @@ export const ENEMIES = {
     def: 2,
     agi: 6,
     rewardMoney: 500,
-    baseLevel: 8,
+    baseLevel: 5,
 
     puzzle: {
       openSlots: [1, 3, 5, 7],
@@ -90,7 +125,7 @@ export const ENEMIES = {
     def: 3,
     agi: 6,
     rewardMoney: 800,
-    baseLevel: 12, // 3F × 4 = 12
+    baseLevel: 10,
 
     puzzle: {
       openSlots: [1, 3, 5, 7],
@@ -101,6 +136,30 @@ export const ENEMIES = {
         5: 3, // ③右（腕）     ＝ 塩 (3)
       },
       targetSum: 18
+    }
+  },
+
+  // 4F フロアボス：色欲のパパ活女子・リナ
+  RINA_4F: {
+    name: '色欲のパパ活女子・リナ',
+    image: 'assets/images/demon/rina.png',
+    hp: 150,
+    atk: 22,
+    satk: 15,
+    def: 4,
+    agi: 8,
+    rewardMoney: 1200,
+    baseLevel: 15,
+
+    puzzle: {
+      openSlots: [1, 3, 5, 7],
+      correctSolution: {
+        1: 2, // ①上（瞳）   ＝ 真実の鏡 (2)
+        3: 1, // ②左（腕）   ＝ 聖水 (1)
+        5: 5, // ③右（誘惑） ＝ 聖書 (5)
+        7: 3, // ④下（足）   ＝ 浄化の塩 (3)
+      },
+      targetSum: 11
     }
   }
 };
@@ -141,6 +200,26 @@ export function evaluateSanadaPuzzle(placedCards) {
   }
 
   if (correctCount === 4 && currentSum === 18) {
+    return { result: 'PERFECT', correctCount: 4 };
+  } else if (correctCount > 0) {
+    return { result: 'PARTIAL', correctCount: Math.min(correctCount, 3) };
+  } else {
+    return { result: 'FAIL', correctCount: 0 };
+  }
+}
+
+export function evaluateRinaPuzzle(placedCards) {
+  const solution = ENEMIES.RINA_4F.puzzle.correctSolution;
+  let correctCount = 0;
+
+  for (const slotId of [1, 3, 5, 7]) {
+    const card = placedCards[slotId];
+    if (card && card === solution[slotId]) {
+      correctCount++;
+    }
+  }
+
+  if (correctCount === 4) {
     return { result: 'PERFECT', correctCount: 4 };
   } else if (correctCount > 0) {
     return { result: 'PARTIAL', correctCount: Math.min(correctCount, 3) };
