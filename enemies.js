@@ -86,7 +86,7 @@ export const ENEMIES = {
   // 4F 雑魚
   DEVIL7_4F: {
     name: 'リナちゃんのスマホ',
-    image: 'assets/images/demon/demon7.jpg',
+    image: 'assets/images/demon/demon7.png',
     hp: 50,
     atk: 18,
     satk: 12,
@@ -97,7 +97,7 @@ export const ENEMIES = {
   },
   DEVIL8_4F: {
     name: '悪魔の赤ちゃん',
-    image: 'assets/images/demon/demon8.jpg',
+    image: 'assets/images/demon/demon8.png',
     hp: 80,
     atk: 20,
     satk: 10,
@@ -108,7 +108,7 @@ export const ENEMIES = {
   },
   DEVIL9_4F: {
     name: '偽りの美貌',
-    image: 'assets/images/demon/demon9.jpg',
+    image: 'assets/images/demon/demon9.png',
     hp: 45,
     atk: 19,
     satk: 14,

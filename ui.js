@@ -467,7 +467,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         itemBtn.disabled = true;
         escapeBtn.disabled = true;
 
-        log.innerText = "Vox Sacra……装填したラミナカードが神聖な言葉を弾丸に変える";
+        log.innerText = "Vox Sacra……ラミナカードが神聖な言葉を弾丸に変える";
 
         setTimeout(() => {
             let baseDamage = equippedCards.reduce((sum, num) => sum + num, 0) * 4;
