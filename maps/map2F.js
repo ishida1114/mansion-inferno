@@ -1,4 +1,4 @@
-// maps/map2F.js - 影山撃破後の安全復帰位置（x:6, y:4, dir:3）修正版
+// maps/map2F.js - 誤保護時の戦闘移行修正完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -124,6 +124,8 @@ export function handleEvent2F(targetCell, gameState, context) {
                             gameState.clearedRooms[roomKey] = true;
                             onComplete();
                         } else if (result === "demon_ambush") {
+                            // ★ 誤保護時の確定不意打ち攻撃（ダメージ10追加）
+                            gameState.player.hp = Math.max(1, gameState.player.hp - 10);
                             const demonEnemy = {
                                 name: entity.name,
                                 image: entity.realImage,
@@ -231,7 +233,6 @@ export function handleEvent2F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ 影山撃破後の復帰位置を部屋前の通路（x:6, y:4, dir:3/西向き）へ修正
 function handleKageyamaWin(gameState, onComplete) {
     if (!gameState.flags) gameState.flags = {};
     gameState.flags.cleared2F = true;

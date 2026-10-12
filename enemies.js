@@ -1,4 +1,4 @@
-// enemies.js - 敵ステータス・ボス判定ロジック完全版（4Fリナ追加対応）
+// enemies.js - 4F新アセット＆親衛隊A・B敵ステータス完全統合版
 
 export const ENEMIES = {
   // 1F 雑魚
@@ -27,7 +27,7 @@ export const ENEMIES = {
 
   // 3F 雑魚
   DEVIL4_3F: {
-    name: '悪魔の食卓',
+    name: '悪魔の赤ちゃん',
     image: 'assets/images/demon/demon4.png',
     hp: 42,
     atk: 13,
@@ -62,8 +62,8 @@ export const ENEMIES = {
 
   // 4F 雑魚
   DEVIL7_4F: {
-    name: '誘惑の淫魔',
-    image: 'assets/images/demon/demon4.png',
+    name: 'リナちゃんのスマホ',
+    image: 'assets/images/demon/demon7.jpg',
     hp: 50,
     atk: 18,
     satk: 12,
@@ -73,8 +73,8 @@ export const ENEMIES = {
     weaknessCard: 2,
   },
   DEVIL8_4F: {
-    name: '執着の影',
-    image: 'assets/images/demon/demon5.png',
+    name: '悪魔の赤ちゃん',
+    image: 'assets/images/demon/demon8.jpg',
     hp: 80,
     atk: 20,
     satk: 10,
@@ -85,7 +85,7 @@ export const ENEMIES = {
   },
   DEVIL9_4F: {
     name: '偽りの美貌',
-    image: 'assets/images/demon/demon6.png',
+    image: 'assets/images/demon/demon9.jpg',
     hp: 45,
     atk: 19,
     satk: 14,
@@ -95,12 +95,37 @@ export const ENEMIES = {
     weaknessCard: 1,
   },
 
+  // 4F リナ親衛隊A（元・富裕層パパ）
+  SHINEI_A_4F: {
+    name: 'リナ親衛隊A（狂乱の元富裕層）',
+    image: 'assets/images/demon/shineia.png',
+    hp: 75,
+    atk: 17,
+    def: 2,
+    agi: 5,
+    rewardMoney: 350,
+    weaknessCard: 2,
+  },
+
+  // 4F リナ親衛隊B（狂信的ファン）
+  SHINEI_B_4F: {
+    name: 'リナ親衛隊B（狂信的ガチ恋）',
+    image: 'assets/images/demon/shineib.png',
+    hp: 90,
+    atk: 19,
+    def: 3,
+    agi: 6,
+    rewardMoney: 400,
+    weaknessCard: 5,
+  },
+
   // 2F フロアボス：ストーカー影山
   KAGEYAMA_2F: {
     name: 'ストーカー影山',
     video: 'assets/images/demon/2f-kageyama.mp4',
-    hp: 60,
-    atk: 8,
+    image: 'assets/images/demon/2f-kageyama2.jpg',
+    hp: 120,
+    atk: 12,
     satk: 6,
     def: 2,
     agi: 6,
@@ -130,10 +155,10 @@ export const ENEMIES = {
     puzzle: {
       openSlots: [1, 3, 5, 7],
       correctSolution: {
-        1: 8, // ①上（毒ガス口）＝ 聖香 (8)
-        7: 6, // ④下（腐敗ゴミ）＝ 聖炎 (6)
-        3: 1, // ②左（腕）     ＝ 聖水 (1)
-        5: 3, // ③右（腕）     ＝ 塩 (3)
+        1: 8,
+        7: 6,
+        3: 1,
+        5: 3,
       },
       targetSum: 18
     }
@@ -142,7 +167,8 @@ export const ENEMIES = {
   // 4F フロアボス：色欲のパパ活女子・リナ
   RINA_4F: {
     name: '色欲のパパ活女子・リナ',
-    image: 'assets/images/demon/rina.png',
+    video: 'assets/images/demon/4f-rina.mp4',
+    image: 'assets/images/demon/4f-rina.jpg',
     hp: 150,
     atk: 22,
     satk: 15,
@@ -154,10 +180,10 @@ export const ENEMIES = {
     puzzle: {
       openSlots: [1, 3, 5, 7],
       correctSolution: {
-        1: 2, // ①上（瞳）   ＝ 真実の鏡 (2)
-        3: 1, // ②左（腕）   ＝ 聖水 (1)
-        5: 5, // ③右（誘惑） ＝ 聖書 (5)
-        7: 3, // ④下（足）   ＝ 浄化の塩 (3)
+        1: 2, // ①上（惑わしの瞳） ＝ 真実の鏡 (2)
+        3: 1, // ②左（色香の腕）   ＝ 聖水 (1)
+        5: 5, // ③右（誘惑の腕）   ＝ 聖書 (5)
+        7: 3, // ④下（執着の足）   ＝ 浄化の塩 (3)
       },
       targetSum: 11
     }

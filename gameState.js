@@ -1,4 +1,4 @@
-// gameState.js - 全機能（闇の契約・ステータス成長・7Fフラグ）フル保持 ＆ 8F黒塗りマップ完全統合版
+// gameState.js - 1Fエレベーター復帰座標 (x: 6, y: 1) 修正版
 
 export const gameState = {
   player: {
@@ -41,25 +41,22 @@ export const gameState = {
 
   flags: {
     cleared2F: false,
-    cleared7F: false,             // 7Fボス撃破
-    postedArmorLetter: false,     // ポストに強防具要請の手紙を投函
-    unlockedAdvancedArmor: false, // ショップに後半防具④〜⑥が並ぶ
-    hasCat: false,                // Lv15で使い魔実体化
+    cleared7F: false,
+    postedArmorLetter: false,
+    unlockedAdvancedArmor: false,
+    hasCat: false,
   },
 
   lastTransitMethod: 'stair',
   lastLostMoney: 0,
 
-  // ★ オートマッピング用踏破記録
   visitedMaps: {},
 
-  // ★ 8F制・5刻み仕様のレベルキャップ取得 (2F: 5, 3F: 10, 4F: 15, 5F: 20, 6F: 25, 7F: 30, 8F: 35)
   getFloorLevelCap(floor = this.currentFloor) {
     if (floor <= 1) return 999;
     return (floor - 1) * 5;
   },
 
-  // ★ 獲得報酬（EXP・お金）へのソフトキャップ（10%減衰）適用計算
   calculateRewards(baseExp, baseMoney, floor = this.currentFloor) {
     const capLevel = this.getFloorLevelCap(floor);
     if (this.player.level >= capLevel) {
@@ -70,7 +67,6 @@ export const gameState = {
     return { exp: baseExp, money: baseMoney, isCapped: false };
   },
 
-  // ★ マップ開放処理（プレイヤーの足元と周囲1マスを開放）
   markVisited(floor, mapData, px, py) {
     if (!this.visitedMaps[floor]) {
       this.visitedMaps[floor] = Array(mapData.length).fill(0).map(() => Array(mapData[0].length).fill(false));
@@ -87,7 +83,6 @@ export const gameState = {
     }
   },
 
-  // ★ 指定マスの既知判定
   isVisited(floor, x, y) {
     if (!this.visitedMaps || !this.visitedMaps[floor]) return false;
     if (y < 0 || y >= this.visitedMaps[floor].length || x < 0 || x >= this.visitedMaps[floor][0].length) return false;
@@ -147,7 +142,7 @@ export const gameState = {
     this.updateEquippedCards();
   },
 
-  // ★ 死亡時処理（闇の契約用 lostMoney 保持機能付き）
+  // ★ エレベーター死戻り位置を (x: 6, y: 1) に修正
   handlePlayerDeath() {
     const lostRate = Math.random() * 0.5;
     const lostMoney = Math.floor(this.player.money * lostRate);
@@ -161,7 +156,7 @@ export const gameState = {
 
     if (this.lastTransitMethod === 'elevator') {
       respawnMsg = `【意識が浮上する……】\n「チーン……」という電子音でハッと目を覚ました。\n悪魔に弾き飛ばされ、自動で1階のエレベーター前まで送り返されたようだ……。`;
-      respawnCoord = { x: 6, y: 6 };
+      respawnCoord = { x: 6, y: 1 };
     } else {
       respawnMsg = `【意識が浮上する……】\n重い衝撃とともに目を覚ました……。\n意識を失う寸前、必死で1階の非常階段前まで転がり落ちてきたようだ。`;
       respawnCoord = { x: 7, y: 1 };
@@ -180,7 +175,6 @@ export const gameState = {
     return respawnMsg;
   },
 
-  // ★ 闇の契約（全額回収 ＆ Sin+15）
   contractRecovery() {
     if (this.lastLostMoney <= 0) return { success: false, msg: "回収できるお金はありません。" };
     

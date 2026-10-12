@@ -1,4 +1,4 @@
-// maps/map3F.js - バール所持チェック＆部屋クリア記録＆真田演出完全統合版
+// maps/map3F.js - 誤保護戦闘移行 ＆ 悪魔討滅時アイテム救済完全対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -6,10 +6,8 @@ import {
 } from '../ui.js';
 import { ENEMIES, evaluateSanadaPuzzle } from '../enemies.js';
 
-// 3Fスタート位置 (x: 5, y: 9, 北向き)
 export const playerStart3F = { x: 5, y: 9, dir: 0 };
 
-// 1: 壁 / 0: 通路 / 7: エレベーター / 4: 4F非常階段 / 2: 査問部屋 / 3: ボス部屋（真田）
 export const map3F = [
     [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1],
     [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1],
@@ -35,7 +33,6 @@ export function check3FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent3F(targetCell, gameState, context) {
-    // 7: エレベーター（1Fへ）
     if (targetCell === 7) {
         return {
             run: (onComplete) => {
@@ -50,7 +47,6 @@ export function handleEvent3F(targetCell, gameState, context) {
         };
     }
 
-    // 4: 非常階段（4Fへ）
     if (targetCell === 4) {
         if (!gameState.flags || !gameState.flags.cleared3F) {
             return {
@@ -69,14 +65,12 @@ export function handleEvent3F(targetCell, gameState, context) {
         }
     }
 
-    // 2: 査問部屋
     if (targetCell === 2) {
         return {
             run: (onComplete) => start3FRoomInquisition(gameState, context, onComplete)
         };
     }
 
-    // 3: 3Fボス部屋（真田）
     if (targetCell === 3) {
         if (gameState.flags && gameState.flags.cleared3F) {
             return {
@@ -84,7 +78,6 @@ export function handleEvent3F(targetCell, gameState, context) {
             };
         }
 
-        // ★ 鉄のバールを持っていないと入れないガードを追加
         if (!gameState.flags || !gameState.flags.hasSanadaRoomKey) {
             return {
                 run: (onComplete) => showMessageDialog("【最奥の部屋】\n山積みの巨大な粗大ゴミで扉が固く塞がれている……！\n撤去するには強固な工具（バールなど）が必要そうだ。", onComplete)
@@ -99,7 +92,7 @@ export function handleEvent3F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ 査問部屋処理（部屋クリアフラグの管理を追加）
+// ★ 悪魔撃破時でもバール・ヒントを獲得できる救済ロジック追加
 function start3FRoomInquisition(gameState, context, onComplete) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
     const vec = dirVectors[gameState.player.dir];
@@ -114,6 +107,19 @@ function start3FRoomInquisition(gameState, context, onComplete) {
         return;
     }
 
+    const grantSanadaItemAndHint = (messageTitle, callback) => {
+        if (!gameState.flags) gameState.flags = {};
+        if (!gameState.flags.hasSanadaRoomKey) {
+            gameState.flags.hasSanadaRoomKey = true;
+            if (!gameState.bossHints) gameState.bossHints = [];
+            gameState.bossHints.push("【3F攻略メモ】真田の魔方陣は4マスの合計を「18」にする。左右の腕には小さい数字から順にカードを配置する。");
+
+            showMessageDialog(`${messageTitle}\n『鉄のバール』と『真田攻略メモ』を手に入れた！\nこれで真田の部屋を塞ぐ粗大ゴミを撤去できる！`, callback);
+        } else {
+            callback();
+        }
+    };
+
     const isRealHuman = Math.random() < 0.5;
 
     if (isRealHuman) {
@@ -125,13 +131,7 @@ function start3FRoomInquisition(gameState, context, onComplete) {
         openInquisitionUI(entity, gameState, (res) => {
             if (res === "finish" || res === "combat_win" || res === "kill_human") {
                 gameState.clearedRooms[roomKey] = true;
-                if (!gameState.flags) gameState.flags = {};
-                gameState.flags.hasSanadaRoomKey = true;
-
-                if (!gameState.bossHints) gameState.bossHints = [];
-                gameState.bossHints.push("【3F住人の証言】真田の魔方陣は4マスの合計を「18」にする。左右の腕には小さい数字から順にカードを配置する。");
-
-                showMessageDialog("【住人からアイテム獲得】\n救出した住人から『鉄のバール』を受け取った！\nこれで真田の部屋を塞ぐ粗大ゴミを撤去できる！", onComplete);
+                grantSanadaItemAndHint("【住人を保護した】", onComplete);
             } else {
                 onComplete();
             }
@@ -147,13 +147,33 @@ function start3FRoomInquisition(gameState, context, onComplete) {
         openInquisitionUI(entity, gameState, (res) => {
             if (res === "combat_win" || res === "kill_human") {
                 gameState.clearedRooms[roomKey] = true;
+                grantSanadaItemAndHint("【悪魔を討滅した】\n悪魔が溜め込んでいた荷物の中から……", onComplete);
+            } else if (res === "demon_ambush") {
+                // ★ 誤保護時の確定不意打ち攻撃（ダメージ10追加）
+                gameState.player.hp = Math.max(1, gameState.player.hp - 10);
+                const demonEnemy = {
+                    name: entity.name,
+                    image: entity.realImage,
+                    hp: 30,
+                    atk: 10,
+                    def: 1,
+                    weakness: [entity.weakness]
+                };
+                openCombatUI(demonEnemy, gameState, (cRes) => {
+                    if (cRes === "win") {
+                        gameState.clearedRooms[roomKey] = true;
+                        grantSanadaItemAndHint("【悪魔を討滅した】\n悪魔が溜め込んでいた荷物の中から……", onComplete);
+                    } else {
+                        onComplete();
+                    }
+                }, context);
+            } else {
+                onComplete();
             }
-            onComplete();
         }, context);
     }
 }
 
-// ★ 真田ボス戦前会話ダイアログ＆演出統合版
 function startSanadaBossSequence(gameState, context, onComplete) {
     showConversationDialog("assets/images/demon/3f-sanada.jpg", "【ゴミ屋敷の狂人・真田】\n「え？ 2Fの中学生の父親？ 知らねえよ、食えんのかよ、うちのBBAが不味かったからな、お前で口直ししてやるよ」", () => {
         playVideo("assets/images/demon/3f-sanada.mp4", () => {
@@ -174,7 +194,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
 
                 playVideo("assets/videos/magic-circle.mp4", () => {
                     const floor = 3;
-                    const targetLevel = (floor - 1) * 5; // 3F適正レベル = 10
+                    const targetLevel = (floor - 1) * 5;
                     const playerLevel = gameState.player.level;
 
                     let hpRatio = 1.0;
@@ -217,7 +237,6 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                                 gameState.flags.cleared3F = true;
                                 if (gameState.saveGame) gameState.saveGame();
 
-                                // ★ ボス部屋の前（安全な通路位置）へ移動
                                 gameState.player.x = 3;
                                 gameState.player.y = 1;
                                 gameState.player.dir = 1;

@@ -1,4 +1,4 @@
-// renderer.js - ミニマップ変数宣言（mapW/mapH）修正＆フォグ・オブ・ウォー対応完全版
+// renderer.js - 4F用セルヒント案内（セル4: 3階へ降りる / セル5: 5階へ登る）対応版
 
 import { gameState } from './gameState.js';
 
@@ -152,10 +152,10 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
 
             if (isVis) {
                 let targetImg = images.wall;
-                if (cellType === 4 && images.stairDoor && images.stairDoor.complete) targetImg = images.stairDoor;
+                if ((cellType === 4 || cellType === 5) && images.stairDoor && images.stairDoor.complete) targetImg = images.stairDoor;
                 else if (cellType === 6 && images.entrance && images.entrance.complete) targetImg = images.entrance;
                 else if (cellType === 7 && images.elevator && images.elevator.complete) targetImg = images.elevator;
-                else if ([2, 3, 5, 8, 9].includes(cellType) && images.door && images.door.complete) targetImg = images.door;
+                else if ([2, 3, 5, 6, 8, 9].includes(cellType) && images.door && images.door.complete) targetImg = images.door;
 
                 if (targetImg && targetImg.complete) {
                     ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
@@ -184,6 +184,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
     ctx.fillText("[ ESC ] アプリ  |  [ F2 ] デバッグ", 20, canvas.height - 13);
 }
 
+// ★ 各フロア階段案内の正確な分岐
 function drawActionHint(ctx, canvas, player, currentMap) {
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
@@ -194,9 +195,15 @@ function drawActionHint(ctx, canvas, player, currentMap) {
         if (target === 4) {
             if (gameState.currentFloor === 2) {
                 label = "[ SPACE ] 1階へ降りる";
+            } else if (gameState.currentFloor === 4) {
+                label = "[ SPACE ] 3階へ降りる";
             } else {
                 const nextFloor = (gameState.currentFloor || 1) + 1;
                 label = `[ SPACE ] ${nextFloor}階へ登る`;
+            }
+        } else if (target === 5) {
+            if (gameState.currentFloor === 4) {
+                label = "[ SPACE ] 5階へ登る";
             }
         } else if (target === 7) {
             label = "[ SPACE ] エレベーターに乗る";
@@ -254,7 +261,6 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 
-// ★ 変数宣言（const mapW, const mapH）を正しく修正
 function drawMiniMap(ctx, player, currentMap, currentFloor) {
     if (!gameState.hasExorcistInherited) return; 
     const size = 10, margin = 10;

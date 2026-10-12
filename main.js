@@ -1,4 +1,4 @@
-// main.js - オートマッピング・正規1Fスタート・8F制完全対応統合版
+// main.js - 4F進入セリフダイアログに4f-rina.jpg反映版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -75,7 +75,6 @@ function init() {
   };
 }
 
-// ★ 正規スタート（1F・非常階段前スタート＆初期マップ開放）
 function startNewGame() {
   gameState.resetGame();
   
@@ -85,7 +84,6 @@ function startNewGame() {
   gameState.player.y = playerStart1F.y;
   gameState.player.dir = playerStart1F.dir;
 
-  // 初期スポーン位置の周囲を開放
   gameState.markVisited(1, map1F, playerStart1F.x, playerStart1F.y);
 
   const container = document.getElementById('app-ui-container');
@@ -109,7 +107,6 @@ function resumeGame() {
 
   document.getElementById('touch-controls')?.classList.remove('hidden');
 
-  // ★ ロード時も現在地のマップを開放
   if (gameState.currentMap) {
       gameState.markVisited(gameState.currentFloor, gameState.currentMap, gameState.player.x, gameState.player.y);
   }
@@ -183,7 +180,6 @@ function interactFrontCell() {
   }
 }
 
-// ★ 移動手段に応じたフロア切替 ＆ 8F制対応
 function changeFloor(floor) {
   gameState.currentFloor = floor;
 
@@ -194,8 +190,8 @@ function changeFloor(floor) {
     gameState.player.dir = playerStart4F.dir;
 
     if (!gameState.flags || !gameState.flags.cleared4F) {
-      // ★ 『環境汚染』から『暴食』へテキスト修正
-      showConversationDialog("assets/images/demon/rina.png", "【色欲・リナ】\n「あら、私は『色欲』のリナ、『嫉妬』と『暴食』は倒されたのね、私も悪魔に乗っ取られてるの、私を助けて、強いひと」", () => {
+      // ★ リナの会話画像に 4f-rina.jpg を適用
+      showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「あら、私は『色欲』のリナ、『嫉妬』と『暴食』は倒されたのね、私も悪魔に乗っ取られてるの、私を助けて、強いひと」", () => {
         redraw();
       });
     } else {
@@ -223,7 +219,7 @@ function changeFloor(floor) {
     gameState.currentMap = map1F;
     if (gameState.lastTransitMethod === 'elevator') {
       gameState.player.x = 6;
-      gameState.player.y = 5;
+      gameState.player.y = 1;
       gameState.player.dir = 0;
     } else {
       gameState.player.x = playerStart1F.x;
@@ -231,13 +227,11 @@ function changeFloor(floor) {
       gameState.player.dir = playerStart1F.dir;
     }
   } else if (floor >= 5) {
-    // 5F以降の実装準備用ダミー枠
     showMessageDialog(`【${floor}階】\n重い扉の向こうから邪悪な気配が漂っている……（※開発中）`, () => {
       redraw();
     });
   }
 
-  // ★ 階層移動直後に足元を開放
   if (gameState.currentMap) {
     gameState.markVisited(floor, gameState.currentMap, gameState.player.x, gameState.player.y);
   }
@@ -270,7 +264,7 @@ function toggleDebugUI() {
     const isHidden = overlay.classList.contains('hidden');
     if (isHidden) {
       const p = gameState.player;
-      info.innerHTML = `階層: ${gameState.currentFloor}F<br>座標 (X:${p.x}, Y:${p.y})<br>向き: ${p.dir} (0:北,1:東,2:南,3:西)<br>Lv: ${p.level} | HP: ${p.hp}/${p.maxHp} | 罪: ${p.sin}`;
+      info.innerHTML = `階層: ${gameState.currentFloor}F<br>座標 (X:${p.x}, Y:${p.y})<br>向き: ${p.dir} (0:北,1:东,2:南,3:西)<br>Lv: ${p.level} | HP: ${p.hp}/${p.maxHp} | 罪: ${p.sin}`;
       overlay.classList.remove('hidden');
     } else {
       overlay.classList.add('hidden');
@@ -315,7 +309,6 @@ function checkEncounterAfterMove() {
   }
 }
 
-// ★ 前進（一歩歩くたびにマップ開放処理を実行）
 function moveForward() {
   const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
   const vec = dirVectors[gameState.player.dir];
@@ -325,12 +318,11 @@ function moveForward() {
   if (map && map[nextY] && map[nextY][nextX] === 0) {
     gameState.player.x = nextX;
     gameState.player.y = nextY;
-    gameState.markVisited(gameState.currentFloor, map, nextX, nextY); // ★ 足元のマップを開放
+    gameState.markVisited(gameState.currentFloor, map, nextX, nextY);
     checkEncounterAfterMove();
   }
 }
 
-// ★ 後退（一歩歩くたびにマップ開放処理を実行）
 function moveBackward() {
   const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
   const vec = dirVectors[gameState.player.dir];
@@ -340,7 +332,7 @@ function moveBackward() {
   if (map && map[nextY] && map[nextY][nextX] === 0) {
     gameState.player.x = nextX;
     gameState.player.y = nextY;
-    gameState.markVisited(gameState.currentFloor, map, nextX, nextY); // ★ 足元のマップを開放
+    gameState.markVisited(gameState.currentFloor, map, nextX, nextY);
     checkEncounterAfterMove();
   }
 }
