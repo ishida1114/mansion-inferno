@@ -1,4 +1,4 @@
-// renderer.js - フォグ・オブ・ウォー ＆ 2F階段「1階へ降りる」表示修正版
+// renderer.js - ミニマップ変数宣言（mapW/mapH）修正＆フォグ・オブ・ウォー対応完全版
 
 import { gameState } from './gameState.js';
 
@@ -184,7 +184,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
     ctx.fillText("[ ESC ] アプリ  |  [ F2 ] デバッグ", 20, canvas.height - 13);
 }
 
-// ★ 階段（セル4）の表示判定修正
 function drawActionHint(ctx, canvas, player, currentMap) {
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
@@ -255,10 +254,11 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 
+// ★ 変数宣言（const mapW, const mapH）を正しく修正
 function drawMiniMap(ctx, player, currentMap, currentFloor) {
     if (!gameState.hasExorcistInherited) return; 
     const size = 10, margin = 10;
-    mapW = currentMap[0].length * size, mapH = currentMap.length * size;
+    const mapW = currentMap[0].length * size, mapH = currentMap.length * size;
     
     ctx.fillStyle = "rgba(0, 0, 0, 0.75)"; 
     ctx.fillRect(margin, margin, mapW + 6, mapH + 6);
