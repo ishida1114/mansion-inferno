@@ -149,13 +149,18 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
     overlay.id = "video-player-overlay";
     overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 3500; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; padding: 20px;";
 
+  // ui.js の playVideo 関数の中（120行目付近）
     const video = document.createElement("video");
     video.src = src;
-    video.style.cssText = "max-width: 100%; max-height: 80%; object-fit: contain; background-color: #000;";
+    // ↓背景色を黒に近いグレーにしておくと透過した時に自然です
+    video.style.cssText = "max-width: 100%; max-height: 80%; object-fit: contain; background-color: #111;";
     video.controls = false; 
     video.autoplay = true; 
     video.playsInline = true; 
     video.muted = true; 
+
+    // ★ この1行があるか確認！ なければ追加してください。
+    applyChromaKey(video);
 
     overlay.appendChild(video);
 
