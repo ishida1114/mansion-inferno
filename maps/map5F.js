@@ -1,8 +1,8 @@
-// maps/map5F.js - ドア画像表示対応・敵エンカウント追加・階段画像修正版
+// maps/map5F.js - 機能完全復元・パズル＆戦闘直接起動・ステータスLv20適正版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
-    playVideo, playFloorTransition 
+    playVideo, playFloorTransition, openCombatUI, openInquisitionUI, openBossPuzzleUI 
 } from '../ui.js';
 import { ENEMIES, evaluateHirunumaPuzzle } from '../enemies.js';
 
@@ -12,40 +12,36 @@ export const playerStart5F = { x: 7, y: 1, dir: 2 };
 // 5階マップ構造 (15 x 9)
 // 1: 壁 / 0: 通路
 // 3: エレベーター (x:2, y:1) 
-// 4: 4階への非常階段 (降り: x:7, y:0)
-// 5: 6階への非常階段 (昇り: x:7, y:8) <-- 6から5（上り階段画像）に変更
-// 8: 査問/イベント部屋（システムがドア画像として認識する番号を使用）
+// 5: 4階への非常階段【下り】 (降り: x:7, y:0)
+// 4: 6階への非常階段【上り】 (昇り: x:7, y:8)
+// 2: 査問/イベント部屋（扉として描画される番号「2」を使用）
 export const map5F = [
-    [1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 8, 1, 0, 1, 8, 1, 0, 1, 8, 1, 0, 1], // 左から: 501号室(x:3), 隔離実験室(x:7), 502号室(x:11)
+    [1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1], // 左から: 501号室(x:3), 隔離実験室(x:7), 502号室(x:11)
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 1, 1, 0, 1, 8, 1, 0, 1, 1, 1, 0, 1], // 最奥実験室(x:7)
+    [1, 0, 1, 1, 1, 0, 1, 2, 1, 0, 1, 1, 1, 0, 1], // 最奥実験室(x:7)
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1]  // 6F行き階段（番号5）
+    [1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1]  // 6F行き階段(南)
 ];
 
-// ★ 5F専用のランダムエンカウント処理（敵が出ない問題を修正）
+// ★ 5F専用ランダムエンカウント（Lv20適正ステータス）
 export function check5FRandomEncounter(gameState, onEncounter) {
     if (gameState.currentFloor !== 5) return;
     
-    // 歩くたびに15%の確率で敵が出現
     if (Math.random() < 0.15) {
-        // demon10, demon11, demon12 に相当する敵データを生成
         const demonTypes = [
-            { id: 'DEVIL10_5F', name: '徘徊するキメラ', image: 'assets/images/demon/demon10.png', hp: 45, atk: 12, def: 2, weakness: [4, 7] },
-            { id: 'DEVIL11_5F', name: '失敗作の肉塊', image: 'assets/images/demon/demon11.png', hp: 50, atk: 14, def: 3, weakness: [1, 6] },
-            { id: 'DEVIL12_5F', name: '狂気の実験体', image: 'assets/images/demon/demon12.png', hp: 40, atk: 16, def: 1, weakness: [9] }
+            { id: 'DEVIL10_5F', name: '徘徊するキメラ', image: 'assets/images/demon/demon10.png', hp: 200, atk: 32, def: 5, weakness: [4, 7] },
+            { id: 'DEVIL11_5F', name: '失敗作の肉塊', image: 'assets/images/demon/demon11.png', hp: 240, atk: 35, def: 8, weakness: [1, 6] },
+            { id: 'DEVIL12_5F', name: '狂気の実験体', image: 'assets/images/demon/demon12.png', hp: 170, atk: 42, def: 4, weakness: [9] }
         ];
         
         const chosenEnemy = demonTypes[Math.floor(Math.random() * demonTypes.length)];
         onEncounter({ ...chosenEnemy });
     }
 }
-
-// maps/map5F.js 内の handleEvent5F 関数を以下で上書きしてください
 
 export function handleEvent5F(targetCell, gameState, context) {
     // 3: エレベーター
@@ -84,8 +80,8 @@ export function handleEvent5F(targetCell, gameState, context) {
         };
     }
 
-    // 4: 北側の非常階段（4階へ降りる）
-    if (targetCell === 4) {
+    // 5: 北側の非常階段（4階へ降りる）
+    if (targetCell === 5) {
         return {
             run: (onComplete) => {
                 showMessageDialog("【非常階段】\n4階へ降りますか？", () => {
@@ -99,8 +95,8 @@ export function handleEvent5F(targetCell, gameState, context) {
         };
     }
 
-    // 5: 南側の非常階段（6階へ昇る）
-    if (targetCell === 5) {
+    // 4: 南側の非常階段（6階へ昇る）
+    if (targetCell === 4) {
         if (!gameState.isHirunumaDefeated) {
             return {
                 run: (onComplete) => showMessageDialog(
@@ -123,14 +119,14 @@ export function handleEvent5F(targetCell, gameState, context) {
         }
     }
 
-    // 8: 各種イベント部屋（座標で分岐）
-    if (targetCell === 8) {
+    // 2: 各種イベント部屋（座標で分岐）
+    if (targetCell === 2) {
         const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
         const vec = dirVectors[gameState.player.dir];
         const frontX = gameState.player.x + vec.x;
         const frontY = gameState.player.y + vec.y;
 
-        // X=3, Y=2: 501号室（看護師）
+        // X=3, Y=2: 501号室（看護師・査問）
         if (frontX === 3 && frontY === 2) {
             return { run: (onComplete) => handleRoom501(gameState, context, onComplete) };
         }
@@ -138,11 +134,11 @@ export function handleEvent5F(targetCell, gameState, context) {
         if (frontX === 7 && frontY === 2) {
             return { run: (onComplete) => handleRoom53(gameState, context, onComplete) };
         }
-        // X=11, Y=2: 502号室（助手）
+        // X=11, Y=2: 502号室（助手・戦闘＆メモ）
         if (frontX === 11 && frontY === 2) {
             return { run: (onComplete) => handleRoom502(gameState, context, onComplete) };
         }
-        // X=7, Y=5: 最奥実験室（ボス連戦）
+        // X=7, Y=5: 最奥実験室（父親 ＆ 蛭沼 連戦）
         if (frontX === 7 && frontY === 5) {
             return { run: (onComplete) => handleBossLab54(gameState, context, onComplete) };
         }
@@ -155,29 +151,7 @@ export function handleEvent5F(targetCell, gameState, context) {
 // イベントサブルーチン
 // ----------------------------------------------------
 
-function trigger5FEntranceEvent(gameState, onComplete) {
-    gameState.hasSeen5FIntro = true;
-    showMessageDialog(
-        "【館内放送・ドクター蛭沼の声】\n「失敗だな、リナからもらった実験体、とても進化とは言えない、醜い、廃棄しなくては……」",
-        () => {
-            if (gameState.player.level >= 15 || gameState.playerLevel >= 15) {
-                const prevBg = document.body.style.backgroundColor;
-                document.body.style.backgroundColor = "#141418";
-
-                playVideo("assets/videos/blackcat.mp4", () => {
-                    document.body.style.backgroundColor = prevBg;
-                    showMessageDialog(
-                        "【使い魔の実体化】\n5階に充満する濃厚な生体エネルギーに反応し、主人公の影からすっと黒猫が実体化して現れた！\n（※足元に寄り添い、戦闘中に身を挺して庇ってくれたり、追撃してくれたりするようになった！）",
-                        onComplete
-                    );
-                });
-            } else {
-                onComplete();
-            }
-        }
-    );
-}
-
+// 501号室：看護師（正解：保護 ➔ 部位ヒント）
 function handleRoom501(gameState, context, onComplete) {
     if (gameState.hasRescued501) {
         showMessageDialog("【501号室 看護師】\n「先生、無事で……！ 奥で苦しんでいる人たちを早く助けてあげてください……！」", onComplete);
@@ -193,23 +167,19 @@ function handleRoom501(gameState, context, onComplete) {
                 faceImage: "assets/images/kangosi.png",
                 dialogue: "「助けてくれてありがとう……！ あの医者、自分の頭脳を神だと思い込んでいて、右手の手術メスで生体を切り刻んでいるの。」\n\n「奴の【頭部（上段）に『聖書（5）』】、【凶器の腕（右）に『銀の杭（9）』】を打ち込めば動きを止められるはずよ！」"
             };
-            if (context.openInquisitionUI) {
-                context.openInquisitionUI(entity, gameState, (res) => {
-                    if (res === "finish" || res === "combat_win" || res === "kill_human") {
-                        gameState.hasRescued501 = true;
-                        onComplete();
-                    } else {
-                        onComplete();
-                    }
-                });
-            } else {
-                gameState.hasRescued501 = true;
-                showMessageDialog("【看護師を保護した】\n" + entity.dialogue, onComplete);
-            }
+            openInquisitionUI(entity, gameState, (res) => {
+                if (res === "finish" || res === "combat_win" || res === "kill_human") {
+                    gameState.hasRescued501 = true;
+                    onComplete();
+                } else {
+                    onComplete();
+                }
+            }, context);
         }
     );
 }
 
+// 502号室：助手悪魔（戦闘 ➔ 計算ヒントメモ）
 function handleRoom502(gameState, context, onComplete) {
     if (gameState.hasCleared502) {
         showMessageDialog("【502号室】\n実験記録が散乱した冷たい部屋。もう悪魔の気配はない。", onComplete);
@@ -222,29 +192,26 @@ function handleRoom502(gameState, context, onComplete) {
             const demonEnemy = { 
                 name: 'キメラ化した助手', 
                 image: 'assets/images/demon/5f-kimera.png', 
-                hp: 60, atk: 15, def: 2, weakness: [4] 
+                hp: 260, atk: 35, def: 8, weakness: [4] 
             };
-            if (context.startCombat) {
-                context.startCombat(demonEnemy, (res) => {
-                    if (res === 'win' || res === 'combat_win') {
-                        gameState.hasCleared502 = true;
-                        showItemAcquiredModal(
-                            "assets/images/cards/5Card.png",
-                            "『実験記録の切れ端』",
-                            "悪魔の懐からメモを見つけた！\n「……結界を崩す術式数値は4マスの合計で『20』。【真実を映す鏡（2）】と【神への権威を否定する十字架（4）】を埋め込めば陣は崩壊する……」",
-                            onComplete
-                        );
-                    } else {
-                        onComplete();
-                    }
-                });
-            } else {
-                onComplete();
-            }
+            openCombatUI(demonEnemy, gameState, (res) => {
+                if (res === 'win' || res === 'combat_win') {
+                    gameState.hasCleared502 = true;
+                    showItemAcquiredModal(
+                        "assets/images/cards/5Card.png",
+                        "『実験記録の切れ端』",
+                        "悪魔の懐からメモを見つけた！\n「……結界を崩す術式数値は4マスの合計で『20』。【真実を映す鏡（2）】と【神への権威を否定する十字架（4）】を埋め込めば陣は崩壊する……」",
+                        onComplete
+                    );
+                } else {
+                    onComplete();
+                }
+            }, context);
         }
     );
 }
 
+// 53: 隔離実験室（改造キメラ人間・鍵入手）
 function handleRoom53(gameState, context, onComplete) {
     if (gameState.hasKeyLab5F) {
         showMessageDialog("【隔離実験室】\n正気を取り戻した住人が息を整えている。\n「私は大丈夫です……！ 早く奥の部屋へ……！」", onComplete);
@@ -254,34 +221,31 @@ function handleRoom53(gameState, context, onComplete) {
         const kimeraEnemy = { 
             name: '暴走キメラ人間', 
             image: 'assets/images/demon/demon11.png', 
-            hp: 80, atk: 18, def: 4, weakness: [7] 
+            hp: 340, atk: 44, def: 12, weakness: [7] 
         };
-        if (context.startCombat) {
-            context.startCombat(kimeraEnemy, (res) => {
-                if (res === 'win' || res === 'combat_win') {
-                    gameState.hasKeyLab5F = true;
-                    showConversationDialog(
-                        "assets/images/human1.png",
-                        "【正気に戻った住人】\n「う……あ……私ハ……？ 意識が戻った……？ 倒して、助けてくれたのか……！」\n\n「あいつは……ドクター蛭沼は、さらに奥の部屋で別の人間を実験台にしている……！ この鍵を持って行ってくれ……！」",
-                        () => {
-                            showItemAcquiredModal(
-                                "assets/images/cards/9Card.png",
-                                "最奥実験室の鍵",
-                                "『最奥実験室の鍵』を受け取った！\n（主人公の確信: 「倒せば正気に戻せる……！ なら、生徒の父親も絶対に救い出せるはずだ！」）",
-                                onComplete
-                            );
-                        }
-                    );
-                } else {
-                    onComplete();
-                }
-            });
-        } else {
-            onComplete();
-        }
+        openCombatUI(kimeraEnemy, gameState, (res) => {
+            if (res === 'win' || res === 'combat_win') {
+                gameState.hasKeyLab5F = true;
+                showConversationDialog(
+                    "assets/images/human1.png",
+                    "【正気に戻った住人】\n「う……あ……私ハ……？ 意識が戻った……？ 倒して、助けてくれたのか……！」\n\n「あいつは……ドクター蛭沼は、さらに奥の部屋で別の人間を実験台にしている……！ この鍵を持って行ってくれ……！」",
+                    () => {
+                        showItemAcquiredModal(
+                            "assets/images/cards/9Card.png",
+                            "最奥実験室の鍵",
+                            "『最奥実験室の鍵』を受け取った！\n（主人公の確信: 「倒せば正気に戻せる……！ なら、生徒の父親も絶対に救い出せるはずだ！」）",
+                            onComplete
+                        );
+                    }
+                );
+            } else {
+                onComplete();
+            }
+        }, context);
     });
 }
 
+// 54: 最奥実験室（父親 ➔ 蛭沼 連戦 ＆ パズル）
 function handleBossLab54(gameState, context, onComplete) {
     if (gameState.isHirunumaDefeated) {
         showMessageDialog("【最奥実験室】\n狂気の生体実験装置は停止し、静寂が漂っている。", onComplete);
@@ -292,6 +256,7 @@ function handleBossLab54(gameState, context, onComplete) {
         return;
     }
 
+    // 連戦第1弾：父親
     showMessageDialog("【最奥実験室】\n扉を開けると、手術台の前に変わり果てた姿の男が鎖に繋がれていた……。", () => {
         showConversationDialog(
             "assets/images/demon/5f-father.png",
@@ -300,27 +265,51 @@ function handleBossLab54(gameState, context, onComplete) {
                 const fatherEnemy = { 
                     name: 'キメラ化した父親', 
                     image: 'assets/images/demon/5f-father.png', 
-                    hp: 120, atk: 25, def: 5, weakness: [3] 
+                    hp: 480, atk: 50, def: 15, weakness: [3] 
                 };
-                if (context.startCombat) {
-                    context.startCombat(fatherEnemy, (res) => {
-                        if (res === 'win' || res === 'combat_win') {
-                            gameState.isFatherRescued = true;
-                            showMessageDialog(
-                                "【父親の救出】\n異形の肉体が崩れ、人間の姿を取り戻した父親が気を失って倒れ込んだ。\n微かに息はある……助かったんだ！",
-                                () => {
-                                    playVideo("assets/videos/5f-hirunuma.mp4", () => {
-                                        showConversationDialog(
-                                            "assets/images/demon/5f-hirunuma.png",
-                                            "【ドクター蛭沼】\n「俺は選ばれた、生物を合体させて進化させることができるのだ、神だよ、お前も俺を神と称えよ」",
-                                            () => {
+                openCombatUI(fatherEnemy, gameState, (res) => {
+                    if (res === 'win' || res === 'combat_win') {
+                        gameState.isFatherRescued = true;
+                        showMessageDialog(
+                            "【父親の救出】\n異形の肉体が崩れ、人間の姿を取り戻した父親が気を失って倒れ込んだ。\n微かに息はある……助かったんだ！",
+                            () => {
+                                // 連戦第2弾：蛭沼登場動画
+                                playVideo("assets/videos/5f-hirunuma.mp4", () => {
+                                    showConversationDialog(
+                                        "assets/images/demon/5f-hirunuma.png",
+                                        "【ドクター蛭沼】\n「俺は選ばれた、生物を合体させて進化させることができるのだ、神だよ、お前も俺を神と称えよ」",
+                                        () => {
+                                            // ★ 蛭沼パズルUI起動
+                                            const puzzleConfig = {
+                                                title: "【魔方陣術式】ドクター蛭沼の生体結界",
+                                                subTitle: "看護師の助言と実験記録のヒントから、術式を崩すラミナカードを配置せよ",
+                                                bossName: "蛭沼",
+                                                slots: [
+                                                    { id: "slot-top", label: "頭部(上)", gridPos: "grid-area: 1 / 2;" },
+                                                    { id: "slot-right", label: "凶器(右)", gridPos: "grid-area: 2 / 3;" },
+                                                    { id: "slot-left", label: "左腕", gridPos: "grid-area: 2 / 1;" },
+                                                    { id: "slot-bottom", label: "心臓(下)", gridPos: "grid-area: 3 / 2;" }
+                                                ]
+                                            };
+
+                                            openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
+                                                const isPuzzleSuccess = evaluateHirunumaPuzzle ? evaluateHirunumaPuzzle(slots) : true;
+                                                
                                                 const hirunumaEnemy = { 
                                                     name: 'ドクター蛭沼', 
                                                     image: 'assets/images/demon/5f-hirunuma.png', 
-                                                    hp: 400, atk: 35, def: 8, weakness: [5, 9] 
+                                                    hp: isPuzzleSuccess ? 600 : 1200, 
+                                                    atk: isPuzzleSuccess ? 45 : 70, 
+                                                    def: isPuzzleSuccess ? 12 : 25, 
+                                                    weakness: [5, 9] 
                                                 };
-                                                if (context.startBossCombat) {
-                                                    context.startBossCombat(hirunumaEnemy, (bossRes) => {
+
+                                                const resultNotice = isPuzzleSuccess 
+                                                    ? "【術式解呪成功！】\n魔方陣が激しく砕け散り、蛭沼の肉体結合が弱体化した！（HP・能力半減！）" 
+                                                    : "【術式解呪失敗……！】\n術式が暴走し、完全体となった蛭沼が襲いかかってくる！";
+
+                                                showMessageDialog(resultNotice, () => {
+                                                    openCombatUI(hirunumaEnemy, gameState, (bossRes) => {
                                                         if (bossRes === 'win' || bossRes === 'combat_win') {
                                                             gameState.isHirunumaDefeated = true;
                                                             showConversationDialog(
@@ -336,22 +325,18 @@ function handleBossLab54(gameState, context, onComplete) {
                                                         } else {
                                                             onComplete();
                                                         }
-                                                    });
-                                                } else {
-                                                    onComplete();
-                                                }
-                                            }
-                                        );
-                                    });
-                                }
-                            );
-                        } else {
-                            onComplete();
-                        }
-                    });
-                } else {
-                    onComplete();
-                }
+                                                    }, context);
+                                                });
+                                            });
+                                        }
+                                    );
+                                });
+                            }
+                        );
+                    } else {
+                        onComplete();
+                    }
+                }, context);
             }
         );
     });

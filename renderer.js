@@ -1,4 +1,4 @@
-// renderer.js - 4F専用ピンクフィルターエフェクト搭載版
+// renderer.js - エレベーター描画(3番対応)・5F階段案内修正 完全版
 
 import { gameState } from './gameState.js';
 
@@ -104,7 +104,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
                 ctx.closePath(); ctx.clip();
                 ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
-                // ★ 4F限定 ピンクフィルター
                 if (currentFloor === 4) {
                     ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -125,7 +124,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
                 ctx.closePath(); ctx.clip();
                 ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
-                // ★ 4F限定 ピンクフィルター
                 if (currentFloor === 4) {
                     ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -139,14 +137,21 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         if (currentMap[fY] && currentMap[fY][fX] !== 0) {
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;
-            if ((cellType === 4 || cellType === 5) && images.stairDoor && images.stairDoor.complete) targetImg = images.stairDoor;
-            else if (cellType === 6 && images.entrance && images.entrance.complete) targetImg = images.entrance;
-            else if (cellType === 7 && images.elevator && images.elevator.complete) targetImg = images.elevator;
-            else if ([2, 3, 5, 6, 8, 9].includes(cellType) && images.door && images.door.complete) targetImg = images.door;
+            
+            // ★ 修正：非常階段(4, 5)、エントランス(6)、エレベーター(3, 7)、通常扉(2, 8, 9)
+            if ((cellType === 4 || cellType === 5) && images.stairDoor && images.stairDoor.complete) {
+                targetImg = images.stairDoor;
+            } else if (cellType === 6 && images.entrance && images.entrance.complete) {
+                targetImg = images.entrance;
+            } else if ((cellType === 3 || cellType === 7) && images.elevator && images.elevator.complete) {
+                // ★ 3番もエレベーター画像として描画
+                targetImg = images.elevator;
+            } else if ([2, 8, 9].includes(cellType) && images.door && images.door.complete) {
+                targetImg = images.door;
+            }
 
             if (targetImg && targetImg.complete) {
                 ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
-                // ★ 4F限定 ピンクフィルター
                 if (currentFloor === 4) {
                     ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
                     ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -179,11 +184,14 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     if ([2, 3, 4, 5, 6, 7, 8, 9].includes(target)) {
         let label = "[ SPACE ] 調べる";
         
+        // ★ 階段やエレベーターの案内テキストを完全に整合
         if (target === 4) {
             if (gameState.currentFloor === 2) {
                 label = "[ SPACE ] 1階へ降りる";
             } else if (gameState.currentFloor === 4) {
                 label = "[ SPACE ] 3階へ降りる";
+            } else if (gameState.currentFloor === 5) {
+                label = "[ SPACE ] 6階へ登る";
             } else {
                 const nextFloor = (gameState.currentFloor || 1) + 1;
                 label = `[ SPACE ] ${nextFloor}階へ登る`;
@@ -191,8 +199,10 @@ function drawActionHint(ctx, canvas, player, currentMap) {
         } else if (target === 5) {
             if (gameState.currentFloor === 4) {
                 label = "[ SPACE ] 5階へ登る";
+            } else if (gameState.currentFloor === 5) {
+                label = "[ SPACE ] 4階へ降りる";
             }
-        } else if (target === 7) {
+        } else if (target === 3 || target === 7) {
             label = "[ SPACE ] エレベーターに乗る";
         } else if (target === 2 && gameState.currentFloor === 1) {
             label = "[ SPACE ] コンビニに入る";
