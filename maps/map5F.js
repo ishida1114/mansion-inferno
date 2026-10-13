@@ -45,11 +45,9 @@ export function check5FRandomEncounter(gameState, onEncounter) {
     }
 }
 
-export function handleEvent5F(targetCell, gameState, context) {
-    if (!gameState.hasSeen5FIntro) {
-        return { run: (onComplete) => trigger5FEntranceEvent(gameState, onComplete) };
-    }
+// maps/map5F.js 内の handleEvent5F 関数を以下で上書きしてください
 
+export function handleEvent5F(targetCell, gameState, context) {
     // 3: エレベーター
     if (targetCell === 3) {
         return {
@@ -86,61 +84,65 @@ export function handleEvent5F(targetCell, gameState, context) {
         };
     }
 
-    // 4: 4階へ降りる階段
-  // 4: 4階へ降りる階段
+    // 4: 北側の非常階段（4階へ降りる）
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
-                // ★ 降りるフラグを明示的にセット
-                gameState.lastTransitMethod = 'stair_down'; 
-                playFloorTransition(4, () => {
-                    context.changeFloor(4); // ★ここは4
-                    onComplete();
+                showMessageDialog("【非常階段】\n4階へ降りますか？", () => {
+                    gameState.lastTransitMethod = 'stair_down';
+                    playFloorTransition(4, () => {
+                        context.changeFloor(4);
+                        onComplete();
+                    });
                 });
             }
         };
     }
 
-    // 5: 6階へ上がる階段
+    // 5: 南側の非常階段（6階へ昇る）
     if (targetCell === 5) {
         if (!gameState.isHirunumaDefeated) {
             return {
-                run: (onComplete) => showMessageDialog("【6階への非常階段】\n生体実験の醜悪な肉塊と蔦が階段を強固に塞いでいる……。", onComplete)
+                run: (onComplete) => showMessageDialog(
+                    "【6階への非常階段】\n生体実験の醜悪な肉塊と蔦が階段を強固に塞いでいる……。\nフロアの元凶（ドクター蛭沼）を排除しなければ先へ進めない。",
+                    onComplete
+                )
             };
         } else {
             return {
                 run: (onComplete) => {
-                    gameState.lastTransitMethod = 'stair';
-                    playFloorTransition(6, () => {
-                        context.changeFloor(6); // ★ここは6
-                        onComplete();
+                    showMessageDialog("【非常階段】\n6階へ昇りますか？", () => {
+                        gameState.lastTransitMethod = 'stair';
+                        playFloorTransition(6, () => {
+                            context.changeFloor(6);
+                            onComplete();
+                        });
                     });
                 }
             };
         }
     }
 
-    // 8: 各種イベント部屋（座標でどの部屋かを判定）
+    // 8: 各種イベント部屋（座標で分岐）
     if (targetCell === 8) {
-        // プレイヤーの目の前の座標を計算
         const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
         const vec = dirVectors[gameState.player.dir];
         const frontX = gameState.player.x + vec.x;
         const frontY = gameState.player.y + vec.y;
 
-        // X=3, Y=2 なら 501号室（看護師）
+        // X=3, Y=2: 501号室（看護師）
         if (frontX === 3 && frontY === 2) {
             return { run: (onComplete) => handleRoom501(gameState, context, onComplete) };
         }
-        // X=7, Y=2 なら 隔離実験室（キメラ人間・鍵）
+        // X=7, Y=2: 隔離実験室（キメラ人間・鍵）
         if (frontX === 7 && frontY === 2) {
             return { run: (onComplete) => handleRoom53(gameState, context, onComplete) };
         }
-        // X=11, Y=2 なら 502号室（助手）
+        // X=11, Y=2: 502号室（助手）
         if (frontX === 11 && frontY === 2) {
             return { run: (onComplete) => handleRoom502(gameState, context, onComplete) };
         }
-        // X=7, Y=5 なら 最奥実験室（ボス連戦）
+        // X=7, Y=5: 最奥実験室（ボス連戦）
         if (frontX === 7 && frontY === 5) {
             return { run: (onComplete) => handleBossLab54(gameState, context, onComplete) };
         }

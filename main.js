@@ -1,5 +1,6 @@
 // main.js - 5F正式接続・3F階段着地修正・デバッグ連動 完全版
-
+// main.js の import 部分（playVideo を追加）
+import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI, playVideo } from './ui.js';
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -197,66 +198,94 @@ function changeFloor(floor) {
   gameState.currentFloor = floor;
 
   if (floor === 6) {
-    // 6F到達時（現在はメッセージのみ）
     showMessageDialog("【6階への扉】\n重い扉の向こうから邪悪な気配が漂っている……（※開発中）", () => {
       redraw();
     });
   } 
   else if (floor === 5) {
     gameState.currentMap = map5F;
-    // 4Fから「5F行き階段」で上がってきた場合
+    
+    // 4Fから上がってきた場合：北側の階段手前 (X:7, Y:1, 南向き) に着地
     if (gameState.lastTransitMethod === 'stair') {
       gameState.player.x = 7;
-      gameState.player.y = 0; // 5Fの「4Fへ降りる階段」の前
+      gameState.player.y = 1;
       gameState.player.dir = 2; // 南向き（フロア内を向く）
     } else {
-      // エレベーターで来た場合など（デフォルト）
       gameState.player.x = playerStart5F.x;
       gameState.player.y = playerStart5F.y;
       gameState.player.dir = playerStart5F.dir;
     }
 
-    if (!gameState.flags || !gameState.flags.cleared5F) {
-      showMessageDialog("【5階 精神科病棟】\n消毒液と腐敗臭が混ざり合うフロアへ到達した。\n異様な静寂の中、どこからか唸り声が響いている……", () => {
-        redraw();
-      });
+    // ★ 5F進入時の自動演出（SPACE不要・即時実行）
+    if (!gameState.hasSeen5FIntro) {
+      gameState.hasSeen5FIntro = true;
+      showMessageDialog(
+        "【館内放送・ドクター蛭沼の声】\n「失敗だな、リナからもらった実験体、とても進化とは言えない、醜い、廃棄しなくては……」",
+        () => {
+          const prevBg = document.body.style.backgroundColor;
+          document.body.style.backgroundColor = "#141418";
+
+          playVideo("assets/videos/blackcat.mp4", () => {
+            document.body.style.backgroundColor = prevBg;
+            
+            // 使い魔合流フラグを確実に付与
+            if (!gameState.flags) gameState.flags = {};
+            gameState.flags.hasCat = true;
+            gameState.flags.isCatTrapped = false;
+
+            showMessageDialog(
+              "【使い魔の実体化】\n5階に充満する濃厚な生体エネルギーに反応し、主人公の影からすっと黒猫が実体化して現れた！\n（※足元に寄り添い、戦闘中に身代わり防御や爪攻撃で援護してくれるようになった！）",
+              () => {
+                redraw();
+              }
+            );
+          });
+        }
+      );
     } else {
-      showMessageDialog("【5階 精神科病棟】\n蛭沼は討滅され、異様な悪臭は静まり返っている……", () => {
-        redraw();
-      });
+      if (!gameState.isHirunumaDefeated) {
+        showMessageDialog("【5階 精神科病棟】\n消毒液と腐敗臭が混ざり合うフロア。異様な唸り声が響いている……", () => {
+          redraw();
+        });
+      } else {
+        showMessageDialog("【5階 精神科病棟】\nドクター蛭沼は討滅され、異様な悪臭は静まり返っている……", () => {
+          redraw();
+        });
+      }
     }
   } 
   else if (floor === 4) {
     gameState.currentMap = map4F;
-    // 5Fから「4F行き階段」で降りてきた場合
-    if (gameState.lastTransitMethod === 'stair_down' || (gameState.player && gameState.player.level >= 15 && gameState.lastTransitMethod === 'stair')) {
-      // ※4Fの「5F行き階段」は (X:5, Y:0) にあるため、その目の前 (X:5, Y:1) に着地させる
+    
+    // 5Fから降りてきた場合：4F北側の階段手前 (X:5, Y:1, 南向き) に着地
+    if (gameState.lastTransitMethod === 'stair_down') {
       gameState.player.x = 5;
       gameState.player.y = 1;
-      gameState.player.dir = 2; // 南向き
+      gameState.player.dir = 2; // 南向き（フロア内を向く）
+      showMessageDialog("【4階 非常階段前】\n5階から4階へ降りてきた……。", () => {
+        redraw();
+      });
     } else {
-      // 3Fから上がってきた場合（デフォルト）
+      // 3Fから上がってきた場合：4F南側の階段手前 (X:5, Y:8, 北向き)
       gameState.player.x = playerStart4F.x;
       gameState.player.y = playerStart4F.y;
-      gameState.player.dir = playerStart4F.dir; // 北向き
-    }
-
-    if (!gameState.flags || !gameState.flags.cleared4F) {
-      showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「あら、私は『色欲』のリナ、『嫉妬』と『暴食』は倒されたのね、私も悪魔に乗っ取られてるの、私を助けて、強いひと」", () => {
-        redraw();
-      });
-    } else {
-      showMessageDialog("【4階 非常階段前】\n4階へ到達した。リナは討滅され、妖艶な桃色の霧は完全に消え去っている……", () => {
-        redraw();
-      });
+      gameState.player.dir = playerStart4F.dir;
+      if (!gameState.flags || !gameState.flags.cleared4F) {
+        showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「あら、私は『色欲』のリナ……私を助けて、強いひと」", () => {
+          redraw();
+        });
+      } else {
+        showMessageDialog("【4階 非常階段前】\n4階へ到達した。桃色の霧は完全に消え去っている……", () => {
+          redraw();
+        });
+      }
     }
   } 
   else if (floor === 3) {
     gameState.currentMap = map3F;
     
-    // 4Fから階段で降りてきた場合
-    if (gameState.lastTransitMethod === 'stair' || gameState.lastTransitMethod === 'stair_down') {
-      // 3Fの「4F行き階段」は (X:5, Y:0) にあるため、その目の前 (X:5, Y:1) に着地させる
+    // 4Fから降りてきた場合：3F北側の階段手前 (X:5, Y:1, 南向き) に着地
+    if (gameState.lastTransitMethod === 'stair_down') {
       gameState.player.x = 5;
       gameState.player.y = 1;
       gameState.player.dir = 2; // 南向き
@@ -264,7 +293,7 @@ function changeFloor(floor) {
         redraw();
       });
     } else {
-      // エレベーターで来た場合
+      // エレベーターで来た場合：エレベーター前
       gameState.player.x = playerStart3F.x;
       gameState.player.y = playerStart3F.y;
       gameState.player.dir = playerStart3F.dir;
@@ -287,18 +316,12 @@ function changeFloor(floor) {
     if (gameState.lastTransitMethod === 'elevator') {
       gameState.player.x = 6;
       gameState.player.y = 1;
-      gameState.player.dir = 0; // 北向き（扉を背にする）
+      gameState.player.dir = 0;
     } else {
-      // 2Fから降りてきた場合など
       gameState.player.x = playerStart1F.x;
       gameState.player.y = playerStart1F.y;
       gameState.player.dir = playerStart1F.dir;
     }
-  } 
-  else if (floor >= 7) {
-    showMessageDialog(`【${floor}階】\n重い扉の向こうから邪悪な気配が漂っている……（※開発中）`, () => {
-      redraw();
-    });
   }
 
   if (gameState.currentMap) {
