@@ -87,33 +87,32 @@ export function handleEvent5F(targetCell, gameState, context) {
     }
 
     // 4: 4階へ降りる階段
+  // 4: 4階へ降りる階段
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
-                gameState.lastTransitMethod = 'stair';
+                // ★ 降りるフラグを明示的にセット
+                gameState.lastTransitMethod = 'stair_down'; 
                 playFloorTransition(4, () => {
-                    context.changeFloor(4);
+                    context.changeFloor(4); // ★ここは4
                     onComplete();
                 });
             }
         };
     }
 
-    // 5: 6階へ上がる階段（★番号を5に変更）
+    // 5: 6階へ上がる階段
     if (targetCell === 5) {
         if (!gameState.isHirunumaDefeated) {
             return {
-                run: (onComplete) => showMessageDialog(
-                    "【6階への非常階段】\n生体実験の醜悪な肉塊と蔦が階段を強固に塞いでいる……。\nフロアの元凶を排除しなければ先へ進めない。",
-                    onComplete
-                )
+                run: (onComplete) => showMessageDialog("【6階への非常階段】\n生体実験の醜悪な肉塊と蔦が階段を強固に塞いでいる……。", onComplete)
             };
         } else {
             return {
                 run: (onComplete) => {
                     gameState.lastTransitMethod = 'stair';
                     playFloorTransition(6, () => {
-                        context.changeFloor(6);
+                        context.changeFloor(6); // ★ここは6
                         onComplete();
                     });
                 }
