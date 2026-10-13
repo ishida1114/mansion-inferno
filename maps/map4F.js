@@ -1,4 +1,4 @@
-// maps/map4F.js - 査問セリフ個別渡し ＆ 悪魔浄化時のヒント取得バグ修正版
+// maps/map4F.js - 全機能保持・ヒント2種分離・3F帰還座標修正完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -33,6 +33,7 @@ export function check4FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent4F(targetCell, gameState, context) {
+    // 4: 3階への非常階段（降りる）
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
@@ -40,6 +41,10 @@ export function handleEvent4F(targetCell, gameState, context) {
                     gameState.lastTransitMethod = 'stair';
                     playFloorTransition(3, () => {
                         context.changeFloor(3);
+                        // ★ 修正：3階の非常階段前へ着地（エレベーター前への誤ワープを防止）
+                        gameState.player.x = 5;
+                        gameState.player.y = 8;
+                        gameState.player.dir = 0; // 北向き
                         onComplete();
                     });
                 });
@@ -47,6 +52,7 @@ export function handleEvent4F(targetCell, gameState, context) {
         };
     }
 
+    // 5: 5階への非常階段（昇る）
     if (targetCell === 5) {
         if (!gameState.flags || !gameState.flags.cleared4F) {
             return {
@@ -65,19 +71,27 @@ export function handleEvent4F(targetCell, gameState, context) {
         }
     }
 
+    // 2: 親衛隊Aイベント（高級ブランドバッグ）
     if (targetCell === 2) {
         return { run: (onComplete) => startShineiAEvent(gameState, context, onComplete) };
     }
 
+    // 6: 親衛隊Bイベント（高級シャンパン）
     if (targetCell === 6) {
         return { run: (onComplete) => startShineiBEvent(gameState, context, onComplete) };
     }
 
-    // 査問部屋（ヒント入手）
-    if (targetCell === 8 || targetCell === 9) {
-        return { run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete) };
+    // 8: 査問部屋（ヒント1：上と右）
+    if (targetCell === 8) {
+        return { run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete, 8) };
     }
 
+    // 9: 査問部屋（ヒント2：下と左）
+    if (targetCell === 9) {
+        return { run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete, 9) };
+    }
+
+    // 3: リナのボス部屋
     if (targetCell === 3) {
         if (gameState.flags && gameState.flags.cleared4F) {
             return {
@@ -100,8 +114,8 @@ export function handleEvent4F(targetCell, gameState, context) {
     return null;
 }
 
-// ★ 査問部屋（セリフ上書き＆悪魔浄化バグ修正）
-function start4FRoomInquisition(gameState, context, onComplete) {
+// ★ 査問部屋（部屋8と部屋9で異なるヒントを付与）
+function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
     const vec = dirVectors[gameState.player.dir];
     const frontX = gameState.player.x + vec.x;
@@ -115,30 +129,37 @@ function start4FRoomInquisition(gameState, context, onComplete) {
         return;
     }
 
+    // ★ 部屋8（401）と部屋9（402）でヒントを分岐
+    let hintDialogue = "";
+    let hintLogText = "";
+
+    if (roomType === 8) {
+        hintDialogue = "「リナの魔方陣は、上（瞳）に『真実の鏡(2)』、右（腕）に『聖書(5)』を配置して誘惑を打ち破るんだ！」";
+        hintLogText = "【4F住人の証言①】リナの魔方陣は、上（瞳）に『真実の鏡(2)』、右（腕）に『聖書(5)』を配置して誘惑を打ち破るんだ！";
+    } else {
+        hintDialogue = "「あいつの残る急所は……下（足）に『聖水(1)』を流し、左（腕）に『聖香(8)』を焚いて甘い香気を打ち消せ！」";
+        hintLogText = "【4F住人の証言②】リナの魔方陣は、下（足）に『聖水(1)』、左（腕）に『聖香(8)』を配置するんだ！";
+    }
+
     const grantRinaHint = (messageTitle, callback) => {
         if (!gameState.bossHints) gameState.bossHints = [];
-        const hintMsg = "【4F住人の証言】リナの魔方陣は、上（瞳）に『真実の鏡(2)』、右（腕）に『聖書(5)』を配置して誘惑を打ち破るんだ！";
-        if (!gameState.bossHints.includes(hintMsg)) {
-            gameState.bossHints.push(hintMsg);
+        if (!gameState.bossHints.includes(hintLogText)) {
+            gameState.bossHints.push(hintLogText);
         }
-        showMessageDialog(`${messageTitle}\n『リナ攻略メモ』がスマホの悪魔手記に記録された！`, callback);
+        showMessageDialog(`${messageTitle}\n『リナ攻略メモ』がスマホの悪魔手記に記録された！\n\n${hintDialogue}`, callback);
     };
 
     const isRealHuman = Math.random() < 0.5;
-
-    // ★ 4F専用のセリフを用意（影山の固定セリフを上書きするため）
-    const hintDialogue = "「リナの魔方陣は、上（瞳）に『真実の鏡(2)』、右（腕）に『聖書(5)』を配置して誘惑を打ち破るんだ！」";
 
     if (isRealHuman) {
         const entity = {
             type: "human",
             name: "マンションの住人",
             faceImage: "assets/images/human1.png",
-            dialogue: hintDialogue, // ⬅ ui.jsへセリフを渡す
+            dialogue: hintDialogue,
             message: hintDialogue
         };
         openInquisitionUI(entity, gameState, (res) => {
-            // ★ 対話終了・戦闘勝利など、どんな勝ち方でもクリア扱いにする
             if (res === "finish" || res === "combat_win" || res === "kill_human" || res === "win" || res === "success" || res === "exorcised") {
                 gameState.clearedRooms[roomKey] = true;
                 grantRinaHint("【住人を保護した】", onComplete);
@@ -152,12 +173,11 @@ function start4FRoomInquisition(gameState, context, onComplete) {
             name: "マンションの住人",
             faceImage: "assets/images/human1.png",
             realImage: "assets/images/demon/demon7.png",
-            dialogue: hintDialogue, // ⬅ 悪魔（擬態中）にも同じセリフを渡す
+            dialogue: hintDialogue,
             message: hintDialogue,
             weakness: 2
         };
         openInquisitionUI(entity, gameState, (res) => {
-            // ★ カードで悪魔を直接浄化した場合も漏れなくクリア扱いにする
             if (res === "combat_win" || res === "kill_human" || res === "win" || res === "success" || res === "exorcised" || res === "finish") {
                 gameState.clearedRooms[roomKey] = true;
                 grantRinaHint("【悪魔を討滅した】\n悪魔の残骸から手記を発見した！", onComplete);
@@ -188,7 +208,7 @@ function start4FRoomInquisition(gameState, context, onComplete) {
 
 function startShineiAEvent(gameState, context, onComplete) {
     if (gameState.flags && gameState.flags.defeatedShineiA) {
-        showMessageDialog("【豪奢な部屋】\n衰弱しきった男が横たわっている……もう戦う気力はないようだ。", onComplete);
+        showMessageDialog("【豪奢な部屋】\n男はもう動かない", onComplete);
         return;
     }
 
@@ -255,9 +275,9 @@ function startShineiBEvent(gameState, context, onComplete) {
 function startRinaBossSequence(gameState, context, onComplete) {
     showMessageDialog("【台座に貢ぎ物を設置】\n『高級ブランドバッグ』と『高級シャンパン』を台座に並べた。\n桃色の結界が霧散し、最奥の扉が開いた……！", () => {
         playVideo("assets/images/demon/4f-rina.mp4", () => {
-            showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「みんなひどいことばっかり言うの、私は弱いのに、私の強がりをわかってくれない。困ってるの、男のひとはみんな怖い、あなたは？あなたも怖いの？助けて、私の強いひと」", () => {
+            showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「みんなひどいことばっかり言うの、私は弱いのに、私の強がりをわかってくれない。困ってるの、男のひとはみんな怖い、あなたは？あなたも怖いひと？助けて、私の強いひと♥」", () => {
                 const puzzleConfig = {
-                    title: "【4Fボス解読】色欲のパパ活女子・リナ",
+                    title: "【4Fボス解読】色欲のパパ活女子・リナ♥",
                     subTitle: "甘い誘惑と精神攻撃を断ち切れ",
                     bossName: "リナ",
                     slots: [

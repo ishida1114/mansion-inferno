@@ -57,11 +57,13 @@ export const gameState = {
     return (floor - 1) * 5;
   },
 
+  // 変更前: Math.floor(baseMoney * 0.1)
+  // 変更後: Math.floor(baseMoney * 0.5)
   calculateRewards(baseExp, baseMoney, floor = this.currentFloor) {
     const capLevel = this.getFloorLevelCap(floor);
     if (this.player.level >= capLevel) {
       const cappedExp = Math.max(1, Math.floor(baseExp * 0.1));
-      const cappedMoney = Math.max(1, Math.floor(baseMoney * 0.1));
+      const cappedMoney = Math.max(1, Math.floor(baseMoney * 0.5)); // ★ 50%に緩和
       return { exp: cappedExp, money: cappedMoney, isCapped: true };
     }
     return { exp: baseExp, money: baseMoney, isCapped: false };

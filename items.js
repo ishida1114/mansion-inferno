@@ -1,4 +1,4 @@
-// items.js - アイテム定義データ（全機能保持＆後半防具④〜⑥追加版）
+// items.js - アイテム定義データ（全機能保持＆救急セット追加＆傘パターンA修正）
 
 // --- 消費アイテム（コンビニ購入） ---
 export const CONSUMABLE_ITEMS = {
@@ -28,6 +28,20 @@ export const CONSUMABLE_ITEMS = {
       return 'HPが25回復した！';
     }
   },
+  // ★追加：大回復アイテム（救急セット）
+  first_aid: {
+    id: 'first_aid',
+    name: '救急セット',
+    type: 'consumable',
+    price: 600,
+    description: 'HPを 50 回復する。大ダメージ時の切り札。',
+    healAmount: 50,
+    battleUsable: true,
+    use: (state) => {
+      state.player.hp = Math.min(state.player.maxHp, state.player.hp + 50);
+      return 'HPが50回復した！';
+    }
+  },
 
   // ビニール傘シリーズ（使い捨て戦闘用）
   blue_umbrella: {
@@ -35,8 +49,9 @@ export const CONSUMABLE_ITEMS = {
     name: '青いビニール傘（防御）',
     type: 'consumable',
     price: 200,
-    description: '3ターンの間、主人公の DEF を +2 する。',
-    battleEffect: { type: 'BUFF_DEF', value: 2, turns: 3 },
+    // ★変更：パターンA（1回きりの70%カット）に合わせる
+    description: '素早く開き、次の敵の攻撃ダメージを 70% 軽減する。',
+    battleEffect: { type: 'GUARD_70', turns: 1 },
     guardEffect: true,
     battleUsable: true
   },
