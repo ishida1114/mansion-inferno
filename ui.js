@@ -1,4 +1,4 @@
-// ui.js - 戦闘ルーチン・黒猫紫ログ・傘70%軽減・UI統合完全版[cite: 2]
+// ui.js - 戦闘ルーチン（タメ技前倒し・傘70%軽減・黒猫紫ログ）・UI統合完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -342,7 +342,7 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（新行動ルーチン・黒猫・傘70%軽減完全統合）[cite: 2]
+// 戦闘UI制御（タメ技前倒し・黒猫・傘70%軽減完全統合）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
@@ -354,7 +354,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const enemyWeakness = Array.isArray(enemy.weakness) ? enemy.weakness : [enemy.weaknessCard || 1];
     
     let isGuarding = false;         // ビニール傘使用フラグ
-    let isEnemyCharging = false;    // 敵のタメ技待機フラグ（6F〜8F）
+    let isEnemyCharging = false;    // 敵のタメ技待機フラグ
 
     const visualHTML = `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;">`;
 
@@ -425,7 +425,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         return "の容赦ない攻撃が襲いかかる！";
     };
 
-    // 敵ターン処理（行動ルーチン・黒猫割り込み・傘70%軽減完全適用）[cite: 2]
+    // 敵ターン処理（行動ルーチン前倒し・黒猫割り込み・傘70%軽減完全適用）
     const enemyTurn = (initialMessage) => {
         log.innerHTML = initialMessage;
 
@@ -435,7 +435,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             let damageMultiplier = 1.0;
             let actionText = "";
 
-            // --- 敵の行動決定ルーチン ---
+            // --- 敵の行動決定ルーチン（タメ技前倒し版） ---
             if (isEnemyCharging) {
                 // タメ技解放（2ターン目）
                 actionType = "charge_fire";
@@ -444,22 +444,41 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 actionText = `【解放撃】${enemy.name} の収束された破滅の一撃が炸裂する！`;
             } else {
                 const roll = Math.random();
-                if (currentFloor >= 6) {
-                    // 6F〜8F: 通常50% / 単独25% / タメ25%
-                    if (roll < 0.50) {
+                const isKageyamaBoss = enemy.id === 'KAGEYAMA_2F' || enemy.name === 'ストーカー影山';
+                const canUseCharge = (currentFloor >= 3) || isKageyamaBoss;
+
+                if (canUseCharge) {
+                    let chargeRate = 0.20;
+                    let singleRate = 0.20;
+
+                    if (currentFloor >= 6) {
+                        // 6F〜8F: タメ30% / 痛恨25% / 通常45%
+                        chargeRate = 0.30;
+                        singleRate = 0.25;
+                    } else if (isKageyamaBoss) {
+                        // 2Fボス影山: タメ25% / 痛恨25% / 通常50%（チュートリアル）
+                        chargeRate = 0.25;
+                        singleRate = 0.25;
+                    } else {
+                        // 3F〜5F: タメ20% / 痛恨20% / 通常60%
+                        chargeRate = 0.20;
+                        singleRate = 0.20;
+                    }
+
+                    if (roll < chargeRate) {
+                        actionType = "charge_start";
+                        isEnemyCharging = true;
+                    } else if (roll < chargeRate + singleRate) {
+                        actionType = "single";
+                        damageMultiplier = 1.25;
+                        actionText = `【痛恨】${enemy.name} ${getRandomActionMsg()}`;
+                    } else {
                         actionType = "normal";
                         damageMultiplier = 1.0;
                         actionText = `${enemy.name} ${getRandomActionMsg()}`;
-                    } else if (roll < 0.75) {
-                        actionType = "single";
-                        damageMultiplier = 1.25;
-                        actionText = `【強打】${enemy.name} ${getRandomActionMsg()}`;
-                    } else {
-                        actionType = "charge_start";
-                        isEnemyCharging = true;
                     }
                 } else {
-                    // 2F〜5F: 通常75% / 単独25%
+                    // 2F通常雑魚など（タメ技なし：通常75% / 痛恨25%）
                     if (roll < 0.75) {
                         actionType = "normal";
                         damageMultiplier = 1.0;
@@ -503,15 +522,15 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 umbrellaApplied = true;
             }
 
-            // ★ 黒猫の割り込み判定（Lv15加入 / 20%確率で発動）[cite: 2]
+            // ★ 黒猫の割り込み判定（Lv15加入 / 捕縛中でない場合 / 20%確率で発動）
             let catAction = null;
-            if (gameState.flags && gameState.flags.hasCat && Math.random() < 0.20) {
-                // 身代わり 50% / 爪攻撃 50%[cite: 2]
+            if (gameState.flags && gameState.flags.hasCat && !gameState.flags.isCatTrapped && Math.random() < 0.20) {
+                // 身代わり 50% / 爪攻撃 50%
                 catAction = Math.random() < 0.5 ? "shield" : "claw";
             }
 
             if (catAction === "shield") {
-                // 身代わり：ダメージ半減[cite: 2]
+                // 身代わり：ダメージ半減
                 baseDamage = Math.max(1, Math.floor(baseDamage * 0.5));
                 appendLog(`\n<span style="color: #E0B0FF; font-weight: bold;">【使い魔の身代わり】黒猫が前に割り込み、主人公を庇った！（ダメージ半減！）</span>`);
             }
@@ -525,7 +544,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             if (umbrellaApplied) dmgNotice += "（ビニール傘で70%カット！）";
             appendLog(dmgNotice);
 
-            // 黒猫の爪攻撃（追撃ダメージ）[cite: 2]
+            // 黒猫の爪攻撃（追撃ダメージ）
             if (catAction === "claw") {
                 const catDmg = Math.max(8, Math.floor((gameState.player.level || 1) * 3.5));
                 enemyHp = Math.max(0, enemyHp - catDmg);
@@ -880,7 +899,7 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     };
 }
 
-// ボス魔方陣パズルUI制御[cite: 2]
+// ボス魔方陣パズルUI制御
 export function openBossPuzzleUI(puzzleConfig, gameState, onSubmit) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();

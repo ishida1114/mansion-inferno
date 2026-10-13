@@ -5,7 +5,7 @@ import {
     playVideo, playFloorTransition 
 } from '../ui.js';
 import { ENEMIES, evaluateHirunumaPuzzle } from '../enemies.js';
-import { startCombat } from '../combat.js';
+import { startCombat, startBossCombat } from '../combat.js';
 
 // 5階開始位置 (x: 7, y: 1, 南向き)
 export const playerStart5F = { x: 7, y: 1, dir: 2 };
@@ -104,8 +104,7 @@ function trigger5FEntranceEvent(gameState, onComplete) {
     showMessageDialog(
         "【館内放送・ドクター蛭沼の声】\n「失敗だな、リナからもらった実験体、とても進化とは言えない、醜い、廃棄しなくては……」",
         () => {
-            if (gameState.playerLevel >= 15) {
-                // クロマキー緑のチラつき対策として背景色を一時的に暗いグレーに設定
+            if (gameState.player.level >= 15 || gameState.playerLevel >= 15) {
                 const prevBg = document.body.style.backgroundColor;
                 document.body.style.backgroundColor = "#141418";
 
@@ -130,7 +129,6 @@ function handleRoom501(gameState, context, onComplete) {
         return;
     }
 
-    // kangosi.png を使用
     showConversationDialog(
         "assets/images/kangosi.png",
         "【震える看護師】\n「ひっ……！ 殺さないで！ 私はただの看護師です……！ 蛭沼先生に逆らったら実験台にされそうになって……！」\n\n（※この人物をどうする？）",
@@ -151,7 +149,6 @@ function handleRoom502(gameState, context, onComplete) {
         return;
     }
 
-    // 助手悪魔に 5f-kimera.png を適用
     showConversationDialog(
         "assets/images/demon/5f-kimera.png",
         "【キメラ化した助手】\n「私は蛭沼先生の研究助手です……。ここは危険です、私を安全な場所へ連れて行ってください……」\n\n（※カードをかざすと、男の影が引き攣るように蠢いた！ 悪魔だ！）",
@@ -228,4 +225,37 @@ function handleBossLab54(gameState, context, onComplete) {
                         () => {
                             // --- 連戦第2弾：ドクター蛭沼（パズルあり） ---
                             playVideo("assets/images/demon/5f-hirunuma.mp4", () => {
-                                show
+                                showConversationDialog(
+                                    "assets/images/demon/5f-hirunuma.png",
+                                    "【ドクター蛭沼】\n「俺は選ばれた、生物を合体させて進化させることができるのだ、神だよ、お前も俺を神と称えよ」",
+                                    () => {
+                                        // 蛭沼パズル戦闘
+                                        const bossCombatFn = context.startBossCombat || startBossCombat || combatFn;
+                                        bossCombatFn(ENEMIES.HIRUNUMA_5F, () => {
+                                            // 撃破後の本音吐露
+                                            gameState.isHirunumaDefeated = true;
+                                            showConversationDialog(
+                                                "assets/images/demon/5f-hirunuma.png",
+                                                "【瀕死の蛭沼】\n「違う、あの子が歩けなくなったのは俺の執刀ミスのせいじゃない、治せる、俺は治せるんだ……」",
+                                                () => {
+                                                    showMessageDialog(
+                                                        "【黒猫の失踪】\n倒れた蛭沼を背に、父親を介抱しようとしたその時――\n足元にいた黒猫がするりと身を翻し、開いた非常階段（6階）へ駆け上がっていってしまった！\n\n主人公「おい、待て！……くそっ、放っておくわけにはいかない！」",
+                                                        onComplete
+                                                    );
+                                                }
+                                            );
+                                        }, () => {
+                                            onComplete();
+                                        }, evaluateHirunumaPuzzle);
+                                    }
+                                );
+                            });
+                        }
+                    );
+                }, () => {
+                    onComplete();
+                });
+            }
+        );
+    });
+}
