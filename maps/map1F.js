@@ -121,12 +121,14 @@ function startExorcistSequence(gameState, redraw, onComplete) {
         playVideo("assets/videos/BloodPond.mp4", () => playVideo("assets/videos/exorcist.mp4", () => {
             showMessageDialog("【瀕死のエクソシスト】\n「そ、そこのひと…」\n「悪魔にやられました、ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……そして使い魔と2階非常階段の鍵を……あなたに託します……」", () => {
                 showItemAcquiredModal("assets/images/cards/1Card.png", "退魔の札『ラミナ』一式", "『悪魔辞典アプリ』『使い魔（Lv.15から）』『2F非常階段の鍵』\nそして『1〜9番のラミナ全9枚』を受け継いだ！", () => {
-                    showMessageDialog("【衝撃の光景】\n話し終えた直後、無数の黒い腕が池から伸び、神父が引きずり込まれた……。あまりに驚いて、見ているしかなかった", () => {
-                        gameState.hasExorcistInherited = true; 
-                        gameState.hasKey2F = true; 
-                        gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
-                        if (redraw) redraw(); 
-                        onComplete();
+                    showMessageDialog("【瀕死のエクソシスト】\n「8Fの御堂、あれは私の想像を超えて凶悪だった……あれはこの街の脅威になる……」", () => {
+                        showMessageDialog("【衝撃の光景】\n話し終えた直後、無数の黒い腕が池から伸び、神父が引きずり込まれた……。あまりに驚いて、見ているしかなかった。", () => {
+                            gameState.hasExorcistInherited = true; 
+                            gameState.hasKey2F = true; 
+                            gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
+                            if (redraw) redraw(); 
+                            onComplete();
+                        });
                     });
                 });
             });

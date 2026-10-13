@@ -8,6 +8,7 @@ import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './m
 import { map3F, playerStart3F, handleEvent3F, check3FRandomEncounter } from './maps/map3F.js';
 import { map4F, playerStart4F, handleEvent4F, check4FRandomEncounter } from './maps/map4F.js';
 import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI } from './ui.js';
+import { initDebug } from './debug.js';
 
 let appUI;
 let renderer;
@@ -452,3 +453,13 @@ if (document.readyState === 'loading') {
 } else {
   init();
 }
+
+// ==========================================
+// main.js の一番最後に追加
+// ==========================================
+
+// デバッグ機能を初期化（F2キーで呼び出し可能）
+initDebug(gameState, { 
+    changeFloor: typeof changeFloor === 'function' ? changeFloor : null, 
+    redraw: typeof draw === 'function' ? draw : (typeof render === 'function' ? render : null) 
+});
