@@ -503,15 +503,17 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 return;
             }
 
-            // 回避判定（透明傘のAGIアップを加味）
-            const dodgeChance = ((gameState.player.agi || 5) + extraAgi) * 0.04;
-            if (Math.random() < dodgeChance) {
-                appendLog(`\n素早い身こなし！ 主人公は悪魔の攻撃を完全に回避した！`);
-                attackBtn.disabled = false;
-                itemBtn.disabled = false;
-                escapeBtn.disabled = false;
-                return;
-            }
+         // 回避判定（透明傘のAGIアップを加味・最大30%キャップ設定）
+  const rawDodge = ((gameState.player.agi || 5) + extraAgi) * 0.04;
+  const dodgeChance = Math.min(0.30, rawDodge); // ★最大でも30%に制限（70%は被弾する）
+
+  if (Math.random() < dodgeChance) {
+      appendLog(`\n素早い身のこなし！ 主人公は悪魔の攻撃を完全に回避した！`);
+      attackBtn.disabled = false;
+      itemBtn.disabled = false;
+      escapeBtn.disabled = false;
+      return;
+  }
 
             // 被ダメージ計算
             let rawAtk = enemyAtk * damageMultiplier;

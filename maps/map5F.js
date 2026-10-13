@@ -274,7 +274,7 @@ function handleBossLab54(gameState, context, onComplete) {
                             "【父親の救出】\n異形の肉体が崩れ、人間の姿を取り戻した父親が気を失って倒れ込んだ。\n微かに息はある……助かったんだ！",
                             () => {
                                 // 連戦第2弾：蛭沼登場動画
-                                playVideo("assets/videos/5f-hirunuma.mp4", () => {
+                                playVideo("assets/images/demon/5f-hirunuma.mp4", () => {
                                     showConversationDialog(
                                         "assets/images/demon/5f-hirunuma.png",
                                         "【ドクター蛭沼】\n「俺は選ばれた、生物を合体させて進化させることができるのだ、神だよ、お前も俺を神と称えよ」",
@@ -293,22 +293,38 @@ function handleBossLab54(gameState, context, onComplete) {
                                             };
 
                                             openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
-                                                const isPuzzleSuccess = evaluateHirunumaPuzzle ? evaluateHirunumaPuzzle(slots) : true;
-                                                
+                                                // スロットにセットされたカードの数字を抽出
+                                                const getCardNum = (slotId) => {
+                                                    const cardStr = slots[slotId] || "";
+                                                    const num = parseInt(cardStr.replace("Card.png", ""), 10);
+                                                    return isNaN(num) ? 0 : num;
+                                                };
+
+                                                const topVal = getCardNum("slot-top");
+                                                const rightVal = getCardNum("slot-right");
+                                                const leftVal = getCardNum("slot-left");
+                                                const bottomVal = getCardNum("slot-bottom");
+
+                                                // ★完全正解の判定（少しでも違えば失敗）
+                                                // 看護師ヒント: 頭(上)=5, 凶器(右)=9
+                                                // 助手ヒント: 合計20かつ「2」と「4」を使用 -> 残り枠は左・下。
+                                                let isPerfectSuccess = false;
+                                                if (topVal === 5 && rightVal === 9) {
+                                                    if ((leftVal === 2 && bottomVal === 4) || (leftVal === 4 && bottomVal === 2)) {
+                                                        isPerfectSuccess = true;
+                                                    }
+                                                }
+
                                                 const hirunumaEnemy = { 
                                                     name: 'ドクター蛭沼', 
                                                     image: 'assets/images/demon/5f-hirunuma.png', 
-                                                    hp: isPuzzleSuccess ? 600 : 1200, 
-                                                    atk: isPuzzleSuccess ? 45 : 70, 
-                                                    def: isPuzzleSuccess ? 12 : 25, 
+                                                    hp: isPerfectSuccess ? 600 : 1200, 
+                                                    atk: isPerfectSuccess ? 45 : 70, 
+                                                    def: isPerfectSuccess ? 12 : 25, 
                                                     weakness: [5, 9] 
                                                 };
 
-                                                const resultNotice = isPuzzleSuccess 
-                                                    ? "【術式解呪成功！】\n魔方陣が激しく砕け散り、蛭沼の肉体結合が弱体化した！（HP・能力半減！）" 
-                                                    : "【術式解呪失敗……！】\n術式が暴走し、完全体となった蛭沼が襲いかかってくる！";
-
-                                                showMessageDialog(resultNotice, () => {
+                                                const startBossBattle = () => {
                                                     openCombatUI(hirunumaEnemy, gameState, (bossRes) => {
                                                         if (bossRes === 'win' || bossRes === 'combat_win') {
                                                             gameState.isHirunumaDefeated = true;
@@ -326,7 +342,20 @@ function handleBossLab54(gameState, context, onComplete) {
                                                             onComplete();
                                                         }
                                                     }, context);
-                                                });
+                                                };
+
+                                                // ★完全正解時のみ魔法陣動画を再生
+                                                if (isPerfectSuccess) {
+                                                    showMessageDialog("【術式解呪成功！】\n魔方陣が激しく展開し、蛭沼の肉体結合が弱体化した！（HP・能力半減！）", () => {
+                                                        playVideo("assets/videos/magic-circle.mp4", () => {
+                                                            startBossBattle();
+                                                        });
+                                                    });
+                                                } else {
+                                                    showMessageDialog("【術式解呪失敗……！】\n術式が暴走し、完全体となった蛭沼が襲いかかってくる！", () => {
+                                                        startBossBattle();
+                                                    });
+                                                }
                                             });
                                         }
                                     );
