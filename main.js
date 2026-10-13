@@ -1,4 +1,4 @@
-// main.js - ユーザー様稼働コードベース ＋ 4Fテストワープ設定追加 完全版
+// main.js - 5F正式接続・3F階段着地修正・デバッグ連動 完全版
 
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
@@ -7,6 +7,7 @@ import { map1F, playerStart1F, handleEvent1F } from './maps/map1F.js';
 import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './maps/map2F.js';
 import { map3F, playerStart3F, handleEvent3F, check3FRandomEncounter } from './maps/map3F.js';
 import { map4F, playerStart4F, handleEvent4F, check4FRandomEncounter } from './maps/map4F.js';
+import { map5F, playerStart5F, handleEvent5F, check5FRandomEncounter } from './maps/map5F.js';
 import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI } from './ui.js';
 import { initDebug } from './debug.js';
 
@@ -179,6 +180,8 @@ function interactFrontCell() {
     eventObj = handleEvent3F(cellType, gameState, context);
   } else if (gameState.currentFloor === 4) {
     eventObj = handleEvent4F(cellType, gameState, context);
+  } else if (gameState.currentFloor === 5) {
+    eventObj = handleEvent5F(cellType, gameState, context);
   }
 
   if (eventObj && typeof eventObj.run === 'function') {
@@ -193,7 +196,22 @@ function interactFrontCell() {
 function changeFloor(floor) {
   gameState.currentFloor = floor;
 
-  if (floor === 4) {
+  if (floor === 5) {
+    gameState.currentMap = map5F;
+    gameState.player.x = playerStart5F.x;
+    gameState.player.y = playerStart5F.y;
+    gameState.player.dir = playerStart5F.dir;
+
+    if (!gameState.flags || !gameState.flags.cleared5F) {
+      showMessageDialog("【5階 精神科病棟】\n消毒液と腐敗臭が混ざり合うフロアへ到達した。\n異様な静寂の中、どこからか唸り声が響いている……", () => {
+        redraw();
+      });
+    } else {
+      showMessageDialog("【5階 精神科病棟】\n蛭沼は討滅され、異様な悪臭は静まり返っている……", () => {
+        redraw();
+      });
+    }
+  } else if (floor === 4) {
     gameState.currentMap = map4F;
     gameState.player.x = playerStart4F.x;
     gameState.player.y = playerStart4F.y;
@@ -210,12 +228,24 @@ function changeFloor(floor) {
     }
   } else if (floor === 3) {
     gameState.currentMap = map3F;
-    gameState.player.x = playerStart3F.x;
-    gameState.player.y = playerStart3F.y;
-    gameState.player.dir = playerStart3F.dir;
-    showMessageDialog("【3階 エレベーター前】\n3階へ到着した。漂うヘドロと強烈な異臭が鼻をつく……", () => {
-      redraw();
-    });
+    
+    // ★ 修正：非常階段から降りてきた場合は、3Fの非常階段前（X:5, Y:1）に着地
+    if (gameState.lastTransitMethod === 'stair') {
+      gameState.player.x = 5;
+      gameState.player.y = 1;
+      gameState.player.dir = 2; // 南向き（フロア奥を向く）
+      showMessageDialog("【3階 非常階段前】\n3階へ降りてきた。漂うヘドロと強烈な異臭が鼻をつく……", () => {
+        redraw();
+      });
+    } else {
+      // エレベーター経由の場合
+      gameState.player.x = playerStart3F.x;
+      gameState.player.y = playerStart3F.y;
+      gameState.player.dir = playerStart3F.dir;
+      showMessageDialog("【3階 エレベーター前】\n3階へ到着した。漂うヘドロと強烈な異臭が鼻をつく……", () => {
+        redraw();
+      });
+    }
   } else if (floor === 2) {
     gameState.currentMap = map2F;
     gameState.player.x = playerStart2F.x;
@@ -235,7 +265,7 @@ function changeFloor(floor) {
       gameState.player.y = playerStart1F.y;
       gameState.player.dir = playerStart1F.dir;
     }
-  } else if (floor >= 5) {
+  } else if (floor >= 6) {
     showMessageDialog(`【${floor}階】\n重い扉の向こうから邪悪な気配が漂っている……（※開発中）`, () => {
       redraw();
     });
@@ -266,7 +296,7 @@ function toggleAppUI() {
   }
 }
 
-// ★ F2デバッグパネル（ワープボタン付き）
+// ★ F2デバッグパネル
 function toggleDebugUI() {
   const overlay = document.getElementById('debug-overlay');
   const info = document.getElementById('debug-info');
@@ -283,6 +313,7 @@ function toggleDebugUI() {
             <button class="debug-warp-btn" data-floor="2" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">2Fワープ(Lv5)</button>
             <button class="debug-warp-btn" data-floor="3" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">3Fワープ(Lv10)</button>
             <button class="debug-warp-btn" data-floor="4" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">4Fテスト開始(3F前)</button>
+            <button class="debug-warp-btn" data-floor="5" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">5Fワープ(Lv20)</button>
         </div>
       `;
       overlay.classList.remove('hidden');
@@ -296,7 +327,6 @@ function toggleDebugUI() {
 function debugJumpToFloor(floor) {
   if (!gameState.flags) gameState.flags = {};
 
-  // 全階層共通（モデルガン・アプリ・全ラミナカード付与）
   gameState.hasExorcistInherited = true;
   gameState.hasModelGun = true;
   gameState.player.hasModelGun = true;
@@ -337,14 +367,13 @@ function debugJumpToFloor(floor) {
     gameState.hasKey2F = true;
     gameState.hasElevatorKey = true;
     gameState.flags.cleared2F = true;
-    gameState.flags.hasSanadaRoomKey = true; // 鉄のバール所有
+    gameState.flags.hasSanadaRoomKey = true;
     gameState.currentFloor = 3;
     gameState.currentMap = map3F;
     gameState.player.x = playerStart3F.x;
     gameState.player.y = playerStart3F.y;
     gameState.player.dir = playerStart3F.dir;
   } else if (floor === 4) {
-    // ★ 4Fテスト開始時は「3Fの4F行き階段前」から開始（フラグ未クリア）
     gameState.player.level = 15;
     gameState.player.maxHp = 120;
     gameState.player.hp = 120;
@@ -356,27 +385,43 @@ function debugJumpToFloor(floor) {
     gameState.flags.cleared2F = true;
     gameState.flags.cleared3F = true;
     
-    // 4Fのフラグは全てリセット
     gameState.flags.hasBrandBag = false;   
     gameState.flags.hasChampagne = false;  
     gameState.flags.defeatedShineiA = false;
     gameState.flags.defeatedShineiB = false;
     gameState.flags.cleared4F = false;
 
-    // 現在地を「3Fマップの x:5, y:1, 北向き(dir:0)」にセット
     gameState.currentFloor = 3;
     gameState.currentMap = map3F;
     gameState.player.x = 5;
     gameState.player.y = 1;
     gameState.player.dir = 0;
+  } else if (floor === 5) {
+    gameState.player.level = 20;
+    gameState.player.maxHp = 160;
+    gameState.player.hp = 160;
+    gameState.player.def = 8;
+    gameState.player.agi = 15;
+    gameState.player.money = 8000;
+    gameState.hasKey2F = true;
+    gameState.hasElevatorKey = true;
+    gameState.flags.cleared2F = true;
+    gameState.flags.cleared3F = true;
+    gameState.flags.cleared4F = true;
+    gameState.flags.cleared5F = false;
+
+    gameState.currentFloor = 5;
+    gameState.currentMap = map5F;
+    gameState.player.x = playerStart5F.x;
+    gameState.player.y = playerStart5F.y;
+    gameState.player.dir = playerStart5F.dir;
   }
 
   gameState.updateEquippedCards();
   if (gameState.currentMap) {
-    gameState.markVisited(floor, gameState.currentMap, gameState.player.x, gameState.player.y);
+    gameState.markVisited(gameState.currentFloor, gameState.currentMap, gameState.player.x, gameState.player.y);
   }
 
-  // デバッグUIの数値を更新
   toggleDebugUI();
   toggleDebugUI();
 
@@ -417,6 +462,13 @@ function checkEncounterAfterMove() {
       isProcessingEvent = true;
       openCombatUI(enemy, gameState, handleBattleResult, { changeFloor });
     });
+  } else if (gameState.currentFloor === 5) {
+    if (typeof check5FRandomEncounter === 'function') {
+      check5FRandomEncounter(gameState, (enemy) => {
+        isProcessingEvent = true;
+        openCombatUI(enemy, gameState, handleBattleResult, { changeFloor });
+      });
+    }
   }
 }
 
@@ -454,12 +506,7 @@ if (document.readyState === 'loading') {
   init();
 }
 
-// ==========================================
-// main.js の一番最後に追加
-// ==========================================
-
-// デバッグ機能を初期化（F2キーで呼び出し可能）
 initDebug(gameState, { 
     changeFloor: typeof changeFloor === 'function' ? changeFloor : null, 
-    redraw: typeof draw === 'function' ? draw : (typeof render === 'function' ? render : null) 
+    redraw: typeof redraw === 'function' ? redraw : null 
 });

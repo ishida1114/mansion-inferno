@@ -346,7 +346,7 @@ function startRinaBossSequence(gameState, context, onComplete) {
                                     
                                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
 
-                                    showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「バカじゃないの、この悪魔！ 中学生の父親？ あいつはなびかないから5Fの蛭沼に渡したわ、あいつ、改造できるおもちゃを欲しがってたから。ねぇ助けてよ……お願いだから捨てないでぇぇっ…」", () => {
+                                    showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「バカじゃないの、この悪魔！ 中学生の父親？ あの男はなびかないから5Fの蛭沼に渡したわ、蛭沼、改造できるおもちゃを欲しがってたから。ねぇ助けてよ……お願いだから捨てないでぇぇっ…」", () => {
                                         showMessageDialog(`【4Fフロアボス討滅！】\nリナの怨霊を浄化し、甘い桃色の霧と蔦が消え去った！\n（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}\n※5階への非常階段が解禁されました！`, onComplete);
                                     });
                                 } else {
