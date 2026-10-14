@@ -82,6 +82,7 @@ red_umbrella: {
     battleEffect: { type: 'BOOST_DAMAGE', multiplier: 3, turns: 1 },
     battleUsable: true
   }
+};
 
 // --- 防具（ショップ専用） ---
 export const ARMOR_ITEMS = {
