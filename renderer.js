@@ -1,4 +1,4 @@
-// renderer.js - 7F完全VIP対応（正面・扉・左右壁の差し替え版）
+// renderer.js - 7F完全VIP対応（画像トリミング・自動ファイル検索・角度パース完全整合版）
 
 import { gameState } from './gameState.js';
 
@@ -8,7 +8,7 @@ const dx = [0, 1, 0, -1];
 const dy = [-1, 0, 1, 0];
 
 export const images = {};
-const imageSources = {
+const baseImages = {
     logo: "assets/images/DictionariumDaemonum.webp",
     door: "assets/images/door.png",
     wall: "assets/images/wall.png",
@@ -23,43 +23,63 @@ const imageSources = {
     right2: "assets/images/rightwall2.png",
     right3: "assets/images/rightwall3.png",
     right4: "assets/images/rightwall4.png",
-    carpet: "assets/images/carpet.png",
-    // ★ 7F用の新素材4枚を登録
-    wall7fLeft: "assets/images/7fwallleft_2.jpg",
-    wall7fRight: "assets/images/7fwallright_2.png",
-    wall7fFront: "assets/images/7ffloor.png", 
-    wall7fDoor: "assets/images/7fdoor.png"
+    carpet: "assets/images/carpet.png"
 };
 
-let loadedCount = 0;
-const totalImages = Object.keys(imageSources).length;
+// 7F用画像（名前の揺れを全自動で探索）
+const candidates7F = {
+    wall7fLeft: [
+        "assets/images/7fwallleft_2.jpg", "assets/images/7fwallleft_2.png",
+        "assets/images/7fwallleft.jpg", "assets/images/7fwallleft.png"
+    ],
+    wall7fRight: [
+        "assets/images/7fwallright_2.png", "assets/images/7fwallright_2.jpg",
+        "assets/images/7fwallright.png", "assets/images/7fwallright.jpg"
+    ],
+    wall7fFront: [
+        "assets/images/7ffloor.png", "assets/images/7ffloor.jpg"
+    ],
+    wall7fDoor: [
+        "assets/images/7fdoor.png", "assets/images/7fdoor.jpg"
+    ]
+};
 
 function isImageReady(img) {
     return img && img.complete && img.naturalWidth > 0;
 }
 
 export function initRenderer(onReady) {
-    for (let key in imageSources) {
+    let toLoad = Object.keys(baseImages).length + Object.keys(candidates7F).length;
+    let loaded = 0;
+
+    const checkDone = () => {
+        loaded++;
+        if (loaded >= toLoad && onReady) onReady();
+    };
+
+    // 基本画像のロード
+    for (let key in baseImages) {
         images[key] = new Image();
-        images[key].onload = () => {
-            loadedCount++;
-            if (loadedCount === totalImages && onReady) onReady();
-        };
-        images[key].onerror = () => {
-            // 画像の読み込み失敗時の安全装置（jpgとpngの相互変換リトライ）
-            const src = images[key].src;
-            if (src.endsWith('.jpg') && !src.includes('_retry')) {
-                images[key].src = src.replace('.jpg', '.png') + "?_retry=1";
-                return;
-            } else if (src.endsWith('.png') && !src.includes('_retry')) {
-                images[key].src = src.replace('.png', '.jpg') + "?_retry=1";
-                return;
+        images[key].onload = checkDone;
+        images[key].onerror = checkDone;
+        images[key].src = baseImages[key];
+    }
+
+    // 7F用画像の自動探索ロード
+    for (let key in candidates7F) {
+        const list = candidates7F[key];
+        images[key] = new Image();
+        let idx = 0;
+        const tryNext = () => {
+            if (idx < list.length) {
+                images[key].src = list[idx++];
+            } else {
+                checkDone();
             }
-            console.warn(`画像の読み込みに失敗しました: ${imageSources[key]}`);
-            loadedCount++;
-            if (loadedCount === totalImages && onReady) onReady();
         };
-        images[key].src = imageSources[key];
+        images[key].onload = checkDone;
+        images[key].onerror = tryNext;
+        tryNext();
     }
 }
 
@@ -162,8 +182,8 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             if (currentMap[fY] && currentMap[fY][fX] !== 0) {
                 const cellType = currentMap[fY][fX], b = frontBounds[depth];
                 let targetImg = images.wall;
+                let is7FCustom = false;
                 
-                // 通常階の扉判定
                 if ((cellType === 4 || cellType === 5) && isImageReady(images.stairDoor)) {
                     targetImg = images.stairDoor;
                 } else if (cellType === 6 && isImageReady(images.entrance)) {
@@ -174,17 +194,31 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     targetImg = images.door;
                 }
 
-                // ★ 7階専用の正面壁 ＆ 豪華な扉の差し替え
+                // 7階専用の壁・扉
                 if (currentFloor === 7) {
                     if ([2, 8, 9].includes(cellType) && isImageReady(images.wall7fDoor)) {
-                        targetImg = images.wall7fDoor; // 豪華な扉
+                        targetImg = images.wall7fDoor;
+                        is7FCustom = true;
                     } else if (cellType === 1 && isImageReady(images.wall7fFront)) {
-                        targetImg = images.wall7fFront; // 扉なしの正面大理石
+                        targetImg = images.wall7fFront;
+                        is7FCustom = true;
                     }
                 }
 
                 if (isImageReady(targetImg)) {
-                    ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
+                    if (is7FCustom) {
+                        // ★ 重要：画像内の黒い天井(上6%)と黒い床(下12%)をトリミングし、
+                        // 大理石の壁だけをCanvasの床ラインにピタリと接地させる
+                        const nw = targetImg.naturalWidth;
+                        const nh = targetImg.naturalHeight;
+                        const cropTop = nh * 0.055;
+                        const cropHeight = nh * 0.83;
+
+                        ctx.drawImage(targetImg, 0, cropTop, nw, cropHeight, b.x, b.y, b.w, b.h);
+                    } else {
+                        ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
+                    }
+
                     if (currentFloor === 4) {
                         ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
                         ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -261,30 +295,35 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     }
 }
 
+// ★ 壁と完全に平行な角度で、奥も尖らない自然な台形パースカーペット
 function drawEnvironment(ctx, canvas, currentFloor) {
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
+    const cx = canvas.width / 2; // 300
+    const cy = canvas.height / 2; // 200
 
     ctx.fillStyle = "#0a0a0c"; 
     ctx.fillRect(0, 0, canvas.width, cy);
     
     if (currentFloor === 7) {
+        // ① 両脇の黒大理石の床
         ctx.fillStyle = "#121216"; 
         ctx.fillRect(0, cy, canvas.width, cy);
 
         if (isImageReady(images.carpet)) {
             ctx.save();
-            const carpetHalfWidth = 210; 
-            const botL = { x: cx - carpetHalfWidth, y: canvas.height }; 
-            const botR = { x: cx + carpetHalfWidth, y: canvas.height }; 
-            const topL = { x: cx, y: cy }; 
-            const topR = { x: cx, y: cy };
+            
+            // 壁の傾き（手前幅600px -> 奥depth4幅38px）に完全一致させる計算
+            // 通路全体の幅の約75%をカーペットにする
+            const botLeftX = 75;        // 手前左端 (通路幅600の中央75%)
+            const botRightX = 525;      // 手前右端
+            const topY = 212;           // 最奥（depth 4）の床ライン
+            const topLeftX = 285;       // 最奥左端（幅30pxの台形上底として上品に収束）
+            const topRightX = 315;      // 最奥右端
 
             ctx.beginPath();
-            ctx.moveTo(topL.x, topL.y);
-            ctx.lineTo(topR.x, topR.y);
-            ctx.lineTo(botR.x, botR.y);
-            ctx.lineTo(botL.x, botL.y);
+            ctx.moveTo(topLeftX, topY);
+            ctx.lineTo(topRightX, topY);
+            ctx.lineTo(botRightX, canvas.height);
+            ctx.lineTo(botLeftX, canvas.height);
             ctx.closePath();
             
             ctx.save();
@@ -293,7 +332,7 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             const pattern = ctx.createPattern(images.carpet, 'repeat');
             if (pattern) {
                 const matrix = new DOMMatrix();
-                matrix.scaleSelf(0.3, 0.3);
+                matrix.scaleSelf(0.28, 0.28);
                 pattern.setTransform(matrix);
                 ctx.fillStyle = pattern;
             } else {
@@ -301,22 +340,24 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             }
             ctx.fillRect(0, cy, canvas.width, cy);
 
-            const shadowGrad = ctx.createLinearGradient(0, cy, 0, canvas.height);
-            shadowGrad.addColorStop(0, "rgba(0, 0, 0, 0.95)");
-            shadowGrad.addColorStop(0.45, "rgba(20, 0, 5, 0.45)");
+            // 重厚なライティング
+            const shadowGrad = ctx.createLinearGradient(0, topY, 0, canvas.height);
+            shadowGrad.addColorStop(0, "rgba(0, 0, 0, 0.90)");
+            shadowGrad.addColorStop(0.4, "rgba(25, 0, 5, 0.45)");
             shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0.05)");
             ctx.fillStyle = shadowGrad;
             ctx.fillRect(0, cy, canvas.width, cy);
 
             ctx.restore();
 
+            // 金色の縁取りライン（壁と完全に平行に走る）
             ctx.lineWidth = 2.5;
             ctx.strokeStyle = "#c5a059"; 
             ctx.beginPath();
-            ctx.moveTo(topL.x, topL.y);
-            ctx.lineTo(botL.x, botL.y);
-            ctx.moveTo(topR.x, topR.y);
-            ctx.lineTo(botR.x, botR.y);
+            ctx.moveTo(topLeftX, topY);
+            ctx.lineTo(botLeftX, canvas.height);
+            ctx.moveTo(topRightX, topY);
+            ctx.lineTo(botRightX, canvas.height);
             ctx.stroke();
 
             ctx.restore();
