@@ -13,7 +13,7 @@ export const playerStart1F = { x: 7, y: 1, dir: 0 };
 export const map1F = [
     [1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 1, 1, 1], // ★ (6,0)を正式なエレベーター[3]に変更
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-    [1, 0, 1, 2, 1, 0, 1, 8, 1, 0, 1, 5, 1, 0, 1], // ★ 中庭の扉(7,2)をドア[8]に変更
+    [1, 0, 1, 2, 1, 0, 1, 8, 1, 0, 1, 9, 1, 0, 1], // ★ 中庭の扉(7,2)をドア[8]に変更
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
@@ -97,8 +97,8 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // 5: 集合ポスト
-    if (targetCell === 5) {
+    // 9: 集合ポスト
+    if (targetCell === 9) {
         return { run: (onComplete) => startPostEvent(gameState, onComplete) };
     }
 
