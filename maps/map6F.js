@@ -169,7 +169,7 @@ function handleSpiderMiniBoss(gameState, context, onComplete) {
             if (res === "win" || res === "combat_win") {
                 gameState.flags.hasSilverShears = true;
                 showMessageDialog("蜘蛛の怪異を討ち滅ぼした！\n奴の巣の奥に、悪魔の糸をも断ち切る鋭利な刃物が突き刺さっているのを発見した。", () => {
-                    showItemAcquiredModal("assets/images/present.png", "断ち切りの銀鋏", "【キーアイテム】\n精神を蝕む悪魔の繭糸を切断できる聖銀の鋏。\nこれで奥の部屋に捕らわれているかもしれない『黒猫』を救出できる！", onComplete);
+                    showItemAcquiredModal("assets/images/knife.jpg", "断ち切りの銀鋏", "【キーアイテム】\n精神を蝕む悪魔の繭糸を切断できる聖銀の鋏。\nこれで奥の部屋に捕らわれているかもしれない『黒猫』を救出できる！", onComplete);
                 });
             } else { onComplete(); }
         }, context);
