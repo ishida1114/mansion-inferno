@@ -1,4 +1,4 @@
-// maps/map4F.js - 全機能保持・ヒント2種分離・3F帰還座標修正完全版
+// maps/map4F.js - 全ドア(セル2)統一・エレベーター/エントランス誤描画完全解消版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -8,17 +8,19 @@ import { ENEMIES, evaluateRinaPuzzle } from '../enemies.js';
 
 export const playerStart4F = { x: 5, y: 8, dir: 0 };
 
+// ★ 修正：すべての部屋の扉を「2」（通常のドア）で統一
+// 5: 5Fへの上り階段 / 4: 3Fへの下り階段
 export const map4F = [
-    [1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1],
-    [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1],
+    [1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1], // 5: 5F上り階段
+    [1, 2, 1, 0, 0, 0, 0, 0, 1, 2, 1], // (1,1)リナ部屋 / (9,1)親衛隊A
     [1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
-    [1, 0, 0, 0, 1, 8, 1, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 2, 1, 0, 0, 0, 1], // (5,3)査問部屋1
     [1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1],
-    [1, 6, 1, 0, 0, 0, 0, 0, 1, 9, 1],
+    [1, 2, 1, 0, 0, 0, 0, 0, 1, 2, 1], // (1,5)親衛隊B / (9,5)査問部屋2
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
     [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
     [1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1],
-    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], // 4: 3F下り階段
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  
 ];
 
@@ -38,13 +40,9 @@ export function handleEvent4F(targetCell, gameState, context) {
         return {
             run: (onComplete) => {
                 showMessageDialog("【非常階段】\n3階へ降りますか？", () => {
-                    gameState.lastTransitMethod = 'stair';
+                    gameState.lastTransitMethod = 'stair_down';
                     playFloorTransition(3, () => {
                         context.changeFloor(3);
-                        // ★ 修正：3階の非常階段前へ着地（エレベーター前への誤ワープを防止）
-                        gameState.player.x = 5;
-                        gameState.player.y = 8;
-                        gameState.player.dir = 0; // 北向き
                         onComplete();
                     });
                 });
@@ -71,50 +69,58 @@ export function handleEvent4F(targetCell, gameState, context) {
         }
     }
 
-    // 2: 親衛隊Aイベント（高級ブランドバッグ）
+    // ★ 2: 通常の扉（目の前のマスの座標で部屋を分岐）
     if (targetCell === 2) {
-        return { run: (onComplete) => startShineiAEvent(gameState, context, onComplete) };
-    }
+        const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+        const vec = dirVectors[gameState.player.dir];
+        const frontX = gameState.player.x + vec.x;
+        const frontY = gameState.player.y + vec.y;
 
-    // 6: 親衛隊Bイベント（高級シャンパン）
-    if (targetCell === 6) {
-        return { run: (onComplete) => startShineiBEvent(gameState, context, onComplete) };
-    }
+        // X:1, Y:1 -> リナのボス部屋
+        if (frontX === 1 && frontY === 1) {
+            if (gameState.flags && gameState.flags.cleared4F) {
+                return {
+                    run: (onComplete) => showMessageDialog("【最奥の部屋】\nリナの悪霊は浄化され、甘ったるい香気は静まり返っている……。", onComplete)
+                };
+            }
 
-    // 8: 査問部屋（ヒント1：上と右）
-    if (targetCell === 8) {
-        return { run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete, 8) };
-    }
+            const hasBag = gameState.flags && gameState.flags.hasBrandBag;
+            const hasChampagne = gameState.flags && gameState.flags.hasChampagne;
 
-    // 9: 査問部屋（ヒント2：下と左）
-    if (targetCell === 9) {
-        return { run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete, 9) };
-    }
+            if (!hasBag || !hasChampagne) {
+                return {
+                    run: (onComplete) => showMessageDialog("【色欲の扉】\n妖艶なピンクの結界が部屋を塞いでいる……！\n扉の前には絢爛な台座があり、リナへ捧げる『貢ぎ物（ブランドバッグ＆高級シャンパン）』を置く必要がありそうだ。", onComplete)
+                };
+            }
 
-    // 3: リナのボス部屋
-    if (targetCell === 3) {
-        if (gameState.flags && gameState.flags.cleared4F) {
-            return {
-                run: (onComplete) => showMessageDialog("【最奥の部屋】\nリナの悪霊は浄化され、甘ったるい香気は静まり返っている……。", onComplete)
-            };
+            return { run: (onComplete) => startRinaBossSequence(gameState, context, onComplete) };
         }
 
-        const hasBag = gameState.flags && gameState.flags.hasBrandBag;
-        const hasChampagne = gameState.flags && gameState.flags.hasChampagne;
-
-        if (!hasBag || !hasChampagne) {
-            return {
-                run: (onComplete) => showMessageDialog("【色欲の扉】\n妖艶なピンクの結界が部屋を塞いでいる……！\n扉の前には絢爛な台座があり、リナへ捧げる『貢ぎ物（ブランドバッグ＆高級シャンパン）』を置く必要がありそうだ。", onComplete)
-            };
+        // X:9, Y:1 -> 親衛隊Aイベント（高級ブランドバッグ）
+        if (frontX === 9 && frontY === 1) {
+            return { run: (onComplete) => startShineiAEvent(gameState, context, onComplete) };
         }
 
-        return { run: (onComplete) => startRinaBossSequence(gameState, context, onComplete) };
+        // X:1, Y:5 -> 親衛隊Bイベント（高級シャンパン）
+        if (frontX === 1 && frontY === 5) {
+            return { run: (onComplete) => startShineiBEvent(gameState, context, onComplete) };
+        }
+
+        // X:5, Y:3 -> 査問部屋1（ヒント1：上と右）
+        if (frontX === 5 && frontY === 3) {
+            return { run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete, 8) };
+        }
+
+        // X:9, Y:5 -> 査問部屋2（ヒント2：下と左）
+        if (frontX === 9 && frontY === 5) {
+            return { run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete, 9) };
+        }
     }
 
     return null;
 }
 
-// ★ 査問部屋（部屋8と部屋9で異なるヒントを付与）
+// 査問部屋（部屋8と部屋9で異なるヒントを付与）
 function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
     const vec = dirVectors[gameState.player.dir];
@@ -129,7 +135,6 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
         return;
     }
 
-    // ★ 部屋8（401）と部屋9（402）でヒントを分岐
     let hintDialogue = "";
     let hintLogText = "";
 
@@ -186,9 +191,7 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
                 const demonEnemy = {
                     name: entity.name,
                     image: entity.realImage,
-                    hp: 40,
-                    atk: 14,
-                    def: 2,
+                    hp: 40, atk: 14, def: 2,
                     weakness: [entity.weakness]
                 };
                 openCombatUI(demonEnemy, gameState, (cRes) => {
@@ -294,7 +297,7 @@ function startRinaBossSequence(gameState, context, onComplete) {
                     const applyDamageAndCombat = () => {
                         const floor = 4;
                         const targetLevel = (floor - 1) * 5;
-                        const playerLevel = gameState.player.level;
+                        const playerLevel = gameState.player.level || 1;
 
                         let hpRatio = 1.0;
                         let resultMsg = "";
@@ -323,8 +326,7 @@ function startRinaBossSequence(gameState, context, onComplete) {
                             const rinaEnemy = {
                                 name: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.name : "色欲のパパ活女子・リナ",
                                 image: "assets/images/demon/4f-rina.jpg",
-                                hp: startHp,
-                                maxHp: baseHp,
+                                hp: startHp, maxHp: baseHp,
                                 atk: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.atk : 60,
                                 def: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.def : 8,
                                 weakness: [2, 5]

@@ -1,4 +1,4 @@
-// maps/map3F.js - 真田パズル完全正解時のみ魔方陣動画再生対応版
+// maps/map3F.js - エレベーター(3)統一・真田部屋(8)修正・行き先選択メニュー対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -6,19 +6,20 @@ import {
 } from '../ui.js';
 import { ENEMIES, evaluateSanadaPuzzle } from '../enemies.js';
 
-export const playerStart3F = { x: 5, y: 9, dir: 0 };
+export const playerStart3F = { x: 5, y: 8, dir: 0 };
 
+// ★ 修正：(1,1)のボス部屋を「8」に、(5,9)のエレベーターを「3」に変更
 export const map3F = [
-    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1],
-    [1, 3, 1, 0, 0, 0, 0, 0, 1, 2, 1],
+    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], // 4: 4Fへの上り階段
+    [1, 8, 1, 0, 0, 0, 0, 0, 1, 2, 1], // 8: 真田の部屋 / 2: 住人の部屋
     [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1],
+    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1], // 2: 住人の部屋
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1],
     [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
     [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 7, 1, 1, 1, 0, 1],
+    [1, 0, 1, 1, 1, 3, 1, 1, 1, 0, 1], // 3: エレベーター
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
@@ -33,20 +34,42 @@ export function check3FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent3F(targetCell, gameState, context) {
-    if (targetCell === 7) {
-        return {
+    // ★ 3: エレベーター（行き先選択メニュー）
+    if (targetCell === 3) {
+        return { 
             run: (onComplete) => {
-                showMessageDialog("【エレベーター】\n1階の拠点（コンビニ）へ降りますか？", () => {
-                    gameState.lastTransitMethod = 'elevator';
-                    playFloorTransition(1, () => {
-                        context.changeFloor(1);
-                        onComplete();
-                    });
+                const evModal = document.createElement("div");
+                evModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; font-family: monospace;";
+                
+                let html = `<h2 style="color: #66ccff; margin-bottom: 20px;">【エレベーター】</h2>`;
+                html += `<button class="ev-btn" data-floor="1" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">1F (エントランス)</button>`;
+                html += `<button class="ev-btn" data-floor="3" style="width: 220px; padding: 15px; margin: 5px; background: #004400; color: #00ff66; border: 1px solid #00ff66; font-size: 1.1em; cursor: pointer;">3F (現在地)</button>`;
+                html += `<button class="ev-btn" data-floor="5" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">5F (精神科病棟)</button>`;
+                html += `<button id="ev-cancel" style="width: 220px; padding: 15px; margin-top: 20px; background: #440000; color: #ff6666; border: 1px solid #ff3333; cursor: pointer;">閉じる</button>`;
+                evModal.innerHTML = html;
+                document.body.appendChild(evModal);
+
+                document.getElementById("ev-cancel").onclick = () => { evModal.remove(); onComplete(); };
+                evModal.querySelectorAll(".ev-btn").forEach(btn => {
+                    btn.onclick = () => {
+                        const f = parseInt(btn.getAttribute("data-floor"), 10);
+                        evModal.remove();
+                        if (f === 3) {
+                            onComplete();
+                        } else {
+                            gameState.lastTransitMethod = 'elevator';
+                            playFloorTransition(f, () => {
+                                context.changeFloor(f);
+                                onComplete();
+                            });
+                        }
+                    };
                 });
-            }
+            } 
         };
     }
 
+    // 4: 非常階段（4Fへ登る）
     if (targetCell === 4) {
         if (!gameState.flags || !gameState.flags.cleared3F) {
             return {
@@ -65,13 +88,15 @@ export function handleEvent3F(targetCell, gameState, context) {
         }
     }
 
+    // 2: 住人の部屋
     if (targetCell === 2) {
         return {
             run: (onComplete) => start3FRoomInquisition(gameState, context, onComplete)
         };
     }
 
-    if (targetCell === 3) {
+    // ★ 8: ボス部屋（真田）
+    if (targetCell === 8) {
         if (gameState.flags && gameState.flags.cleared3F) {
             return {
                 run: (onComplete) => showMessageDialog("【最奥の部屋】\n真田は討滅され、毒気と腐敗ゴミは静まり返っている……。", onComplete)
@@ -152,9 +177,7 @@ function start3FRoomInquisition(gameState, context, onComplete) {
                 const demonEnemy = {
                     name: entity.name,
                     image: entity.realImage,
-                    hp: 30,
-                    atk: 10,
-                    def: 1,
+                    hp: 30, atk: 10, def: 1,
                     weakness: [entity.weakness]
                 };
                 openCombatUI(demonEnemy, gameState, (cRes) => {
@@ -193,7 +216,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                 const applyDamageAndCombat = () => {
                     const floor = 3;
                     const targetLevel = (floor - 1) * 5;
-                    const playerLevel = gameState.player.level;
+                    const playerLevel = gameState.player.level || 1;
 
                     let hpRatio = 1.0;
                     let resultMsg = "";
@@ -222,8 +245,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                         const sanadaEnemy = {
                             name: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.name : "ゴミ屋敷の狂人・真田",
                             image: "assets/images/demon/3f-sanada.jpg",
-                            hp: startHp,
-                            maxHp: baseHp,
+                            hp: startHp, maxHp: baseHp,
                             atk: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.atk : 18,
                             def: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.def : 3,
                             weakness: [8, 6]
@@ -252,7 +274,6 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                     });
                 };
 
-                // ★ 全正解時のみ動画再生
                 if (evalResult.result === 'PERFECT') {
                     playVideo("assets/videos/magic-circle.mp4", applyDamageAndCombat);
                 } else {

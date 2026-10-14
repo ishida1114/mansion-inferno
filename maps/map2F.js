@@ -1,4 +1,4 @@
-// maps/map2F.js - 影山パズル完全正解時のみ魔方陣動画再生対応版
+// maps/map2F.js - 影山パズル完全正解時のみ魔方陣動画再生対応・エレベーター重複修正版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -8,12 +8,13 @@ import { ENEMIES, evaluateKageyamaPuzzle } from '../enemies.js';
 
 export const playerStart2F = { x: 1, y: 1, dir: 2 };
 
+// ★ 修正：普通のドアだった「3」を「9」に変更
 export const map2F = [
-    [1, 4, 1, 1, 1, 1, 1, 1, 1],
+    [1, 4, 1, 1, 1, 1, 1, 1, 1], // 4: 下り階段
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
-    [1, 0, 1, 0, 2, 0, 1, 0, 1], 
+    [1, 0, 1, 0, 2, 0, 1, 0, 1], // 2: コンビニ（教え子）
     [1, 0, 1, 0, 0, 0, 1, 0, 1],
-    [1, 3, 1, 1, 1, 0, 1, 8, 1], 
+    [1, 8, 1, 1, 1, 0, 1, 8, 1], // 8: ボス・探索部屋
     [1, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
@@ -89,7 +90,8 @@ export function handleEvent2F(targetCell, gameState, context) {
         }
     }
 
-    if (targetCell === 3) {
+    // ★ 8を通常のドアとして処理
+    if (targetCell === 8) {
         return {
             run: (onComplete) => {
                 const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
@@ -98,6 +100,93 @@ export function handleEvent2F(targetCell, gameState, context) {
                 const frontY = gameState.player.y + vec.y;
                 const roomKey = `2F_${frontX}_${frontY}`;
 
+                // 影山のボス部屋 (X:7, Y:4) の処理
+                if (frontX === 7 && frontY === 4) {
+                    if (gameState.flags && gameState.flags.cleared2F) {
+                        showMessageDialog("【2F 影山の部屋】\n部屋の中は静まり返っている……。", onComplete);
+                        return;
+                    }
+
+                    playVideo("assets/images/demon/2f-kageyama.mp4", () => {
+                        showConversationDialog(
+                            "assets/images/demon/2f-kageyama2.jpg", 
+                            "【覗き魔・影山】\n「中学生の父親？？さぁな、男には興味がなくてねぇ、邪魔するなら、お前のトラウマを覗いて闇の檻に閉じ込めるぞ」", 
+                            () => {
+                                openBossPuzzleUI(kageyamaPuzzleConfig, gameState, (slots) => {
+                                    // 修正：数値での取得に統一
+                                    const getCardNum = (slotId) => {
+                                        const val = slots[slotId];
+                                        return typeof val === 'number' ? val : 0;
+                                    };
+                                    const isFaceCorrect = getCardNum("slot1") === 2;
+                                    const isFootCorrect = getCardNum("slot4") === 3;
+                                    const s2 = getCardNum("slot2");
+                                    const s3 = getCardNum("slot3");
+                                    const isArmsCorrect = (s2 === 1 && s3 === 4) || (s2 === 4 && s3 === 1);
+                                    const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
+
+                                    const kageyamaEnemy = { 
+                                        name: "覗き魔・影山", 
+                                        image: "assets/images/demon/2f-kageyama2.jpg", 
+                                        hp: 120, atk: 12, def: 2 
+                                    };
+
+                                    const applyDamageAndCombat = () => {
+                                        const pLevel = gameState.player.level || 1;
+
+                                        if (isPerfect) {
+                                            if (pLevel >= 5) {
+                                                kageyamaEnemy.name = "覗き魔・影山 (瀕死)";
+                                                kageyamaEnemy.hp = Math.max(12, Math.floor(120 * 0.1));
+                                                showMessageDialog("【完全解読成功！】\n魔方陣が完全共鳴を起こした！\n聖なる光が影山を打ち砕き、壊滅的ダメージ（90%）を与えた！\n瀕死の影山にトドメを刺すため通常戦闘に入る！", () => {
+                                                    openCombatUI(kageyamaEnemy, gameState, (res) => {
+                                                        if (res === "win") handleKageyamaWin(gameState, onComplete);
+                                                        else onComplete();
+                                                    }, context);
+                                                });
+                                            } else if (pLevel === 4) {
+                                                kageyamaEnemy.name = "覗き魔・影山 (重傷)";
+                                                kageyamaEnemy.hp = Math.floor(120 * 0.2);
+                                                showMessageDialog("【完全解読成功！】\n魔方陣が作動！ 影山に大ダメージ（80%）を与えた！\n手負いの影山との戦闘に入る！", () => {
+                                                    openCombatUI(kageyamaEnemy, gameState, (res) => {
+                                                        if (res === "win") handleKageyamaWin(gameState, onComplete);
+                                                        else onComplete();
+                                                    }, context);
+                                                });
+                                            } else {
+                                                kageyamaEnemy.hp = Math.floor(120 * 0.5);
+                                                showMessageDialog("【完全解読成功！】\n魔方陣が作動！ しかし主人公の霊力が足りず仕留めきれない！\n影山に50%ダメージを与え、通常戦闘へ移行！", () => {
+                                                    openCombatUI(kageyamaEnemy, gameState, (res) => {
+                                                        if (res === "win") handleKageyamaWin(gameState, onComplete);
+                                                        else onComplete();
+                                                    }, context);
+                                                });
+                                            }
+                                        } else {
+                                            let matchCount = (isFaceCorrect ? 1 : 0) + (isFootCorrect ? 1 : 0) + (isArmsCorrect ? 2 : 0);
+                                            kageyamaEnemy.hp = Math.max(60, 120 - (matchCount * 15));
+                                            showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: ${matchCount}/4）\n影山が怒り狂って襲いかかってきた！`, () => {
+                                                openCombatUI(kageyamaEnemy, gameState, (res) => {
+                                                    if (res === "win") handleKageyamaWin(gameState, onComplete);
+                                                    else onComplete();
+                                                }, context);
+                                            });
+                                        }
+                                    };
+
+                                    if (isPerfect) {
+                                        playVideo("assets/videos/magic-circle.mp4", applyDamageAndCombat);
+                                    } else {
+                                        applyDamageAndCombat();
+                                    }
+                                });
+                            }
+                        );
+                    });
+                    return;
+                }
+
+                // ボス部屋以外の通常の部屋
                 if (!gameState.clearedRooms) gameState.clearedRooms = {};
 
                 if (gameState.clearedRooms[roomKey]) {
@@ -141,9 +230,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                             const demonEnemy = {
                                 name: entity.name,
                                 image: entity.realImage,
-                                hp: 30,
-                                atk: 10,
-                                def: 1,
+                                hp: 30, atk: 10, def: 1,
                                 weakness: [entity.weakness]
                             };
                             openCombatUI(demonEnemy, gameState, (res) => {
@@ -157,94 +244,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                 } else {
                     onComplete();
                 }
-            }
-        };
-    }
-
-    if (targetCell === 8) {
-        return {
-            run: (onComplete) => {
-                if (gameState.flags && gameState.flags.cleared2F) {
-                    showMessageDialog("【2F 影山の部屋】\n部屋の中は静まり返っている……。", onComplete);
-                    return;
-                }
-
-                playVideo("assets/images/demon/2f-kageyama.mp4", () => {
-                    showConversationDialog(
-                        "assets/images/demon/2f-kageyama2.jpg", 
-                        "【覗き魔・影山】\n「中学生の父親？？さぁな、男には興味がなくてねぇ、邪魔するなら、お前のトラウマを覗いて闇の檻に閉じ込めるぞ」", 
-                        () => {
-                            openBossPuzzleUI(kageyamaPuzzleConfig, gameState, (slots) => {
-                                const isFaceCorrect = slots.slot1 === 2;
-                                const isFootCorrect = slots.slot4 === 3;
-                                const isArmsCorrect = (slots.slot2 === 1 && slots.slot3 === 4) || (slots.slot2 === 4 && slots.slot3 === 1);
-                                const isPerfect = isFaceCorrect && isFootCorrect && isArmsCorrect;
-
-                                const kageyamaEnemy = { 
-                                    name: "覗き魔・影山", 
-                                    image: "assets/images/demon/2f-kageyama2.jpg", 
-                                    hp: 120, 
-                                    atk: 12, 
-                                    def: 2 
-                                };
-
-                                const applyDamageAndCombat = () => {
-                                    const pLevel = gameState.player.level;
-
-                                    if (isPerfect) {
-                                        if (pLevel >= 5) {
-                                            kageyamaEnemy.name = "覗き魔・影山 (瀕死)";
-                                            kageyamaEnemy.hp = Math.max(12, Math.floor(120 * 0.1));
-                                            
-                                            showMessageDialog("【完全解読成功！】\n魔方陣が完全共鳴を起こした！\n聖なる光が影山を打ち砕き、壊滅的ダメージ（90%）を与えた！\n瀕死の影山にトドメを刺すため通常戦闘に入る！", () => {
-                                                openCombatUI(kageyamaEnemy, gameState, (res) => {
-                                                    if (res === "win") handleKageyamaWin(gameState, onComplete);
-                                                    else onComplete();
-                                                }, context);
-                                            });
-                                        } else if (pLevel === 4) {
-                                            kageyamaEnemy.name = "覗き魔・影山 (重傷)";
-                                            kageyamaEnemy.hp = Math.floor(120 * 0.2);
-
-                                            showMessageDialog("【完全解読成功！】\n魔方陣が作動！ 影山に大ダメージ（80%）を与えた！\n手負いの影山との戦闘に入る！", () => {
-                                                openCombatUI(kageyamaEnemy, gameState, (res) => {
-                                                    if (res === "win") handleKageyamaWin(gameState, onComplete);
-                                                    else onComplete();
-                                                }, context);
-                                            });
-                                        } else {
-                                            kageyamaEnemy.hp = Math.floor(120 * 0.5);
-
-                                            showMessageDialog("【完全解読成功！】\n魔方陣が作動！ しかし主人公の霊力が足りず仕留めきれない！\n影山に50%ダメージを与え、通常戦闘へ移行！", () => {
-                                                openCombatUI(kageyamaEnemy, gameState, (res) => {
-                                                    if (res === "win") handleKageyamaWin(gameState, onComplete);
-                                                    else onComplete();
-                                                }, context);
-                                            });
-                                        }
-                                    } else {
-                                        let matchCount = (isFaceCorrect ? 1 : 0) + (isFootCorrect ? 1 : 0) + (isArmsCorrect ? 2 : 0);
-                                        kageyamaEnemy.hp = Math.max(60, 120 - (matchCount * 15));
-
-                                        showMessageDialog(`【解読失敗……】\n魔方陣の一部が不発に終わった！（部分合致: ${matchCount}/4）\n影山が怒り狂って襲いかかってきた！`, () => {
-                                            openCombatUI(kageyamaEnemy, gameState, (res) => {
-                                                if (res === "win") handleKageyamaWin(gameState, onComplete);
-                                                else onComplete();
-                                            }, context);
-                                        });
-                                    }
-                                };
-
-                                // ★ 全正解時のみ動画再生
-                                if (isPerfect) {
-                                    playVideo("assets/videos/magic-circle.mp4", applyDamageAndCombat);
-                                } else {
-                                    applyDamageAndCombat();
-                                }
-                            });
-                        }
-                    );
-                });
             }
         };
     }
