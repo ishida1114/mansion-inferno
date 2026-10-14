@@ -50,7 +50,7 @@ export function check6FRandomEncounter(gameState, onEncounter) {
             { 
                 id: 'DEVIL13_6F', 
                 name: '停滞の糸紡ぎ', 
-                image: 'assets/images/demon/demon14.jpg', 
+                image: 'assets/images/demon/demon14.png', 
                 hp: 260, atk: 45, def: 8, weakness: [6], agi: 14 // 聖炎(6)が弱点
             },
             { 
@@ -277,7 +277,7 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
             // ★ ドッペルゲンガー覚醒の動画を再生
             playVideo("assets/images/demon/6f-doppelganger.mp4", () => {
                 showConversationDialog(
-                    "assets/images/demon/6f-doppelganger.jpg", // ★ ドッペルゲンガーの画像
+                    "assets/images/demon/6f-doppelganger.png", // ★ ドッペルゲンガーの画像
                     "【ドッペルゲンガー】\n「……何を必死になっている？ 銃を握らされ、誰かのために戦うフリをして、自分に価値があると思い込みたいだけだろう？」\n\n「お前はずっと、何者にもなりたくなかったはずだ。選択する痛みを恐れ、責任を恐れ、ただ眠っていたかった。……あの子を助ける？ 傲慢だな。お前はただ、自分の空っぽな人生から目を背ける口実が欲しかっただけだ」",
                     () => {
                         showMessageDialog("主人公の足元に蜘蛛の糸が絡みつき、身体が鉛のように重くなる（怠惰の呪縛）。\n\n――しかし、足元にいる黒猫が、じっと金色の瞳で主人公を見つめ返してきた。", () => {
@@ -324,7 +324,7 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
                                         // ★ ボスの戦闘用画像
                                         const doppelEnemy = {
                                             name: "ドッペルゲンガー",
-                                            image: "assets/images/demon/6f-doppelganger.jpg", 
+                                            image: "assets/images/demon/6f-doppelganger.png", 
                                             hp: isPerfect ? 400 : 1000,
                                             maxHp: 1000,
                                             atk: isPerfect ? 50 : 70,
