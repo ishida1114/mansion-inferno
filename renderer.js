@@ -295,29 +295,45 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     }
 }
 
-// ★ 壁と完全に平行な角度で、奥も尖らない自然な台形パースカーペット
+// ★ 7F環境光・大理石反射・カーペット奥の溶け込み強化版
 function drawEnvironment(ctx, canvas, currentFloor) {
-    const cx = canvas.width / 2; // 300
-    const cy = canvas.height / 2; // 200
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
 
-    ctx.fillStyle = "#0a0a0c"; 
+    // 天井（燭台の明かりをほんのり受け止めるアンバーのグラデーション）
+    if (currentFloor === 7) {
+        const ceilingGrad = ctx.createLinearGradient(0, cy, 0, 0);
+        ceilingGrad.addColorStop(0, "rgba(25, 20, 15, 0.95)");
+        ceilingGrad.addColorStop(0.3, "#0d0c0e");
+        ceilingGrad.addColorStop(1, "#050507");
+        ctx.fillStyle = ceilingGrad;
+    } else {
+        ctx.fillStyle = "#0a0a0c"; 
+    }
     ctx.fillRect(0, 0, canvas.width, cy);
     
     if (currentFloor === 7) {
-        // ① 両脇の黒大理石の床
-        ctx.fillStyle = "#121216"; 
+        // ① 両脇の床：磨き上げられた黒大理石の反射光
+        ctx.fillStyle = "#101014"; 
+        ctx.fillRect(0, cy, canvas.width, cy);
+
+        // 燭台の光が黒大理石に反射するグラデーション
+        const marbleGloss = ctx.createLinearGradient(0, cy, 0, canvas.height);
+        marbleGloss.addColorStop(0, "rgba(0, 0, 0, 0.95)");
+        marbleGloss.addColorStop(0.3, "rgba(45, 35, 20, 0.25)"); // 壁際の間接光
+        marbleGloss.addColorStop(1, "rgba(0, 0, 0, 0.40)");
+        ctx.fillStyle = marbleGloss;
         ctx.fillRect(0, cy, canvas.width, cy);
 
         if (isImageReady(images.carpet)) {
             ctx.save();
             
-            // 壁の傾き（手前幅600px -> 奥depth4幅38px）に完全一致させる計算
-            // 通路全体の幅の約75%をカーペットにする
-            const botLeftX = 75;        // 手前左端 (通路幅600の中央75%)
-            const botRightX = 525;      // 手前右端
-            const topY = 212;           // 最奥（depth 4）の床ライン
-            const topLeftX = 285;       // 最奥左端（幅30pxの台形上底として上品に収束）
-            const topRightX = 315;      // 最奥右端
+            // カーペットの台形座標（奥を205pxまで伸ばして水平線を闇に消す）
+            const botLeftX = 75;
+            const botRightX = 525;
+            const topY = 202; // 奥のラインを地平線ギリギリまで伸ばす
+            const topLeftX = 290;
+            const topRightX = 310;
 
             ctx.beginPath();
             ctx.moveTo(topLeftX, topY);
@@ -340,17 +356,18 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             }
             ctx.fillRect(0, cy, canvas.width, cy);
 
-            // 重厚なライティング
+            // ★ 奥の切れ目を消すため、上部グラデーションの黒を少し手前まで効かせる
             const shadowGrad = ctx.createLinearGradient(0, topY, 0, canvas.height);
-            shadowGrad.addColorStop(0, "rgba(0, 0, 0, 0.90)");
-            shadowGrad.addColorStop(0.4, "rgba(25, 0, 5, 0.45)");
-            shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0.05)");
+            shadowGrad.addColorStop(0, "rgba(0, 0, 0, 1.0)");    // 完全に奥の闇と同化
+            shadowGrad.addColorStop(0.12, "rgba(10, 0, 2, 0.88)");
+            shadowGrad.addColorStop(0.45, "rgba(35, 0, 5, 0.40)");
+            shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
             ctx.fillStyle = shadowGrad;
             ctx.fillRect(0, cy, canvas.width, cy);
 
             ctx.restore();
 
-            // 金色の縁取りライン（壁と完全に平行に走る）
+            // 金色の縁取りライン
             ctx.lineWidth = 2.5;
             ctx.strokeStyle = "#c5a059"; 
             ctx.beginPath();
