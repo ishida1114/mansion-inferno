@@ -1,4 +1,4 @@
-// appUI.js - 全機能完全維持 ＆ レベルアップ必要経験値ヘッダー追加統合版
+// appUI.js - 全機能完全維持 ＆ 最大3スロット装填システム実装版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -71,6 +71,9 @@ if (!document.getElementById("app-style-element")) {
         .card-item:hover { border-color: #ff3333; }
         .card-item.disabled { opacity: 0.35; cursor: not-allowed; border-color: #222; }
         .card-item img { max-width: 45px; display: block; margin: 0 auto 4px auto; }
+
+        .btn-danger { background: #440000; color: #ff6666; border: 1px solid #ff3333; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
+        .btn-danger:hover { background: #660000; color: #fff; }
     `;
     document.head.appendChild(appStyle);
 }
@@ -97,7 +100,6 @@ export class AppUI {
     }
 
     const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
-    // ★ 必要経験値の計算
     const nextExp = Math.max(0, (gameState.player.maxExp || 100) - (gameState.player.exp || 0));
 
     appContainer.innerHTML = `
@@ -195,7 +197,20 @@ export class AppUI {
     const equipped = gameState.equippedCards || [];
     const totalPower = equipped.reduce((a, b) => a + b, 0);
 
-    const equippedLabel = (equipped.length > 0) ? ("【カード " + equipped[0] + "】") : "未装填";
+    // 最大スロット数の決定
+    let maxSlots = 1;
+    if (pLevel >= 15) { maxSlots = 3; }
+    else if (pLevel >= 5) { maxSlots = 2; }
+    
+    // スロットの描画用HTML生成
+    let slotsHTML = "";
+    for (let i = 0; i < maxSlots; i++) {
+        if (equipped[i]) {
+            slotsHTML += `<div class="loadout-slot equipped-slot">【スロット ${i+1}】: <strong>カード ${equipped[i]}</strong></div>`;
+        } else {
+            slotsHTML += `<div class="loadout-slot">【スロット ${i+1}】: 未装填</div>`;
+        }
+    }
 
     return `
       <div class="sub-header">
@@ -213,19 +228,21 @@ export class AppUI {
       </div>
 
       <div style="font-size: 0.8em; color: #aaa; margin-bottom: 8px; text-align: center;">
-        Lv.<strong>${pLevel}</strong> （EXP: ${gameState.player.exp}/${gameState.player.maxExp}） | 上限コスト: <strong>${pLevel}</strong>
+        Lv.<strong>${pLevel}</strong> （解放ポート: <strong>${maxSlots}枠</strong>）
       </div>
 
       <div>
-        <div class="loadout-slot ${equipped.length > 0 ? 'equipped-slot' : ''}">
-          装填中：<strong>${equippedLabel}</strong>
+        ${slotsHTML}
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+            <div style="color: #00ff66; font-size: 0.85em; font-weight:bold;">総合威力: ${totalPower}</div>
+            <button id="btn-clear-slots" class="btn-danger">全スロット解除</button>
         </div>
-        <div style="color: #00ff66; font-size: 0.8em; margin-bottom: 10px; text-align: center;">基本威力 (Vox Sacra): ${totalPower}</div>
       </div>
 
       <div class="sub-title" style="font-size: 0.85em; text-align: left; margin: 10px 0 5px 0; color:#ffdd66;">タップして装填するカードを選択</div>
       <div class="card-list">
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
+          // 単体コストがプレイヤーレベルを超えていればロック
           const isAllowed = hasGun && (num <= pLevel);
           return `
             <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
@@ -338,6 +355,15 @@ export class AppUI {
         };
     }
 
+    // 全スロット解除ボタン
+    const clearBtn = document.getElementById('btn-clear-slots');
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            gameState.equippedCards = [];
+            this.renderApp();
+        };
+    }
+
     const useBtns = document.querySelectorAll('.use-item-btn');
     useBtns.forEach(btn => {
       btn.onclick = () => {
@@ -383,13 +409,27 @@ export class AppUI {
         const num = parseInt(item.getAttribute('data-card-num'));
         if (isNaN(num)) return;
 
+        // レベル制限のチェック
         if (num > gameState.player.level) {
             alert(`主人公のレベル（Lv.${gameState.player.level}）を超えるカード【${num}】は装填できません！`);
-        } else {
-            gameState.equippedCards = [num];
-            alert(`カード【${num}】をモデルガンに装填しました！`);
-            this.renderApp();
+            return;
         }
+
+        // 最大スロット数の再計算
+        let maxSlots = 1;
+        if (gameState.player.level >= 15) { maxSlots = 3; }
+        else if (gameState.player.level >= 5) { maxSlots = 2; }
+
+        if (!gameState.equippedCards) gameState.equippedCards = [];
+
+        // スロットの空きチェック
+        if (gameState.equippedCards.length >= maxSlots) {
+            alert(`スロットが全て埋まっています！\n「全スロット解除」ボタンを押して空きを作ってください。`);
+            return;
+        }
+
+        gameState.equippedCards.push(num);
+        this.renderApp();
       };
     });
 
