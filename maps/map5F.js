@@ -1,33 +1,26 @@
-// maps/map5F.js - アリスの追いかけっこ・時計回り新マップ・完全版
+// maps/map5F.js - 502号室（生体分離の伏線）追加・完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playVideo, playFloorTransition, openCombatUI, openInquisitionUI, openBossPuzzleUI 
 } from '../ui.js';
-import { ENEMIES, evaluateHirunumaPuzzle } from '../enemies.js';
 
-// 5階開始位置 (x: 7, y: 1, 南向きではなく、壁を背に東を向かせる)
+// 5階開始位置
 export const playerStart5F = { x: 7, y: 1, dir: 1 };
 
-// ★完全新規マップ（15x9）: 時計回りにフロアを一周させる構造
-// 1: 壁 / 0: 通路
-// 3: エレベーター(2,0) / 5: 4Fへ(7,0) / 4: 6Fへ(7,8)
-// 2: イベント扉（看護師、覗き窓、トランプ、アリス、ウサギ、実験室）
-
-// ★ 5Fマップ配列（エレベーターを階段の隣に移動）
+// ★マップ配列（X:14, Y:1 に502号室を追加）
 export const map5F = [
-    [1, 1, 1, 1, 1, 1, 3, 5, 1, 1, 1, 2, 1, 1, 1], // y=0 (3:エレベーター(6,0), 5:4F下り階段(7,0), 2:501号室ナース(11,0))
-    [1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1], // y=1 (Start:7,1。エレベーター前(6,1)を通路に)
+    [1, 1, 1, 1, 1, 1, 3, 5, 1, 1, 1, 2, 1, 1, 1], // y=0 (3:エレベーター(6,0), 5:4F下り階段(7,0), 2:501号室(11,0))
+    [1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2], // y=1 (Start:7,1。東の突き当り 14,1 が502号室)
     [1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1], // y=2 
-    [1, 0, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 0, 2], // y=3 
+    [1, 0, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 0, 2], // y=3 (2:最奥実験室(7,3), 2:ウサギ覗き窓(14,3))
     [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1], // y=4
     [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1], // y=5
     [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1], // y=6
-    [1, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 1], // y=7 
-    [1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1]  // y=8 
+    [1, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 1], // y=7 (2:ウサギ(3,7), 2:アリス(7,7), 2:トランプ(13,7))
+    [1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1]  // y=8 (4:6F上り階段)
 ];
 
-// マップ状態の同期（ロード時に破壊した扉を消去する）
 function syncMapState(gameState) {
     if (!gameState.flags) gameState.flags = {};
     if (!gameState.flags.rabbitChaseStep) gameState.flags.rabbitChaseStep = 0;
@@ -40,7 +33,7 @@ function syncMapState(gameState) {
 
 export function check5FRandomEncounter(gameState, onEncounter) {
     if (gameState.currentFloor !== 5) return;
-    syncMapState(gameState); // 歩くたびにマップ状態を保証
+    syncMapState(gameState);
     
     if (Math.random() < 0.15) {
         const demonTypes = [
@@ -138,6 +131,10 @@ export function handleEvent5F(targetCell, gameState, context) {
         if (frontX === 11 && frontY === 0) {
             return { run: (onComplete) => handleRoom501(gameState, context, onComplete) };
         }
+        // ★新規追加 X=14, Y=1: 502号室（隔離病室）
+        if (frontX === 14 && frontY === 1) {
+            return { run: (onComplete) => handleRoom502(gameState, context, onComplete) };
+        }
         // X=14, Y=3: ウサギの覗き窓
         if (frontX === 14 && frontY === 3) {
             return { run: (onComplete) => handlePeekHole(gameState, context, onComplete) };
@@ -156,7 +153,7 @@ export function handleEvent5F(targetCell, gameState, context) {
         }
         // X=7, Y=3: 最奥実験室（父親・蛭沼）
         if (frontX === 7 && frontY === 3) {
-            return { run: (onComplete) => handleBossLab54(gameState, context, onComplete) };
+            return { run: (onComplete) => handleBossLab5F(gameState, context, onComplete) };
         }
     }
 
@@ -195,7 +192,36 @@ function handleRoom501(gameState, context, onComplete) {
     );
 }
 
-// ② ウサギの覗き窓
+// ★追加：② 502号室（隔離病室・生体分離の伏線）
+function handleRoom502(gameState, context, onComplete) {
+    if (gameState.hasSaved502) {
+        showMessageDialog("【502号室 隔離病室】\n人間に戻った男が壁にもたれて荒い息をついている。\n\n「奥の手術室にいる男（父親）を助けてやってくれ……」", onComplete);
+        return;
+    }
+    showMessageDialog("【502号室 隔離病室】\n部屋に入ると、ベッドに縛り付けられていた「異形の肉塊」が拘束を引きちぎり、こちらに襲いかかってきた！", () => {
+        const experimentEnemy = { 
+            name: '暴走したキメラ', image: 'assets/images/demon/demon11.png', 
+            hp: 280, atk: 35, def: 5, weakness: [1, 6], agi: 12 
+        };
+        openCombatUI(experimentEnemy, gameState, (res) => {
+            if (res === 'win' || res === 'combat_win') {
+                gameState.hasSaved502 = true;
+                showMessageDialog("【生体分離現象】\n悪魔の肉塊が崩れ落ちると、中から『人間の男性』が倒れ込んできた！\n\n主人公「……死んでいない。悪魔の部分だけが消え去ったのか？」", () => {
+                    showMessageDialog(
+                        "【助け出された男性】\n「ハッ……体が、戻った……？\n あんたの撃った弾丸が、悪魔の核だけを浄化してくれたのか……！」\n\n「頼む、奥の手術室に……最近連れてこられた『家庭教師の教え子の父親』がまだ囚われている……！ 奴もその銃で撃ち抜けば、きっと助かるはずだ……！」",
+                        () => {
+                            showMessageDialog("（なるほど……ラミナカードの神聖な力を使えば、キメラ化された人間を殺さずに救出できるんだ！）", onComplete);
+                        }
+                    );
+                });
+            } else {
+                onComplete();
+            }
+        }, context);
+    });
+}
+
+// ③ ウサギの覗き窓
 function handlePeekHole(gameState, context, onComplete) {
     if (gameState.flags.rabbitChaseStep > 0) {
         showMessageDialog("【実験室】\n部屋の中はもぬけの殻だ。ウサギの頭をした男は奥へ逃げてしまった。", onComplete);
@@ -213,7 +239,7 @@ function handlePeekHole(gameState, context, onComplete) {
     });
 }
 
-// ③ トランプキメラ（13,7）
+// ④ トランプキメラ（13,7）
 function handleTrumpChimera(gameState, context, onComplete) {
     if (gameState.flags.rabbitChaseStep === 0) {
         showMessageDialog("【強固な電子扉】\nロックがかかっている。どこかでセキュリティを解除する必要があるようだ。", onComplete);
@@ -248,7 +274,7 @@ function handleTrumpChimera(gameState, context, onComplete) {
     });
 }
 
-// ④ アリス老婆（7,7）
+// ⑤ アリス老婆（7,7）
 function handleAliceGranny(gameState, context, onComplete) {
     showMessageDialog("【大部屋の悪霊】\nフリルだらけの少女服を無理やり着せられた、顔中シワだらけの老婆悪魔が濃硫酸を撒き散らしている！", () => {
         showConversationDialog(
@@ -279,7 +305,7 @@ function handleAliceGranny(gameState, context, onComplete) {
     });
 }
 
-// ⑤ ウサギ助手決戦（3,7）
+// ⑥ ウサギ助手決戦（3,7）
 function handleRabbitBoss(gameState, context, onComplete) {
     showMessageDialog("【行き止まりの薬品庫】\nついに逃げ場を失ったウサギの助手を追い詰めた！", () => {
         showConversationDialog(
@@ -312,8 +338,8 @@ function handleRabbitBoss(gameState, context, onComplete) {
     });
 }
 
-// ⑥ 最奥実験室（父親 ➔ 蛭沼 連戦）
-function handleBossLab54(gameState, context, onComplete) {
+// ⑦ 最奥実験室（父親 ➔ 蛭沼 連戦）
+function handleBossLab5F(gameState, context, onComplete) {
     if (gameState.isHirunumaDefeated) {
         showMessageDialog("【最奥実験室】\n狂気の生体実験装置は停止し、静寂が漂っている。", onComplete);
         return;
