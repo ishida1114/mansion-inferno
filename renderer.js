@@ -1,4 +1,4 @@
-// renderer.js - エレベーター描画(3番対応)・5F階段案内修正・7Fカーペット対応 完全版
+// renderer.js - 7F豪華壁面・カーペット・エラー修正 完全版
 
 import { gameState } from './gameState.js';
 
@@ -23,7 +23,9 @@ const imageSources = {
     right2: "assets/images/rightwall2.png",
     right3: "assets/images/rightwall3.png",
     right4: "assets/images/rightwall4.png",
-    carpet: "assets/images/carpet.png" // ★ 7F用の赤いカーペットを追加！
+    carpet: "assets/images/carpet.png",       // ★ カンマを追加
+    wall7fLeft: "assets/images/7fwallleft.jpg",  // ★ 追加
+    wall7fRight: "assets/images/7fwallright.png" // ★ 追加
 };
 
 let loadedCount = 0;
@@ -85,7 +87,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // ★ 引数に currentFloor を追加して床の描画へ渡す
     drawEnvironment(ctx, canvas, currentFloor);
     const leftDir = (player.dir + 3) % 4, rightDir = (player.dir + 1) % 4;
 
@@ -98,7 +99,11 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         // 左側側壁
         if (currentMap[lY] && currentMap[lY][lX] !== 0) {
             const imgKey = "left" + depth;
-            const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
+            // ★ 7階ならVIP壁（7fwallleft）を使う。それ以外は既存の壁。
+            let targetImg = (currentFloor === 7 && images.wall7fLeft && images.wall7fLeft.complete) 
+                            ? images.wall7fLeft 
+                            : ((images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall);
+
             if (targetImg && targetImg.complete) {
                 const clip = leftClips[depth];
                 ctx.save(); ctx.beginPath(); 
@@ -106,8 +111,13 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
                 ctx.closePath(); ctx.clip();
                 ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
+                
+                // 照明効果
                 if (currentFloor === 4) {
                     ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else if (currentFloor === 7) {
+                    ctx.fillStyle = "rgba(255, 200, 100, 0.05)"; // 7階専用の薄いゴールド照明
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
                 applyDepthShadow(ctx, clip, depth); 
@@ -118,7 +128,11 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         // 右側側壁
         if (currentMap[rY] && currentMap[rY][rX] !== 0) {
             const imgKey = "right" + depth;
-            const targetImg = (images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall;
+            // ★ 7階ならVIP壁（7fwallright）を使う。
+            let targetImg = (currentFloor === 7 && images.wall7fRight && images.wall7fRight.complete) 
+                            ? images.wall7fRight 
+                            : ((images[imgKey] && images[imgKey].complete) ? images[imgKey] : images.wall);
+
             if (targetImg && targetImg.complete) {
                 const clip = rightClips[depth];
                 ctx.save(); ctx.beginPath(); 
@@ -126,8 +140,13 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
                 ctx.closePath(); ctx.clip();
                 ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
+                
+                // 照明効果
                 if (currentFloor === 4) {
                     ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else if (currentFloor === 7) {
+                    ctx.fillStyle = "rgba(255, 200, 100, 0.05)"; // 7階専用
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
                 applyDepthShadow(ctx, clip, depth); 
@@ -154,6 +173,9 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
                 if (currentFloor === 4) {
                     ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
+                    ctx.fillRect(b.x, b.y, b.w, b.h);
+                } else if (currentFloor === 7 && cellType === 1) { // 7階の正面壁（扉以外）
+                    ctx.fillStyle = "rgba(255, 200, 100, 0.05)";
                     ctx.fillRect(b.x, b.y, b.w, b.h);
                 }
                 const shadowAlpha = (depth - 1) * 0.22;
@@ -201,9 +223,9 @@ function drawActionHint(ctx, canvas, player, currentMap) {
             } else if (gameState.currentFloor === 5) {
                 label = "[ SPACE ] 4階へ降りる";
             } else if (gameState.currentFloor === 6) {
-                label = "[ SPACE ] 7階へ登る"; // ★ 6Fから7Fへ
+                label = "[ SPACE ] 7階へ登る";
             } else if (gameState.currentFloor === 7) {
-                label = "[ SPACE ] 8階へ登る"; // ★ 7Fから8Fへ
+                label = "[ SPACE ] 8階へ登る";
             }
         } else if (target === 3 || target === 7) {
             label = "[ SPACE ] エレベーターに乗る";
@@ -225,32 +247,27 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     }
 }
 
-// ★ 7F：高級ホテルのレッドカーペット（金縁＆黒大理石）に完全改修
 function drawEnvironment(ctx, canvas, currentFloor) {
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
 
-    // 天井（暗黒）
+    // 天井
     ctx.fillStyle = "#0a0a0c"; 
     ctx.fillRect(0, 0, canvas.width, cy);
     
-    // 7階の床描画
+    // 床描画
     if (currentFloor === 7) {
-        // ① 両脇の床：シックで重厚な黒大理石
+        // ① 黒大理石
         ctx.fillStyle = "#121216"; 
         ctx.fillRect(0, cy, canvas.width, cy);
 
         if (images.carpet && images.carpet.complete) {
             ctx.save();
-            
-            // ② 通路の中央にまっすぐ伸びる「レッドカーペット（台形）」の座標計算
-            // 奥（地平線）：幅160px / 手前（足元）：幅380px
             const topL = { x: cx - 80, y: cy };
             const topR = { x: cx + 80, y: cy };
             const botR = { x: cx + 190, y: canvas.height };
             const botL = { x: cx - 190, y: canvas.height };
 
-            // 台形の中だけにカーペットを描画（クリッピング）
             ctx.beginPath();
             ctx.moveTo(topL.x, topL.y);
             ctx.lineTo(topR.x, topR.y);
@@ -261,11 +278,10 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             ctx.save();
             ctx.clip();
 
-            // カーペット模様を敷き詰める
             const pattern = ctx.createPattern(images.carpet, 'repeat');
             if (pattern) {
                 const matrix = new DOMMatrix();
-                matrix.scaleSelf(0.3, 0.3); // 繊細な織り目サイズに縮小
+                matrix.scaleSelf(0.3, 0.3);
                 pattern.setTransform(matrix);
                 ctx.fillStyle = pattern;
             } else {
@@ -273,7 +289,6 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             }
             ctx.fillRect(0, cy, canvas.width, cy);
 
-            // 奥に向かって暗く落ちる重厚なライティング（影）
             const shadowGrad = ctx.createLinearGradient(0, cy, 0, canvas.height);
             shadowGrad.addColorStop(0, "rgba(0, 0, 0, 0.90)");
             shadowGrad.addColorStop(0.45, "rgba(20, 0, 5, 0.45)");
@@ -281,11 +296,11 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             ctx.fillStyle = shadowGrad;
             ctx.fillRect(0, cy, canvas.width, cy);
 
-            ctx.restore(); // クリップ解除
+            ctx.restore(); 
 
-            // ③ カーペットの両脇に走る「金色の縁取りライン」
+            // ③ 金縁
             ctx.lineWidth = 3;
-            ctx.strokeStyle = "#c5a059"; // アンティークゴールド
+            ctx.strokeStyle = "#c5a059"; 
             ctx.beginPath();
             ctx.moveTo(topL.x, topL.y);
             ctx.lineTo(botL.x, botL.y);
@@ -296,11 +311,9 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             ctx.restore();
         }
     } else {
-        // 通常フロアの床
         ctx.fillStyle = "#140f0c"; 
         ctx.fillRect(0, cy, canvas.width, cy);
 
-        // 通常フロア用のパース線
         ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; 
         ctx.lineWidth = 1;
         [0, 100, 150, 225, 262].forEach(x => {
@@ -308,16 +321,6 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             ctx.beginPath(); ctx.moveTo(cx + x, cy); ctx.lineTo(canvas.width + x * 2, canvas.height); ctx.stroke();
         });
     }
-}
-    
-    // パースラインの描画
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; 
-    ctx.lineWidth = 1;
-    const cx = canvas.width / 2, cy = canvas.height / 2;
-    [0, 100, 150, 225, 262].forEach(x => {
-        ctx.beginPath(); ctx.moveTo(cx - x, cy); ctx.lineTo(0 - x * 2, canvas.height); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx + x, cy); ctx.lineTo(canvas.width + x * 2, canvas.height); ctx.stroke();
-    });
 }
 
 function applyDepthShadow(ctx, clip, depth) {
