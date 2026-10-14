@@ -227,17 +227,44 @@ function drawActionHint(ctx, canvas, player, currentMap) {
 
 // ★ 引数に currentFloor を追加し、7Fの時だけ床をカーペットにする
 function drawEnvironment(ctx, canvas, currentFloor) {
+    // 天井
     ctx.fillStyle = "#0a0a0c"; 
     ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
     
-    // ★ 7階の時は床を赤いカーペット画像にする
+    // 床の描画
     if (currentFloor === 7 && images.carpet && images.carpet.complete) {
-        ctx.drawImage(images.carpet, 0, canvas.height / 2, canvas.width, canvas.height / 2);
+        ctx.save();
+        
+        // ① パターンとして小さく緻密に敷き詰める（ボケ・マグマ感を解消）
+        const pattern = ctx.createPattern(images.carpet, 'repeat');
+        if (pattern) {
+            // 0.2倍〜0.25倍にギュッと縮小してタイリング
+            const scale = 0.22; 
+            const matrix = new DOMMatrix();
+            matrix.scaleSelf(scale, scale);
+            pattern.setTransform(matrix);
+            ctx.fillStyle = pattern;
+        } else {
+            ctx.fillStyle = "#3d050a";
+        }
+        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+
+        // ② 奥に向かって暗く落ちる重厚なライティング（立体感と高級感を付与）
+        const shadowGrad = ctx.createLinearGradient(0, canvas.height / 2, 0, canvas.height);
+        shadowGrad.addColorStop(0, "rgba(5, 0, 0, 0.92)");   // 奥（消失点）は深く暗い影
+        shadowGrad.addColorStop(0.35, "rgba(20, 0, 5, 0.55)"); // 中間
+        shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0.15)");    // 手前は自然なトーン
+        ctx.fillStyle = shadowGrad;
+        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+        
+        ctx.restore();
     } else {
+        // 通常フロアの床
         ctx.fillStyle = "#140f0c"; 
         ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
     }
     
+    // パースラインの描画
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; 
     ctx.lineWidth = 1;
     const cx = canvas.width / 2, cy = canvas.height / 2;
