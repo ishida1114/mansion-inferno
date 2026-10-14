@@ -1,4 +1,4 @@
-// maps/map1F.js - エレベーター(セル3)統一・中庭扉(セル8)修正・5F行先対応完全版
+// maps/map1F.js - エレベーター(セル3)統一・中庭扉(セル8)・段階的防具ポスト投函対応 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -9,11 +9,11 @@ export const playerStart1F = { x: 7, y: 1, dir: 0 };
 
 // 1: 壁 / 0: 通路 
 // 3: エレベーター(x:6, y:0) / 4: 非常階段(x:7, y:0) 
-// 2: コンビニ(x:3, y:2) / 8: 中庭への扉・血の池(x:7, y:2) / 5: 集合ポスト(x:11, y:2) / 6: 出口(x:7, y:6)
+// 2: コンビニ(x:3, y:2) / 8: 中庭への扉・血の池(x:7, y:2) / 9: 集合ポスト(x:11, y:2) / 6: 出口(x:7, y:6)
 export const map1F = [
-    [1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 1, 1, 1], // ★ (6,0)を正式なエレベーター[3]に変更
+    [1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 1, 1, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-    [1, 0, 1, 2, 1, 0, 1, 8, 1, 0, 1, 9, 1, 0, 1], // ★ 中庭の扉(7,2)をドア[8]に変更
+    [1, 0, 1, 2, 1, 0, 1, 8, 1, 0, 1, 9, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
@@ -21,7 +21,7 @@ export const map1F = [
 ];
 
 export function handleEvent1F(targetCell, gameState, context) {
-    // 3: エレベーター（★ 1F・3F・5F を選べる共通UI）
+    // 3: エレベーター（1F・3F・5F を選べる共通UI）
     if (targetCell === 3) {
         if (!gameState.hasElevatorKey) {
             return { 
@@ -86,7 +86,7 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // ★ 8: 中庭への扉（血の池）
+    // 8: 中庭への扉（血の池）
     if (targetCell === 8) {
         if (!gameState.hasExorcistInherited) {
             return { run: (onComplete) => startExorcistSequence(gameState, context.redraw, onComplete) };
@@ -97,7 +97,7 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // 9: 集合ポスト
+    // 9: 集合ポスト（段階的防具解放）
     if (targetCell === 9) {
         return { run: (onComplete) => startPostEvent(gameState, onComplete) };
     }
@@ -112,14 +112,62 @@ export function handleEvent1F(targetCell, gameState, context) {
     return null;
 }
 
+// 段階的防具解放ポストイベント
 function startPostEvent(gameState, onComplete) {
     if (!gameState.hasExorcistInherited) {
         showMessageDialog("【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n……『悪魔辞典アプリ』を持っていないため、まだ調べる意味はなさそうだ。\n（※まずは中庭の血の池を調べよう）", onComplete);
         return;
     }
-    playVideo("assets/videos/post.mp4", () => {
-        showMessageDialog("【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。", onComplete);
-    });
+
+    if (!gameState.flags) gameState.flags = {};
+    if (gameState.armorUnlockStage === undefined) {
+        gameState.armorUnlockStage = 0;
+    }
+
+    const stage = gameState.armorUnlockStage;
+    const canPost3F = (stage < 1 && gameState.flags.cleared3F);
+    const canPost5F = (stage < 2 && gameState.flags.cleared5F);
+    const canPost7F = (stage < 3 && gameState.flags.cleared7F);
+    const isFirstCheck = !gameState.flags.seenPostVideo;
+    const willPost = canPost3F || canPost5F || canPost7F;
+
+    const executePostLogic = () => {
+        if (canPost3F) {
+            gameState.armorUnlockStage = 1;
+            showMessageDialog(
+                "【1階 集合ポスト】\n3階の怨霊を祓った報告と共に、『中層探索用防具の支給要請書』を投函口へ差し入れた。\n\nポストの奥から微かな聖水のはじける音がした……。\n\n【防具解放】\nコンビニに『お守りレザージャケット』と『儀式用タクティカルベスト』が入荷しました！",
+                onComplete
+            );
+        } else if (canPost5F) {
+            gameState.armorUnlockStage = 2;
+            showMessageDialog(
+                "【1階 集合ポスト】\n中層の悪魔を退けた報告と共に、『上位退魔スーツの支給要請書』を投函口へ差し入れた。\n\nポストの奥からカチャリと重厚な鍵の開く音がした……。\n\n【防具解放】\nコンビニに『聖遺物のレザースーツ』が入荷しました！",
+                onComplete
+            );
+        } else if (canPost7F) {
+            gameState.armorUnlockStage = 3;
+            showMessageDialog(
+                "【1階 集合ポスト】\nマダム・白鳥を討伐した証と共に、『最終決戦用防具の支給要請書』を投函口へ差し入れた。\n\nポストの奥から低い鐘の音が響いた……。\n\n【防具解放】\nコンビニに『エクソシストの漆黒コート』が入荷しました！",
+                onComplete
+            );
+        } else {
+            if (stage >= 3) {
+                showMessageDialog("【1階 集合ポスト】\n全ての防具要請書は投函済みだ。これ以上の装備は存在しない。\n残るは8階……最上階の決戦のみだ。", onComplete);
+            } else {
+                showMessageDialog(
+                    "【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。\n（※各階のフロアボスを撃破すると、防具支給要請書を投函できます）",
+                    onComplete
+                );
+            }
+        }
+    };
+
+    if (isFirstCheck || willPost) {
+        gameState.flags.seenPostVideo = true;
+        playVideo("assets/videos/post.mp4", executePostLogic);
+    } else {
+        executePostLogic();
+    }
 }
 
 function startStudentInCvsEvent(gameState, onComplete) {

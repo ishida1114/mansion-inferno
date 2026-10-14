@@ -289,13 +289,18 @@ export function openShopUI(onClosed) {
         }
     };
 
-    let html = "";
+   let html = "";
     Object.values(itemDefinitions).forEach(item => {
-        if (item.requiresAdvanced && (!gameState.flags || !gameState.flags.unlockedAdvancedArmor)) {
-            return;
+        // ★ 新しい段階的防具解放（unlockStage）の判定
+        if (item.type === "armor") {
+            const currentStage = gameState.armorUnlockStage || 0;
+            if (item.unlockStage > currentStage) {
+                return; // まだ解放されていない防具は店頭に出さない
+            }
         }
 
         const isEquippedArmor = item.type === "armor" && gameState.equippedArmor === item.id;
+
         html += `
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(20, 10, 10, 0.85); padding: 10px 12px; margin-bottom: 8px; border: 1px solid #441111; border-radius: 6px;">
                 <div style="flex: 1;"><div style="color: #ffdd66; font-weight: bold;">${item.name}</div><div style="font-size: 0.8em; color: #bbb;">${item.description || ''}</div></div>
