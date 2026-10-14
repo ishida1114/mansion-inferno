@@ -1,4 +1,4 @@
-// renderer.js - 7F豪華壁面・カーペット・エラー安全対策 完全版
+// renderer.js - 7F完全VIP対応（正面・扉・左右壁の差し替え版）
 
 import { gameState } from './gameState.js';
 
@@ -24,14 +24,16 @@ const imageSources = {
     right3: "assets/images/rightwall3.png",
     right4: "assets/images/rightwall4.png",
     carpet: "assets/images/carpet.png",
-    wall7fLeft: "assets/images/7fwallleft.jpg",
-    wall7fRight: "assets/images/7fwallright.png"
+    // ★ 7F用の新素材4枚を登録
+    wall7fLeft: "assets/images/7fwallleft_2.jpg",
+    wall7fRight: "assets/images/7fwallright_2.png",
+    wall7fFront: "assets/images/7ffloor.png", 
+    wall7fDoor: "assets/images/7fdoor.png"
 };
 
 let loadedCount = 0;
 const totalImages = Object.keys(imageSources).length;
 
-// 画像が安全に描画可能か検証する補助関数（ロード失敗時のクラッシュ防止）
 function isImageReady(img) {
     return img && img.complete && img.naturalWidth > 0;
 }
@@ -44,6 +46,15 @@ export function initRenderer(onReady) {
             if (loadedCount === totalImages && onReady) onReady();
         };
         images[key].onerror = () => {
+            // 画像の読み込み失敗時の安全装置（jpgとpngの相互変換リトライ）
+            const src = images[key].src;
+            if (src.endsWith('.jpg') && !src.includes('_retry')) {
+                images[key].src = src.replace('.jpg', '.png') + "?_retry=1";
+                return;
+            } else if (src.endsWith('.png') && !src.includes('_retry')) {
+                images[key].src = src.replace('.png', '.jpg') + "?_retry=1";
+                return;
+            }
             console.warn(`画像の読み込みに失敗しました: ${imageSources[key]}`);
             loadedCount++;
             if (loadedCount === totalImages && onReady) onReady();
@@ -120,14 +131,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
                     ctx.closePath(); ctx.clip();
                     ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
-                    
-                    if (currentFloor === 4) {
-                        ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    } else if (currentFloor === 7) {
-                        ctx.fillStyle = "rgba(255, 200, 100, 0.05)";
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    }
                     applyDepthShadow(ctx, clip, depth); 
                     ctx.restore();
                 }
@@ -150,14 +153,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     ctx.lineTo(clip[2].x, clip[2].y); ctx.lineTo(clip[3].x, clip[3].y); 
                     ctx.closePath(); ctx.clip();
                     ctx.drawImage(targetImg, 0, 0, canvas.width, canvas.height); 
-                    
-                    if (currentFloor === 4) {
-                        ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    } else if (currentFloor === 7) {
-                        ctx.fillStyle = "rgba(255, 200, 100, 0.05)";
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    }
                     applyDepthShadow(ctx, clip, depth); 
                     ctx.restore();
                 }
@@ -168,6 +163,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 const cellType = currentMap[fY][fX], b = frontBounds[depth];
                 let targetImg = images.wall;
                 
+                // 通常階の扉判定
                 if ((cellType === 4 || cellType === 5) && isImageReady(images.stairDoor)) {
                     targetImg = images.stairDoor;
                 } else if (cellType === 6 && isImageReady(images.entrance)) {
@@ -178,13 +174,19 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     targetImg = images.door;
                 }
 
+                // ★ 7階専用の正面壁 ＆ 豪華な扉の差し替え
+                if (currentFloor === 7) {
+                    if ([2, 8, 9].includes(cellType) && isImageReady(images.wall7fDoor)) {
+                        targetImg = images.wall7fDoor; // 豪華な扉
+                    } else if (cellType === 1 && isImageReady(images.wall7fFront)) {
+                        targetImg = images.wall7fFront; // 扉なしの正面大理石
+                    }
+                }
+
                 if (isImageReady(targetImg)) {
                     ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
                     if (currentFloor === 4) {
                         ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
-                        ctx.fillRect(b.x, b.y, b.w, b.h);
-                    } else if (currentFloor === 7 && cellType === 1) {
-                        ctx.fillStyle = "rgba(255, 200, 100, 0.05)";
                         ctx.fillRect(b.x, b.y, b.w, b.h);
                     }
                     const shadowAlpha = (depth - 1) * 0.22;
@@ -272,10 +274,11 @@ function drawEnvironment(ctx, canvas, currentFloor) {
 
         if (isImageReady(images.carpet)) {
             ctx.save();
-            const topL = { x: cx - 80, y: cy };
-            const topR = { x: cx + 80, y: cy };
-            const botR = { x: cx + 190, y: canvas.height };
-            const botL = { x: cx - 190, y: canvas.height };
+            const carpetHalfWidth = 210; 
+            const botL = { x: cx - carpetHalfWidth, y: canvas.height }; 
+            const botR = { x: cx + carpetHalfWidth, y: canvas.height }; 
+            const topL = { x: cx, y: cy }; 
+            const topR = { x: cx, y: cy };
 
             ctx.beginPath();
             ctx.moveTo(topL.x, topL.y);
@@ -299,7 +302,7 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             ctx.fillRect(0, cy, canvas.width, cy);
 
             const shadowGrad = ctx.createLinearGradient(0, cy, 0, canvas.height);
-            shadowGrad.addColorStop(0, "rgba(0, 0, 0, 0.90)");
+            shadowGrad.addColorStop(0, "rgba(0, 0, 0, 0.95)");
             shadowGrad.addColorStop(0.45, "rgba(20, 0, 5, 0.45)");
             shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0.05)");
             ctx.fillStyle = shadowGrad;
@@ -307,7 +310,7 @@ function drawEnvironment(ctx, canvas, currentFloor) {
 
             ctx.restore();
 
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2.5;
             ctx.strokeStyle = "#c5a059"; 
             ctx.beginPath();
             ctx.moveTo(topL.x, topL.y);
