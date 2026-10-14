@@ -225,44 +225,90 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     }
 }
 
-// ★ 引数に currentFloor を追加し、7Fの時だけ床をカーペットにする
+// ★ 7F：高級ホテルのレッドカーペット（金縁＆黒大理石）に完全改修
 function drawEnvironment(ctx, canvas, currentFloor) {
-    // 天井
-    ctx.fillStyle = "#0a0a0c"; 
-    ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
-    
-    // 床の描画
-    if (currentFloor === 7 && images.carpet && images.carpet.complete) {
-        ctx.save();
-        
-        // ① パターンとして小さく緻密に敷き詰める（ボケ・マグマ感を解消）
-        const pattern = ctx.createPattern(images.carpet, 'repeat');
-        if (pattern) {
-            // 0.2倍〜0.25倍にギュッと縮小してタイリング
-            const scale = 0.22; 
-            const matrix = new DOMMatrix();
-            matrix.scaleSelf(scale, scale);
-            pattern.setTransform(matrix);
-            ctx.fillStyle = pattern;
-        } else {
-            ctx.fillStyle = "#3d050a";
-        }
-        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
 
-        // ② 奥に向かって暗く落ちる重厚なライティング（立体感と高級感を付与）
-        const shadowGrad = ctx.createLinearGradient(0, canvas.height / 2, 0, canvas.height);
-        shadowGrad.addColorStop(0, "rgba(5, 0, 0, 0.92)");   // 奥（消失点）は深く暗い影
-        shadowGrad.addColorStop(0.35, "rgba(20, 0, 5, 0.55)"); // 中間
-        shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0.15)");    // 手前は自然なトーン
-        ctx.fillStyle = shadowGrad;
-        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
-        
-        ctx.restore();
+    // 天井（暗黒）
+    ctx.fillStyle = "#0a0a0c"; 
+    ctx.fillRect(0, 0, canvas.width, cy);
+    
+    // 7階の床描画
+    if (currentFloor === 7) {
+        // ① 両脇の床：シックで重厚な黒大理石
+        ctx.fillStyle = "#121216"; 
+        ctx.fillRect(0, cy, canvas.width, cy);
+
+        if (images.carpet && images.carpet.complete) {
+            ctx.save();
+            
+            // ② 通路の中央にまっすぐ伸びる「レッドカーペット（台形）」の座標計算
+            // 奥（地平線）：幅160px / 手前（足元）：幅380px
+            const topL = { x: cx - 80, y: cy };
+            const topR = { x: cx + 80, y: cy };
+            const botR = { x: cx + 190, y: canvas.height };
+            const botL = { x: cx - 190, y: canvas.height };
+
+            // 台形の中だけにカーペットを描画（クリッピング）
+            ctx.beginPath();
+            ctx.moveTo(topL.x, topL.y);
+            ctx.lineTo(topR.x, topR.y);
+            ctx.lineTo(botR.x, botR.y);
+            ctx.lineTo(botL.x, botL.y);
+            ctx.closePath();
+            
+            ctx.save();
+            ctx.clip();
+
+            // カーペット模様を敷き詰める
+            const pattern = ctx.createPattern(images.carpet, 'repeat');
+            if (pattern) {
+                const matrix = new DOMMatrix();
+                matrix.scaleSelf(0.3, 0.3); // 繊細な織り目サイズに縮小
+                pattern.setTransform(matrix);
+                ctx.fillStyle = pattern;
+            } else {
+                ctx.fillStyle = "#550011";
+            }
+            ctx.fillRect(0, cy, canvas.width, cy);
+
+            // 奥に向かって暗く落ちる重厚なライティング（影）
+            const shadowGrad = ctx.createLinearGradient(0, cy, 0, canvas.height);
+            shadowGrad.addColorStop(0, "rgba(0, 0, 0, 0.90)");
+            shadowGrad.addColorStop(0.45, "rgba(20, 0, 5, 0.45)");
+            shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0.05)");
+            ctx.fillStyle = shadowGrad;
+            ctx.fillRect(0, cy, canvas.width, cy);
+
+            ctx.restore(); // クリップ解除
+
+            // ③ カーペットの両脇に走る「金色の縁取りライン」
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#c5a059"; // アンティークゴールド
+            ctx.beginPath();
+            ctx.moveTo(topL.x, topL.y);
+            ctx.lineTo(botL.x, botL.y);
+            ctx.moveTo(topR.x, topR.y);
+            ctx.lineTo(botR.x, botR.y);
+            ctx.stroke();
+
+            ctx.restore();
+        }
     } else {
         // 通常フロアの床
         ctx.fillStyle = "#140f0c"; 
-        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+        ctx.fillRect(0, cy, canvas.width, cy);
+
+        // 通常フロア用のパース線
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; 
+        ctx.lineWidth = 1;
+        [0, 100, 150, 225, 262].forEach(x => {
+            ctx.beginPath(); ctx.moveTo(cx - x, cy); ctx.lineTo(0 - x * 2, canvas.height); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx + x, cy); ctx.lineTo(canvas.width + x * 2, canvas.height); ctx.stroke();
+        });
     }
+}
     
     // パースラインの描画
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; 
