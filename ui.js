@@ -1,4 +1,4 @@
-// ui.js - 戦闘ルーチン（タメ技前倒し・各種傘効果完全統合・黒猫紫ログ）・UI統合完全版
+// ui.js - 主人公Lv攻撃力反映・赤い傘3倍ロマン砲・戦闘UI統合完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -149,19 +149,15 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
     overlay.id = "video-player-overlay";
     overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 3500; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; padding: 20px;";
 
-  // ui.js の playVideo 関数の中（120行目付近）
     const video = document.createElement("video");
     video.src = src;
-    // ↓背景色を黒に近いグレーにしておくと透過した時に自然です
     video.style.cssText = "max-width: 100%; max-height: 80%; object-fit: contain; background-color: #111;";
     video.controls = false; 
     video.autoplay = true; 
     video.playsInline = true; 
     video.muted = true; 
 
-    // ★ この1行があるか確認！ なければ追加してください。
     applyChromaKey(video);
-
     overlay.appendChild(video);
 
     const ctrlContainer = document.createElement("div");
@@ -347,7 +343,7 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（タメ技前倒し・黒猫・傘70%軽減完全統合）
+// 戦闘UI制御（Lv攻撃力反映・赤い傘3倍・黒猫・回避キャップ完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
     const ui = document.createElement("div");
@@ -358,12 +354,12 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const enemyDef = enemy.def || 0;
     const enemyWeakness = Array.isArray(enemy.weakness) ? enemy.weakness : [enemy.weaknessCard || 1];
     
-    // ★ 傘バフ用フラグ群
-    let isGuarding = false;         // 青い傘（70%カット）
-    let isRedUmbrellaActive = false;// 赤い傘（次ターン攻撃2倍）
-    let extraAgi = 0;               // 透明傘（AGI底上げ用）
+    // 傘バフ用フラグ群
+    let isGuarding = false;          // 青い傘（70%カット）
+    let isRedUmbrellaActive = false; // 赤い傘（次ターン攻撃3倍）
+    let extraAgi = 0;                // 透明傘（AGI底上げ用）
 
-    let isEnemyCharging = false;    // 敵のタメ技待機フラグ
+    let isEnemyCharging = false;     // 敵のタメ技待機フラグ
 
     const visualHTML = `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;">`;
 
@@ -426,7 +422,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }, 1800); 
     };
 
-    // 技メッセージの抽出
     const getRandomActionMsg = () => {
         if (enemy.actions && enemy.actions.length > 0) {
             return enemy.actions[Math.floor(Math.random() * enemy.actions.length)];
@@ -440,11 +435,10 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
         setTimeout(() => {
             const currentFloor = gameState.currentFloor || 1;
-            let actionType = "normal"; // normal, single, charge_start, charge_fire
+            let actionType = "normal";
             let damageMultiplier = 1.0;
             let actionText = "";
 
-            // --- 敵の行動決定ルーチン ---
             if (isEnemyCharging) {
                 actionType = "charge_fire";
                 damageMultiplier = 2.5;
@@ -465,9 +459,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     } else if (isKageyamaBoss) {
                         chargeRate = 0.25;
                         singleRate = 0.25;
-                    } else {
-                        chargeRate = 0.20;
-                        singleRate = 0.20;
                     }
 
                     if (roll < chargeRate) {
@@ -503,23 +494,22 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 return;
             }
 
-         // 回避判定（透明傘のAGIアップを加味・最大30%キャップ設定）
-  const rawDodge = ((gameState.player.agi || 5) + extraAgi) * 0.04;
-  const dodgeChance = Math.min(0.30, rawDodge); // ★最大でも30%に制限（70%は被弾する）
+            // 回避判定（最大30%キャップ設定）
+            const rawDodge = ((gameState.player.agi || 5) + extraAgi) * 0.04;
+            const dodgeChance = Math.min(0.30, rawDodge);
 
-  if (Math.random() < dodgeChance) {
-      appendLog(`\n素早い身のこなし！ 主人公は悪魔の攻撃を完全に回避した！`);
-      attackBtn.disabled = false;
-      itemBtn.disabled = false;
-      escapeBtn.disabled = false;
-      return;
-  }
+            if (Math.random() < dodgeChance) {
+                appendLog(`\n素早い身のこなし！ 主人公は悪魔の攻撃を完全に回避した！`);
+                attackBtn.disabled = false;
+                itemBtn.disabled = false;
+                escapeBtn.disabled = false;
+                return;
+            }
 
-            // 被ダメージ計算
             let rawAtk = enemyAtk * damageMultiplier;
             let baseDamage = Math.max(1, rawAtk - (gameState.player.def || 0));
 
-            // ★ 青いビニール傘判定：70%軽減
+            // 青いビニール傘判定：70%軽減
             let umbrellaApplied = false;
             if (isGuarding) {
                 baseDamage = Math.max(1, Math.floor(baseDamage * 0.3));
@@ -527,7 +517,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 umbrellaApplied = true;
             }
 
-            // ★ 黒猫の割り込み判定
+            // 黒猫の割り込み判定
             let catAction = null;
             if (gameState.flags && gameState.flags.hasCat && !gameState.flags.isCatTrapped && Math.random() < 0.20) {
                 catAction = Math.random() < 0.5 ? "shield" : "claw";
@@ -578,7 +568,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }, 1400);
     };
 
-    // 攻撃ボタン
+    // ★ 攻撃ボタン（Lv基礎攻撃力反映・赤い傘3倍化・弱点2倍完全統合）
     attackBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -601,26 +591,39 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         log.innerText = "Vox Sacra……ラミナカードが神聖な言葉を弾丸に変える";
 
         setTimeout(() => {
-            let baseDamage = equippedCards.reduce((sum, num) => sum + num, 0) * 4;
-            const isWeaknessHit = equippedCards.some(num => enemyWeakness.includes(num));
-            if (isWeaknessHit) baseDamage *= 2;
+            // 1. 主人公レベルによる基礎攻撃力（Lv1: 8、Lv20: 46）
+            const levelAtk = 8 + ((gameState.player.level || 1) - 1) * 2;
 
-            // ★ 赤い傘バフの適用
+            // 2. 装填カードの威力（カードの数字合計 × 2）
+            const cardSum = equippedCards.reduce((sum, num) => sum + num, 0);
+            const cardAtk = cardSum * 2;
+
+            // 3. 基礎ダメージ合算
+            let baseDamage = levelAtk + cardAtk;
+
+            // 4. 弱点特効（2倍）
+            const isWeaknessHit = equippedCards.some(num => enemyWeakness.includes(num));
+            if (isWeaknessHit) {
+                baseDamage *= 2;
+            }
+
+            // 5. 赤い傘バフ（3倍ロマン砲）
             let isRedApplied = false;
             if (isRedUmbrellaActive) {
-                baseDamage *= 2;
+                baseDamage *= 3; // ★ 2倍から3倍へ強化
                 isRedUmbrellaActive = false; // 1回で消費
                 isRedApplied = true;
             }
 
+            // 6. 防御力減算とランダム幅（0.85 〜 1.15）
             const randomFactor = 0.85 + Math.random() * 0.3;
             const netDamage = Math.max(1, Math.floor((baseDamage - enemyDef) * randomFactor));
 
             enemyHp = Math.max(0, enemyHp - netDamage);
             
-            let shotMsg = `Vox Sacraの射撃！${isWeaknessHit ? '（弱点特効！）' : ''} 悪魔に ${netDamage} ダメージ！`;
+            let shotMsg = `Vox Sacraの射撃！${isWeaknessHit ? '【弱点特効2倍！】' : ''} 悪魔に ${netDamage} ダメージ！`;
             if (isRedApplied) {
-                shotMsg = `【反撃の一撃】赤い傘の反動で威力が倍増！\n${shotMsg}`;
+                shotMsg = `【渾身の一撃】赤い傘の反動で威力が3倍に爆発！\n${shotMsg}`;
             }
 
             if (enemyHp <= 0) {
@@ -646,7 +649,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }, 900);
     };
 
-    // 道具ボタン（★各種傘の判定を追加）
+    // 道具ボタン（各種傘の効果完全分岐）
     itemBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -689,23 +692,21 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 itemBtn.disabled = true;
                 escapeBtn.disabled = true;
 
-                // ★ アイテム効果の完全分岐
                 if (usedItem.id === "energy_drink" || usedItem.id === "bento" || usedItem.id === "first_aid" || usedItem.healAmount) {
                     const heal = usedItem.healAmount || 15;
                     gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + heal);
                     updateHpDisplay();
                     enemyTurn(`【道具使用】${usedItem.name} を使った！\n主人公のHPが ${heal} 回復した！（現在HP: ${gameState.player.hp}）`);
                 } 
-                else if (usedItem.id === "blue_umbrella" || usedItem.id === "umbrella_blue" || usedItem.guardEffect) {
+                else if (usedItem.id === "blue_umbrella" || usedItem.id === "umbrella_blue" || usedItem.guardEffect || (usedItem.name && usedItem.name.includes("青"))) {
                     isGuarding = true;
                     enemyTurn(`【道具使用】${usedItem.name} を素早く開いた！\n次の敵の攻撃ダメージを 70% 軽減する！`);
                 } 
-                else if (usedItem.id === "red_umbrella") {
+                else if (usedItem.id === "red_umbrella" || usedItem.id === "umbrella_red" || (usedItem.name && usedItem.name.includes("赤"))) {
                     isRedUmbrellaActive = true;
-                    enemyTurn(`【道具使用】${usedItem.name} を開いて構えた！\n次の銃撃ダメージが 2倍 になる！`);
+                    enemyTurn(`【道具使用】${usedItem.name} を開いて構えた！\n力を限界まで蓄積した！ 次の銃撃威力が【3倍】に激増する！`);
                 }
-                else if (usedItem.id === "yellow_umbrella") {
-                    // スタン処理（敵のターンをスキップ）
+                else if (usedItem.id === "yellow_umbrella" || (usedItem.name && usedItem.name.includes("黄"))) {
                     log.innerHTML = `【道具使用】${usedItem.name} を突き出した！\n強烈な光で敵の目を眩ませた！`;
                     setTimeout(() => {
                         appendLog(`\n敵は目を押さえて動けない！`);
@@ -713,11 +714,11 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                         itemBtn.disabled = false;
                         escapeBtn.disabled = false;
                     }, 1400);
-                }
-                else if (usedItem.id === "clear_umbrella") {
+                } 
+                else if (usedItem.id === "clear_umbrella" || (usedItem.name && usedItem.name.includes("透明"))) {
                     extraAgi += 5;
                     enemyTurn(`【道具使用】${usedItem.name} を纏った！\n身のこなしが軽くなり、回避率と逃走率が上昇した！`);
-                }
+                } 
                 else {
                     enemyTurn(`【道具使用】${usedItem.name} を使ったが、何も起きなかった……。`);
                 }
@@ -735,7 +736,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         log.innerText = "必死に背を向けて走り出した……！";
 
         setTimeout(() => {
-            // 透明傘のAGIアップを加味して逃走率を計算
             const escapeRate = 0.55 + (((gameState.player.agi || 5) + extraAgi) * 0.04);
             if (Math.random() < escapeRate) {
                 ui.remove();

@@ -1,5 +1,4 @@
 // main.js - 5F正式接続・3F階段着地修正・デバッグ連動 完全版
-// main.js の import 部分（playVideo を追加）
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -17,10 +16,10 @@ let isRunning = false;
 let isProcessingEvent = false;
 
 function isActionBlocked() {
-    if (window.lastDialogCloseTime && (Date.now() - window.lastDialogCloseTime < 400)) {
-        return true; 
-    }
-    return false;
+  if (window.lastDialogCloseTime && (Date.now() - window.lastDialogCloseTime < 400)) {
+    return true; 
+  }
+  return false;
 }
 
 function init() {
@@ -50,7 +49,6 @@ function init() {
       return;
     }
 
-    // テストワープボタンのクリック判定
     if (target.classList.contains('debug-warp-btn')) {
       const floor = parseInt(target.getAttribute('data-floor'));
       if (!isNaN(floor)) {
@@ -119,7 +117,7 @@ function resumeGame() {
   document.getElementById('touch-controls')?.classList.remove('hidden');
 
   if (gameState.currentMap) {
-      gameState.markVisited(gameState.currentFloor, gameState.currentMap, gameState.player.x, gameState.player.y);
+    gameState.markVisited(gameState.currentFloor, gameState.currentMap, gameState.player.x, gameState.player.y);
   }
 
   if (!isRunning) {
@@ -129,7 +127,7 @@ function resumeGame() {
 }
 
 function redraw() {
-    if (renderer) renderer.render();
+  if (renderer) renderer.render();
 }
 
 function gameLoop() {
@@ -204,40 +202,49 @@ function changeFloor(floor) {
   else if (floor === 5) {
     gameState.currentMap = map5F;
     
-    // 4Fから上がってきた場合：北側の階段手前 (X:7, Y:1, 南向き) に着地
+    // 4Fから階段で上がってきた場合：北側の階段手前 (X:7, Y:1, 南向き)
     if (gameState.lastTransitMethod === 'stair') {
       gameState.player.x = 7;
       gameState.player.y = 1;
-      gameState.player.dir = 2; // 南向き（フロア内を向く）
-    } else {
+      gameState.player.dir = 2;
+    } 
+    // エレベーターで上がってきた場合：エレベーター前 (X:6, Y:1, 南向き)
+    else if (gameState.lastTransitMethod === 'elevator') {
+      gameState.player.x = 6;
+      gameState.player.y = 1;
+      gameState.player.dir = 2;
+    } 
+    else {
       gameState.player.x = playerStart5F.x;
       gameState.player.y = playerStart5F.y;
       gameState.player.dir = playerStart5F.dir;
     }
 
-    // ★ 5F進入時の自動演出（SPACE不要・即時実行）
+    // 5Fに入った瞬間の自動イベント
     if (!gameState.hasSeen5FIntro) {
       gameState.hasSeen5FIntro = true;
       showMessageDialog(
         "【館内放送・ドクター蛭沼の声】\n「失敗だな、リナからもらった実験体、とても進化とは言えない、醜い、廃棄しなくては……」",
         () => {
-          const prevBg = document.body.style.backgroundColor;
-          document.body.style.backgroundColor = "#141418";
+          // ワンクッション挟む
+          showMessageDialog("【使い魔の気配が強まった！！急速に存在が実体化する兆しを感じる】", () => {
+            const prevBg = document.body.style.backgroundColor;
+            document.body.style.backgroundColor = "#141418";
 
-          playVideo("assets/videos/blackcat.mp4", () => {
-            document.body.style.backgroundColor = prevBg;
-            
-            // 使い魔合流フラグを確実に付与
-            if (!gameState.flags) gameState.flags = {};
-            gameState.flags.hasCat = true;
-            gameState.flags.isCatTrapped = false;
+            playVideo("assets/videos/blackcat.mp4", () => {
+              document.body.style.backgroundColor = prevBg;
+              
+              if (!gameState.flags) gameState.flags = {};
+              gameState.flags.hasCat = true;
+              gameState.flags.isCatTrapped = false;
 
-            showMessageDialog(
-              "【使い魔の実体化】\n5階に充満する濃厚な生体エネルギーに反応し、主人公の影からすっと黒猫が実体化して現れた！\n（※足元に寄り添い、戦闘中に身代わり防御や爪攻撃で援護してくれるようになった！）",
-              () => {
-                redraw();
-              }
-            );
+              showMessageDialog(
+                "【使い魔の実体化】\n5階に充満する濃厚な生体エネルギーに反応し、主人公の影からすっと黒猫が実体化して現れた！\n（※足元に寄り添い、戦闘中に身を挺して庇ってくれたり、追撃してくれたりするようになった！）",
+                () => {
+                  redraw();
+                }
+              );
+            });
           });
         }
       );
@@ -255,17 +262,14 @@ function changeFloor(floor) {
   } 
   else if (floor === 4) {
     gameState.currentMap = map4F;
-    
-    // 5Fから降りてきた場合：4F北側の階段手前 (X:5, Y:1, 南向き) に着地
     if (gameState.lastTransitMethod === 'stair_down') {
       gameState.player.x = 5;
       gameState.player.y = 1;
-      gameState.player.dir = 2; // 南向き（フロア内を向く）
+      gameState.player.dir = 2;
       showMessageDialog("【4階 非常階段前】\n5階から4階へ降りてきた……。", () => {
         redraw();
       });
     } else {
-      // 3Fから上がってきた場合：4F南側の階段手前 (X:5, Y:8, 北向き)
       gameState.player.x = playerStart4F.x;
       gameState.player.y = playerStart4F.y;
       gameState.player.dir = playerStart4F.dir;
@@ -282,17 +286,14 @@ function changeFloor(floor) {
   } 
   else if (floor === 3) {
     gameState.currentMap = map3F;
-    
-    // 4Fから降りてきた場合：3F北側の階段手前 (X:5, Y:1, 南向き) に着地
     if (gameState.lastTransitMethod === 'stair_down') {
       gameState.player.x = 5;
       gameState.player.y = 1;
-      gameState.player.dir = 2; // 南向き
+      gameState.player.dir = 2;
       showMessageDialog("【3階 非常階段前】\n4階から3階へ降りてきた。漂うヘドロと強烈な異臭が鼻をつく……", () => {
         redraw();
       });
     } else {
-      // エレベーターで来た場合：エレベーター前
       gameState.player.x = playerStart3F.x;
       gameState.player.y = playerStart3F.y;
       gameState.player.dir = playerStart3F.dir;
@@ -348,7 +349,6 @@ function toggleAppUI() {
   }
 }
 
-// ★ F2デバッグパネル
 function toggleDebugUI() {
   const overlay = document.getElementById('debug-overlay');
   const info = document.getElementById('debug-info');
@@ -375,7 +375,6 @@ function toggleDebugUI() {
   }
 }
 
-// ★ 指定階層へテストワープ＆状態自動付与関数
 function debugJumpToFloor(floor) {
   if (!gameState.flags) gameState.flags = {};
 
@@ -559,6 +558,6 @@ if (document.readyState === 'loading') {
 }
 
 initDebug(gameState, { 
-    changeFloor: typeof changeFloor === 'function' ? changeFloor : null, 
-    redraw: typeof redraw === 'function' ? redraw : null 
+  changeFloor: typeof changeFloor === 'function' ? changeFloor : null, 
+  redraw: typeof redraw === 'function' ? redraw : null 
 });

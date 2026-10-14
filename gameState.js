@@ -1,4 +1,4 @@
-// gameState.js - 1Fエレベーター復帰座標 (x: 6, y: 1) 修正版
+// gameState.js - 1Fエレベーター復帰座標(x:6, y:1) ＆ モデルガンコスト撤廃・スロット自動解放版
 
 export const gameState = {
   player: {
@@ -57,13 +57,12 @@ export const gameState = {
     return (floor - 1) * 5;
   },
 
-  // 変更前: Math.floor(baseMoney * 0.1)
-  // 変更後: Math.floor(baseMoney * 0.5)
+  // 報酬キャップ（お金の減衰を50%に緩和）
   calculateRewards(baseExp, baseMoney, floor = this.currentFloor) {
     const capLevel = this.getFloorLevelCap(floor);
     if (this.player.level >= capLevel) {
       const cappedExp = Math.max(1, Math.floor(baseExp * 0.1));
-      const cappedMoney = Math.max(1, Math.floor(baseMoney * 0.5)); // ★ 50%に緩和
+      const cappedMoney = Math.max(1, Math.floor(baseMoney * 0.5));
       return { exp: cappedExp, money: cappedMoney, isCapped: true };
     }
     return { exp: baseExp, money: baseMoney, isCapped: false };
@@ -91,27 +90,27 @@ export const gameState = {
     return this.visitedMaps[floor][y][x];
   },
 
+  // ★ 新仕様：モデルガンのコスト撤廃 ＆ スロット自動解放
   updateEquippedCards() {
     if (!this.player.hasModelGun && !this.hasModelGun) {
       this.equippedCards = [];
       return;
     }
 
-    let remainingCost = this.player.level;
-    const newEquipped = [];
-    const slotCapacities = [9, 8, 7, 6, 5, 4, 3, 2, 1];
+    // レベルに応じてスロット数を決定
+    let slots = 1;
+    if (this.player.level >= 20) slots = 3;
+    else if (this.player.level >= 10) slots = 2;
 
-    for (let i = 0; i < slotCapacities.length; i++) {
-      if (remainingCost <= 0) break;
-      const capacity = slotCapacities[i];
-      const cardToEquip = Math.min(remainingCost, capacity);
+    // 所持しているカード(this.cards)から数字を抽出
+    const availableNums = this.cards.map(cardStr => {
+      const num = parseInt(cardStr.replace("Card.png", ""), 10);
+      return isNaN(num) ? 0 : num;
+    }).filter(n => n > 0);
 
-      if (cardToEquip >= 1) {
-        newEquipped.push(cardToEquip);
-        remainingCost -= cardToEquip;
-      }
-    }
-    this.equippedCards = newEquipped;
+    // 強い順（降順）に並べ替えて、スロットの数だけ自動装備
+    availableNums.sort((a, b) => b - a);
+    this.equippedCards = availableNums.slice(0, slots);
   },
 
   gainExp(amount) {
@@ -141,10 +140,11 @@ export const gameState = {
       this.flags.hasCat = true;
     }
 
+    // レベルアップでスロットが増える可能性があるため装備更新
     this.updateEquippedCards();
   },
 
-  // ★ エレベーター死戻り位置を (x: 6, y: 1) に修正
+  // エレベーター死戻り位置 (x: 6, y: 1)
   handlePlayerDeath() {
     const lostRate = Math.random() * 0.5;
     const lostMoney = Math.floor(this.player.money * lostRate);

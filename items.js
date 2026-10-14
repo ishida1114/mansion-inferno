@@ -73,16 +73,15 @@ export const CONSUMABLE_ITEMS = {
     battleEffect: { type: 'ESCAPE_OR_AGI', value: 5, turns: 3 },
     battleUsable: true
   },
-  red_umbrella: {
+red_umbrella: {
     id: 'red_umbrella',
     name: '赤いビニール傘（反撃）',
     type: 'consumable',
-    price: 300,
-    description: '次ターンの Vox Sacra（銃撃）ダメージが 2倍 になる。',
-    battleEffect: { type: 'BOOST_DAMAGE', multiplier: 2, turns: 1 },
+    price: 2500, // ★ 決戦用切り札として高額化
+    description: '次ターンの Vox Sacra（銃撃）ダメージが【3倍】になる。',
+    battleEffect: { type: 'BOOST_DAMAGE', multiplier: 3, turns: 1 },
     battleUsable: true
   }
-};
 
 // --- 防具（ショップ専用） ---
 export const ARMOR_ITEMS = {
