@@ -295,43 +295,30 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     }
 }
 
-// ★ 7F環境光・大理石反射・カーペット奥の溶け込み強化版
+// ★ 最終調整：交差点の黒抜けをごまかす自然なライティング
 function drawEnvironment(ctx, canvas, currentFloor) {
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
 
-    // 天井（燭台の明かりをほんのり受け止めるアンバーのグラデーション）
+    // 天井（真っ黒をやめ、壁の色に合わせたアンティークな暗がりに）
     if (currentFloor === 7) {
-        const ceilingGrad = ctx.createLinearGradient(0, cy, 0, 0);
-        ceilingGrad.addColorStop(0, "rgba(25, 20, 15, 0.95)");
-        ceilingGrad.addColorStop(0.3, "#0d0c0e");
-        ceilingGrad.addColorStop(1, "#050507");
-        ctx.fillStyle = ceilingGrad;
+        ctx.fillStyle = "#0c0a08"; 
     } else {
         ctx.fillStyle = "#0a0a0c"; 
     }
     ctx.fillRect(0, 0, canvas.width, cy);
     
     if (currentFloor === 7) {
-        // ① 両脇の床：磨き上げられた黒大理石の反射光
-        ctx.fillStyle = "#101014"; 
-        ctx.fillRect(0, cy, canvas.width, cy);
-
-        // 燭台の光が黒大理石に反射するグラデーション
-        const marbleGloss = ctx.createLinearGradient(0, cy, 0, canvas.height);
-        marbleGloss.addColorStop(0, "rgba(0, 0, 0, 0.95)");
-        marbleGloss.addColorStop(0.3, "rgba(45, 35, 20, 0.25)"); // 壁際の間接光
-        marbleGloss.addColorStop(1, "rgba(0, 0, 0, 0.40)");
-        ctx.fillStyle = marbleGloss;
+        // 交差点で壁が抜けた奥に見える「床のベース色」を、黒大理石とカーペットの暗がりに設定
+        ctx.fillStyle = "#151012"; 
         ctx.fillRect(0, cy, canvas.width, cy);
 
         if (isImageReady(images.carpet)) {
             ctx.save();
             
-            // カーペットの台形座標（奥を205pxまで伸ばして水平線を闇に消す）
             const botLeftX = 75;
             const botRightX = 525;
-            const topY = 202; // 奥のラインを地平線ギリギリまで伸ばす
+            const topY = 202; // 奥のライン
             const topLeftX = 290;
             const topRightX = 310;
 
@@ -356,11 +343,10 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             }
             ctx.fillRect(0, cy, canvas.width, cy);
 
-            // ★ 奥の切れ目を消すため、上部グラデーションの黒を少し手前まで効かせる
+            // ★ 修正：カーペットの奥を真っ黒に塗りつぶすのをやめ、自然な影に留める
             const shadowGrad = ctx.createLinearGradient(0, topY, 0, canvas.height);
-            shadowGrad.addColorStop(0, "rgba(0, 0, 0, 1.0)");    // 完全に奥の闇と同化
-            shadowGrad.addColorStop(0.12, "rgba(10, 0, 2, 0.88)");
-            shadowGrad.addColorStop(0.45, "rgba(35, 0, 5, 0.40)");
+            shadowGrad.addColorStop(0, "rgba(10, 0, 5, 0.75)");  // 真っ黒(0.95)から自然な影(0.75)へ
+            shadowGrad.addColorStop(0.4, "rgba(20, 0, 5, 0.25)");
             shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
             ctx.fillStyle = shadowGrad;
             ctx.fillRect(0, cy, canvas.width, cy);
