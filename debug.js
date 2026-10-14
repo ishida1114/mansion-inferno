@@ -103,18 +103,27 @@ function toggleDebugModal(gameState, context) {
             gameState.player.atk = 5 + (targetLv - 1) * 2;
             gameState.player.def = Math.floor((targetLv - 1) * 0.8);
             gameState.player.agi = 5 + Math.floor((targetLv - 1) * 0.5);
+            
+            // ★ レベルに応じたポート（スロット）の強制解放
+            if (targetLv >= 15) {
+                gameState.unlockedSlots = 3;
+            } else if (targetLv >= 5) {
+                gameState.unlockedSlots = 2;
+            } else {
+                gameState.unlockedSlots = 1;
+            }
         }
         if (context && context.redraw) context.redraw();
     };
 
     document.getElementById("debug-lv15").onclick = () => {
         applyLevel(15);
-        alert(`プレイヤーLvを 15 に設定しました（HP:${gameState.player.maxHp} に上昇・全回復）`);
+        alert(`プレイヤーLvを 15 に設定しました（HP:${gameState.player.maxHp} に上昇・全回復・ポート3つ解放）`);
     };
 
     document.getElementById("debug-lv25").onclick = () => {
         applyLevel(25);
-        alert(`プレイヤーLvを 25 に設定しました（HP:${gameState.player.maxHp} に上昇・全回復）`);
+        alert(`プレイヤーLvを 25 に設定しました（HP:${gameState.player.maxHp} に上昇・全回復・ポート3つ解放）`);
     };
 
     document.getElementById("debug-heal").onclick = () => {
@@ -227,6 +236,15 @@ function setupFloorDebugState(floor, gameState) {
         gameState.player.atk = 5 + (targetLv - 1) * 2;
         gameState.player.def = Math.floor((targetLv - 1) * 0.8);
         gameState.player.agi = 5 + Math.floor((targetLv - 1) * 0.5);
+
+        // ★ フロアワープ時にもポート（スロット）を自動解放
+        if (targetLv >= 15) {
+            gameState.unlockedSlots = 3;
+        } else if (targetLv >= 5) {
+            gameState.unlockedSlots = 2;
+        } else {
+            gameState.unlockedSlots = 1;
+        }
     }
     
     if (gameState.updateEquippedCards) {
