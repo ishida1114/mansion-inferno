@@ -46,8 +46,8 @@ export function check6FRandomEncounter(gameState, onEncounter) {
     if (Math.random() < 0.15) {
         const demonTypes = [
             { id: 'DEVIL13_6F', name: '停滞の糸紡ぎ', image: 'assets/images/demon/demon14.png', hp: 260, atk: 45, def: 8, weakness: [6], agi: 14 },
-            { id: 'DEVIL14_6F', name: '神父の幻像', image: 'assets/images/demon/demon15.png', hp: 220, atk: 58, def: 5, weakness: [7], agi: 18 },
-            { id: 'DEVIL15_6F', name: '幻の未来', image: 'assets/images/demon/demon13.png', hp: 320, atk: 48, def: 12, weakness: [2, 4], agi: 10 }
+            { id: 'DEVIL14_6F', name: '神父の悪夢', image: 'assets/images/demon/demon15.png', hp: 220, atk: 58, def: 5, weakness: [7], agi: 18 },
+            { id: 'DEVIL15_6F', name: '可能性のひとつだった幻の未来', image: 'assets/images/demon/demon13.png', hp: 320, atk: 48, def: 12, weakness: [2, 4], agi: 10 }
         ];
         const chosenEnemy = demonTypes[Math.floor(Math.random() * demonTypes.length)];
         if (onEncounter) onEncounter({ ...chosenEnemy });
@@ -100,6 +100,7 @@ export function handleEvent6F(targetCell, gameState, context) {
     return null;
 }
 
+// ① 601号室：目覚めを拒む住人（人間）
 function handleRoom601(gameState, context, onComplete) {
     if (gameState.flags.cleared601) {
         showMessageDialog("【601号室】\n部屋にはもう誰もいない。男性は避難していったようだ。", onComplete);
@@ -117,6 +118,10 @@ function handleRoom601(gameState, context, onComplete) {
             openInquisitionUI(entity, gameState, (res) => {
                 if (res === "finish" || res === "combat_win" || res === "kill_human") {
                     gameState.flags.cleared601 = true;
+                    
+                    if (!gameState.bossHints) gameState.bossHints = [];
+                    gameState.bossHints.push("【6F 覚醒の助言】<br>「影の頭部（上段）に『Ⅶ 鐘』を鳴らせ。足元（下段）に『Ⅱ 鏡』を突きつけろ」");
+
                     onComplete();
                 } else { onComplete(); }
             }, context);
@@ -124,6 +129,7 @@ function handleRoom601(gameState, context, onComplete) {
     );
 }
 
+// ② 602号室：安楽死を囁く蜘蛛の擬態（悪魔）
 function handleRoom602(gameState, context, onComplete) {
     if (gameState.flags.cleared602) {
         showMessageDialog("【602号室】\n悪魔が霧散した跡には、ただどす黒い灰だけが残っている。", onComplete);
@@ -141,6 +147,10 @@ function handleRoom602(gameState, context, onComplete) {
             openInquisitionUI(entity, gameState, (res) => {
                 if (res === "combat_win" || res === "kill_human") {
                     gameState.flags.cleared602 = true;
+                    
+                    if (!gameState.bossHints) gameState.bossHints = [];
+                    gameState.bossHints.push("【6F 術式メモ】<br>「怠惰の影を断ち切る術式数値は6マスの合計で『25』。胸の虚無（左）には【Ⅳ 十字架】を穿て」");
+
                     showMessageDialog("【悪魔の討滅】\n射殺した悪魔の死体から、手記の切れ端が剥がれ落ちた。", () => {
                         showItemAcquiredModal("assets/images/cards/4Card.png", "『剥がれ落ちた蜘蛛の繭片』", "【術式メモ】\n「……怠惰の影を断ち切る術式数値は6マスの合計で『25』。\n奴が抱え込む胸の虚無（左）には、神への忠誠を示す【Ⅳ 十字架】を穿ち、甘美な眠りを打ち砕け……」", onComplete);
                     });
@@ -148,7 +158,11 @@ function handleRoom602(gameState, context, onComplete) {
                     gameState.player.hp = Math.max(1, gameState.player.hp - 15);
                     const demonEnemy = { name: "擬態した蜘蛛悪魔", image: "assets/images/demon/demon14.png", hp: 200, atk: 45, def: 5, weakness: [4] };
                     openCombatUI(demonEnemy, gameState, (cRes) => {
-                        if (cRes === "win") gameState.flags.cleared602 = true;
+                        if (cRes === "win") {
+                            gameState.flags.cleared602 = true;
+                            if (!gameState.bossHints) gameState.bossHints = [];
+                            gameState.bossHints.push("【6F 術式メモ】<br>「怠惰の影を断ち切る術式数値は6マスの合計で『25』。胸の虚無（左）には【Ⅳ 十字架】を穿て」");
+                        }
                         onComplete();
                     }, context);
                 } else { onComplete(); }
@@ -157,6 +171,7 @@ function handleRoom602(gameState, context, onComplete) {
     );
 }
 
+// ③ 廃棄物保管室：中ボス「蜘蛛の怪異」（銀鋏入手）
 function handleSpiderMiniBoss(gameState, context, onComplete) {
     if (gameState.flags.hasSilverShears) {
         showMessageDialog("【廃棄物保管室】\n巨大蜘蛛を討伐した部屋。散らばった糸は干からびている。", onComplete);
@@ -176,6 +191,7 @@ function handleSpiderMiniBoss(gameState, context, onComplete) {
     });
 }
 
+// ④ 蜘蛛の繭部屋：黒猫救出 ＆ ドッペルゲンガー決戦
 function handleCocoonBossRoom(gameState, context, onComplete) {
     if (gameState.flags.cleared6F) {
         showMessageDialog("【最奥の部屋】\n自らの影を乗り越えた静寂が広がっている。\n足元には頼もしい相棒（黒猫）がいる。", onComplete);
@@ -187,6 +203,15 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
         return;
     }
 
+    // ★ リトライ時のイベント短縮（すでに繭を切っている場合）
+    if (gameState.flags.isCocoonCut) {
+        showMessageDialog("【最奥の部屋】\n自由を取り戻した黒猫が、部屋の奥で牙を剥いている。\n暗闇から再び、主人公と同じ姿をした影（ドッペルゲンガー）が嘲笑を浮かべて歩み出てきた！\n\n主人公「……もうお前の言葉には惑わされない。決着をつけるぞ！」", () => {
+            startDoppelgangerPuzzle(gameState, context, onComplete);
+        });
+        return;
+    }
+
+    // 初回イベント
     showConversationDialog("assets/images/catpinchi.jpg", "【捕らわれた黒猫】\n部屋の中央。張り巡らされた巨大な蜘蛛の巣に、黒猫が絡め取られていた。\n\n物理的な拘束だけではない。このフロアに充満する『諦めの毒』に侵され、あの鋭かった金色の瞳は虚ろに濁り、動くことすら放棄しているようだ。", () => {
         showMessageDialog("主人公は『断ち切りの銀鋏』を構え、黒猫を救出しようと踏み出した。\n\n――その時。部屋の奥の暗闇から、主人公と【全く同じ姿をした男】が嘲笑を浮かべて歩み出てきた。", () => {
             playVideo("assets/images/demon/6f-doppelganger.mp4", () => {
@@ -194,55 +219,12 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
                     showMessageDialog("影の言葉が、鋭く胸をえぐる。\n（……その通りだ。俺には崇高な目的もない。立派な志望動機も持てなかった。神父が俺にスマホを託したのだって、きっとただの偶然だ）\n\n主人公の足元に蜘蛛の糸が這い上がり、身体が鉛のように重くなる。銃を構える腕が下がりかけた――", () => {
                         showConversationDialog("assets/images/catpinchi.jpg", "【黒猫】\n「……ニャァアアッ！！」\n\nその瞬間。完全に心を折られていたはずの黒猫が、主人公の危機に反応して力を振り絞り、自分を縛る蜘蛛の糸に鋭く噛みついた！\n\n金色の瞳が、主人公への絶対的な『信頼』を込めて見つめてくる。", () => {
                             showMessageDialog("（……！）\n主人公の中で、何かが弾けた。\n\n（神父が俺を選んだ理由なんて、ただの偶然でいい。）\n（俺の人生に価値があるかどうかも、今すぐ分からなくていい！）\n\n「――だが、今俺を信じて鳴いているこいつを見捨てるような……最低の逃げ方は、もうごめんだッ！！」", () => {
-                                showMessageDialog("主人公は力任せに足元の糸を引きちぎり、銀鋏で黒猫の繭を一気に切り裂いた！\n自由を取り戻した黒猫がしなやかに着地し、低く唸って影を睨みつける。\n\n主人公「……行くぞ、相棒！」", () => {
+                                showMessageDialog("主人公は力任せに足元の糸を引きちぎり、銀鋏で黒猫の繭を一気に切り裂いた！\n自由を取り戻した黒猫がしなやかに着地した。大きく深呼吸すると、覇気を取り戻したようだ。\n\n主人公「……行けるか？」\n\n黒猫は『当たり前だろ』とでも言うように軽く目配せし、低く唸って敵を睨みつける）", () => {
                                     
-                                    const puzzleConfig = {
-                                        title: "【魔方陣術式】怠惰と停滞の影（ドッペルゲンガー）",
-                                        subTitle: "6マスの合計値を『25』にし、トラウマを粉砕せよ",
-                                        bossName: "影",
-                                        slots: [
-                                            { id: "slot-tl", label: "①甘美な忘却", gridPos: "grid-area: 1 / 1;" },
-                                            { id: "slot-top", label: "②思考の停止", gridPos: "grid-area: 1 / 2;" },
-                                            { id: "slot-left", label: "③魂の空洞", gridPos: "grid-area: 2 / 1;" },
-                                            { id: "slot-right", label: "④存在の倦怠", gridPos: "grid-area: 2 / 3;" },
-                                            { id: "slot-bottom", label: "⑤泥濘の足枷", gridPos: "grid-area: 3 / 2;" },
-                                            { id: "slot-br", label: "⑥静かなる死", gridPos: "grid-area: 3 / 3;" }
-                                        ]
-                                    };
-
-                                    openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
-                                        const getCardNum = (id) => typeof slots[id] === 'number' ? slots[id] : 0;
-                                        const sum = [getCardNum("slot-tl"), getCardNum("slot-top"), getCardNum("slot-left"), getCardNum("slot-right"), getCardNum("slot-bottom"), getCardNum("slot-br")].reduce((a,b)=>a+b,0);
-                                        const isUnique = new Set([getCardNum("slot-tl"), getCardNum("slot-top"), getCardNum("slot-left"), getCardNum("slot-right"), getCardNum("slot-bottom"), getCardNum("slot-br")]).size === 6;
-
-                                        let isPerfect = (getCardNum("slot-top") === 7 && getCardNum("slot-bottom") === 2 && getCardNum("slot-left") === 4 && sum === 25 && isUnique);
-
-                                        const doppelEnemy = {
-                                            name: "ドッペルゲンガー", image: "assets/images/demon/6f-doppelganger.png", 
-                                            hp: isPerfect ? 400 : 1000, maxHp: 1000, atk: isPerfect ? 50 : 70, def: isPerfect ? 10 : 20, weakness: [4, 7], agi: 15
-                                        };
-
-                                        const startBossBattle = () => {
-                                            openCombatUI(doppelEnemy, gameState, (res) => {
-                                                if (res === "win" || res === "combat_win") {
-                                                    gameState.flags.cleared6F = true;
-                                                    gameState.flags.hasCat = true;
-                                                    gameState.flags.isCatTrapped = false;
-                                                    showMessageDialog("【ドッペルゲンガー討滅】\n砕け散った自らの影は、黒い霧となって消え去った。\n胸の中にあった鉛のような倦怠感は消え、確かな熱が宿っている。", () => {
-                                                        showMessageDialog("足元に寄ってきた黒猫が、主人公を見上げて一声短く鳴いた。\n\n主人公「さて、相棒……8Fの『御堂』を倒しに行くか」\n\n（※黒猫が真の相棒として合流！ 7階への非常階段が開通した！）", onComplete);
-                                                    });
-                                                } else { onComplete(); }
-                                            }, context);
-                                        };
-
-                                        if (isPerfect) {
-                                            showMessageDialog("【完全解呪成功！】\n魔方陣が激しく共鳴！ 過去の迷いと停滞が打ち砕かれ、影の体力を大幅削減した！", () => {
-                                                playVideo("assets/videos/magic-circle.mp4", startBossBattle);
-                                            });
-                                        } else {
-                                            showMessageDialog(`【術式解呪失敗……（合計: ${sum}）】\n迷いを断ち切れず、完全体となったドッペルゲンガーが襲いかかってくる！`, startBossBattle);
-                                        }
-                                    });
+                                    // ★ ここで「繭を斬った」フラグを保存（負けてもここから再開できる）
+                                    gameState.flags.isCocoonCut = true;
+                                    
+                                    startDoppelgangerPuzzle(gameState, context, onComplete);
                                 });
                             });
                         });
@@ -250,5 +232,58 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
                 });
             });
         });
+    });
+}
+
+// ボス戦の魔方陣 ＆ 戦闘呼び出し（リトライ時にも共通で使うため分離）
+function startDoppelgangerPuzzle(gameState, context, onComplete) {
+    const puzzleConfig = {
+        title: "【魔方陣術式】怠惰と停滞の影（ドッペルゲンガー）",
+        subTitle: "6マスの合計値を『25』にし、トラウマを粉砕せよ",
+        bossName: "影",
+        slots: [
+            { id: "slot-tl", label: "①甘美な忘却", gridPos: "grid-area: 1 / 1;" },
+            { id: "slot-top", label: "②思考の停止", gridPos: "grid-area: 1 / 2;" },
+            { id: "slot-left", label: "③魂の空洞", gridPos: "grid-area: 2 / 1;" },
+            { id: "slot-right", label: "④存在の倦怠", gridPos: "grid-area: 2 / 3;" },
+            { id: "slot-bottom", label: "⑤泥濘の足枷", gridPos: "grid-area: 3 / 2;" },
+            { id: "slot-br", label: "⑥静かなる死", gridPos: "grid-area: 3 / 3;" }
+        ]
+    };
+
+    openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
+        const getCardNum = (id) => typeof slots[id] === 'number' ? slots[id] : 0;
+        const sum = [getCardNum("slot-tl"), getCardNum("slot-top"), getCardNum("slot-left"), getCardNum("slot-right"), getCardNum("slot-bottom"), getCardNum("slot-br")].reduce((a,b)=>a+b,0);
+        const isUnique = new Set([getCardNum("slot-tl"), getCardNum("slot-top"), getCardNum("slot-left"), getCardNum("slot-right"), getCardNum("slot-bottom"), getCardNum("slot-br")]).size === 6;
+
+        let isPerfect = (getCardNum("slot-top") === 7 && getCardNum("slot-bottom") === 2 && getCardNum("slot-left") === 4 && sum === 25 && isUnique);
+
+        const doppelEnemy = {
+            name: "ドッペルゲンガー", image: "assets/images/demon/6f-doppelganger.png", 
+            hp: isPerfect ? 400 : 1000, maxHp: 1000, atk: isPerfect ? 50 : 70, def: isPerfect ? 10 : 20, weakness: [4, 7], agi: 15
+        };
+
+        const startBossBattle = () => {
+            openCombatUI(doppelEnemy, gameState, (res) => {
+                if (res === "win" || res === "combat_win") {
+                    gameState.flags.cleared6F = true;
+                    // ★ 猫の合流を確定
+                    gameState.flags.hasCat = true;
+                    gameState.flags.isCatTrapped = false;
+                    
+                    showMessageDialog("【ドッペルゲンガー討滅】\n砕け散った自らの影は、黒い霧となって消え去った。\n胸の中にあった鉛のような倦怠感は消え、確かな熱が宿っている。", () => {
+                        showMessageDialog("足元に寄ってきた黒猫が、主人公を見上げて一声短く鳴いた。\n\n主人公「さて、相棒……8Fの『御堂』を倒しに行くか」\n\n（※黒猫が真の相棒として合流！ 7階への非常階段が開通した！）", onComplete);
+                    });
+                } else { onComplete(); }
+            }, context);
+        };
+
+        if (isPerfect) {
+            showMessageDialog("【完全解呪成功！】\n魔方陣が激しく共鳴！ 過去の迷いと停滞が打ち砕かれ、影の体力を大幅削減した！", () => {
+                playVideo("assets/videos/magic-circle.mp4", startBossBattle);
+            });
+        } else {
+            showMessageDialog(`【術式解呪失敗……（合計: ${sum}）】\n迷いを断ち切れず、完全体となったドッペルゲンガーが襲いかかってくる！`, startBossBattle);
+        }
     });
 }
