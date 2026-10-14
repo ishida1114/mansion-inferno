@@ -1,4 +1,4 @@
-// main.js - 5F正式接続・3F階段着地修正・デバッグ連動 完全版
+// main.js - 6F正式接続・デバッグ連動 完全版
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -7,6 +7,7 @@ import { map2F, playerStart2F, handleEvent2F, check2FRandomEncounter } from './m
 import { map3F, playerStart3F, handleEvent3F, check3FRandomEncounter } from './maps/map3F.js';
 import { map4F, playerStart4F, handleEvent4F, check4FRandomEncounter } from './maps/map4F.js';
 import { map5F, playerStart5F, handleEvent5F, check5FRandomEncounter } from './maps/map5F.js';
+import { map6F, playerStart6F, handleEvent6F, check6FRandomEncounter } from './maps/map6F.js';
 import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI, playVideo } from './ui.js';
 import { initDebug } from './debug.js';
 
@@ -180,6 +181,8 @@ function interactFrontCell() {
     eventObj = handleEvent4F(cellType, gameState, context);
   } else if (gameState.currentFloor === 5) {
     eventObj = handleEvent5F(cellType, gameState, context);
+  } else if (gameState.currentFloor === 6) {
+    eventObj = handleEvent6F(cellType, gameState, context);
   }
 
   if (eventObj && typeof eventObj.run === 'function') {
@@ -194,21 +197,40 @@ function interactFrontCell() {
 function changeFloor(floor) {
   gameState.currentFloor = floor;
 
-  if (floor === 6) {
-    showMessageDialog("【6階への扉】\n重い扉の向こうから邪悪な気配が漂っている……（※開発中）", () => {
+  if (floor === 7) {
+    showMessageDialog("【7階への扉】\n最上階に近づくにつれ、異常なまでの悪寒が走る……（※開発中）", () => {
       redraw();
     });
-  } 
+  }
+  else if (floor === 6) {
+    gameState.currentMap = map6F;
+    if (gameState.lastTransitMethod === 'stair') {
+      gameState.player.x = 5;
+      gameState.player.y = 8;
+      gameState.player.dir = 0; // 北向き
+    } else {
+      gameState.player.x = playerStart6F.x;
+      gameState.player.y = playerStart6F.y;
+      gameState.player.dir = playerStart6F.dir;
+    }
+    
+    showMessageDialog("【6階 非常階段前】\n6階へ到達した。冷たい蜘蛛の糸がまとわりつく……", () => {
+      redraw();
+    });
+  }
   else if (floor === 5) {
     gameState.currentMap = map5F;
     
-    // 4Fから階段で上がってきた場合：北側の階段手前 (X:7, Y:1, 南向き)
-    if (gameState.lastTransitMethod === 'stair') {
+    if (gameState.lastTransitMethod === 'stair_down') {
+      gameState.player.x = 7;
+      gameState.player.y = 1;
+      gameState.player.dir = 2;
+    }
+    else if (gameState.lastTransitMethod === 'stair') {
       gameState.player.x = 7;
       gameState.player.y = 1;
       gameState.player.dir = 2;
     } 
-    // エレベーターで上がってきた場合：エレベーター前 (X:6, Y:1, 南向き)
     else if (gameState.lastTransitMethod === 'elevator') {
       gameState.player.x = 6;
       gameState.player.y = 1;
@@ -220,13 +242,11 @@ function changeFloor(floor) {
       gameState.player.dir = playerStart5F.dir;
     }
 
-    // 5Fに入った瞬間の自動イベント
     if (!gameState.hasSeen5FIntro) {
       gameState.hasSeen5FIntro = true;
       showMessageDialog(
         "【館内放送・ドクター蛭沼の声】\n「失敗だな、リナからもらった実験体、とても進化とは言えない、醜い、廃棄しなくては……」",
         () => {
-          // ワンクッション挟む
           showMessageDialog("【使い魔の気配が強まった！！急速に存在が実体化する兆しを感じる】", () => {
             const prevBg = document.body.style.backgroundColor;
             document.body.style.backgroundColor = "#141418";
@@ -361,11 +381,12 @@ function toggleDebugUI() {
         階層: ${gameState.currentFloor}F | 座標: (X:${p.x}, Y:${p.y}) | 向き: ${p.dir}<br>
         Lv: ${p.level} | HP: ${p.hp}/${p.maxHp} | 💰${p.money} | Sin: ${p.sin}
         <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
-            <button class="debug-warp-btn" data-floor="1" style="background:#333; color:#fff; border:1px solid #777; padding:4px 8px; cursor:pointer; font-size:11px;">1Fワープ</button>
-            <button class="debug-warp-btn" data-floor="2" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">2Fワープ(Lv5)</button>
-            <button class="debug-warp-btn" data-floor="3" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">3Fワープ(Lv10)</button>
-            <button class="debug-warp-btn" data-floor="4" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">4Fテスト開始(3F前)</button>
-            <button class="debug-warp-btn" data-floor="5" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">5Fワープ(Lv20)</button>
+            <button class="debug-warp-btn" data-floor="1" style="background:#333; color:#fff; border:1px solid #777; padding:4px 8px; cursor:pointer; font-size:11px;">1F</button>
+            <button class="debug-warp-btn" data-floor="2" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">2F</button>
+            <button class="debug-warp-btn" data-floor="3" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">3F</button>
+            <button class="debug-warp-btn" data-floor="4" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">4F</button>
+            <button class="debug-warp-btn" data-floor="5" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">5F</button>
+            <button class="debug-warp-btn" data-floor="6" style="background:#004400; color:#00ff66; border:1px solid #00ff66; padding:4px 8px; cursor:pointer; font-size:11px;">6F直行(Lv25)</button>
         </div>
       `;
       overlay.classList.remove('hidden');
@@ -435,15 +456,8 @@ function debugJumpToFloor(floor) {
     gameState.hasElevatorKey = true;
     gameState.flags.cleared2F = true;
     gameState.flags.cleared3F = true;
-    
-    gameState.flags.hasBrandBag = false;   
-    gameState.flags.hasChampagne = false;  
-    gameState.flags.defeatedShineiA = false;
-    gameState.flags.defeatedShineiB = false;
-    gameState.flags.cleared4F = false;
-
-    gameState.currentFloor = 3;
-    gameState.currentMap = map3F;
+    gameState.currentFloor = 4;
+    gameState.currentMap = map4F;
     gameState.player.x = 5;
     gameState.player.y = 1;
     gameState.player.dir = 0;
@@ -460,12 +474,34 @@ function debugJumpToFloor(floor) {
     gameState.flags.cleared3F = true;
     gameState.flags.cleared4F = true;
     gameState.flags.cleared5F = false;
-
     gameState.currentFloor = 5;
     gameState.currentMap = map5F;
     gameState.player.x = playerStart5F.x;
     gameState.player.y = playerStart5F.y;
     gameState.player.dir = playerStart5F.dir;
+  } else if (floor === 6) {
+    gameState.player.level = 25;
+    gameState.player.maxHp = 200;
+    gameState.player.hp = 200;
+    gameState.player.def = 10;
+    gameState.player.agi = 18;
+    gameState.player.money = 12000;
+    gameState.hasKey2F = true;
+    gameState.hasElevatorKey = true;
+    gameState.flags.cleared2F = true;
+    gameState.flags.cleared3F = true;
+    gameState.flags.cleared4F = true;
+    gameState.flags.cleared5F = true;
+    gameState.flags.cleared6F = false;
+    // 6階用に黒猫フラグだけはfalse（救出前）に設定
+    gameState.flags.hasCat = false; 
+    gameState.flags.hasSilverShears = false;
+
+    gameState.currentFloor = 6;
+    gameState.currentMap = map6F;
+    gameState.player.x = playerStart6F.x;
+    gameState.player.y = playerStart6F.y;
+    gameState.player.dir = playerStart6F.dir;
   }
 
   gameState.updateEquippedCards();
@@ -518,6 +554,17 @@ function checkEncounterAfterMove() {
       check5FRandomEncounter(gameState, (enemy) => {
         isProcessingEvent = true;
         openCombatUI(enemy, gameState, handleBattleResult, { changeFloor });
+      });
+    }
+  } else if (gameState.currentFloor === 6) {
+    if (typeof check6FRandomEncounter === 'function') {
+      check6FRandomEncounter(gameState, (enemy) => {
+        if (enemy) { 
+          isProcessingEvent = true;
+          openCombatUI(enemy, gameState, handleBattleResult, { changeFloor });
+        } else {
+          redraw();
+        }
       });
     }
   }

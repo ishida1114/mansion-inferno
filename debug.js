@@ -1,4 +1,4 @@
-// debug.js - 開発テスト用デバッグコントローラー（全機能保持＆ステータス完全連動版）
+// debug.js - 開発テスト用デバッグコントローラー（全機能保持＆ステータス・フラグ完全自動セット版）
 
 export function initDebug(gameState, context) {
     // F2キーでデバッグメニューの開閉
@@ -33,7 +33,7 @@ function toggleDebugModal(gameState, context) {
     `;
 
     // フロアワープボタンHTML生成
-    const warpButtonsHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(floor => `
+    const warpButtonsHTML = [1, 2, 3, 4, 5, 6, 7].map(floor => `
         <button class="debug-btn-warp" data-floor="${floor}" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">
             ${floor}F
         </button>
@@ -46,7 +46,7 @@ function toggleDebugModal(gameState, context) {
         </div>
         
         <div style="margin-bottom: 12px;">
-            <div style="font-weight:bold; margin-bottom:4px; color:#aaffaa;">■ フロアワープ</div>
+            <div style="font-weight:bold; margin-bottom:4px; color:#aaffaa;">■ フロア直行ワープ（フラグ全セット済）</div>
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
                 ${warpButtonsHTML}
             </div>
@@ -56,7 +56,7 @@ function toggleDebugModal(gameState, context) {
             <div style="font-weight:bold; margin-bottom:4px; color:#aaffaa;">■ プレイヤー強化・育成</div>
             <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
                 <button id="debug-lv15" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">Lv.15にする (4F想定)</button>
-                <button id="debug-lv20" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">Lv.20にする (5F想定)</button>
+                <button id="debug-lv25" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">Lv.25にする (6F想定)</button>
                 <button id="debug-heal" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">HP全回復</button>
                 <button id="debug-money" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">所持金 +10,000</button>
             </div>
@@ -65,7 +65,7 @@ function toggleDebugModal(gameState, context) {
         <div>
             <div style="font-weight:bold; margin-bottom:4px; color:#aaffaa;">■ フラグ・カード</div>
             <div style="display:grid; grid-template-columns: 1fr; gap: 6px;">
-                <button id="debug-give-all-cards" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">全ラミナカード (1〜9) 付与</button>
+                <button id="debug-give-all-cards" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">全ラミナカード (1〜9) ＆銃 付与</button>
                 <button id="debug-give-keys" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">主要な鍵 (2F鍵/EV鍵) 付与</button>
             </div>
         </div>
@@ -81,9 +81,14 @@ function toggleDebugModal(gameState, context) {
     panel.querySelectorAll(".debug-btn-warp").forEach(btn => {
         btn.onclick = () => {
             const f = parseInt(btn.dataset.floor, 10);
+            
+            // ワープ前に必要なフラグ・カード・ステータスをフロアに合わせて自動設定する
+            setupFloorDebugState(f, gameState);
+
             if (context && context.changeFloor) {
                 context.changeFloor(f);
                 overlay.remove();
+                if (context.redraw) context.redraw();
             }
         };
     });
@@ -92,14 +97,14 @@ function toggleDebugModal(gameState, context) {
     const applyLevel = (targetLv) => {
         if (gameState.player) {
             gameState.player.level = targetLv;
-            gameState.player.maxHp = 100 + (targetLv - 1) * 15;
+            // 基礎ステータスの再計算
+            gameState.player.maxHp = 20 + (targetLv - 1) * 7; 
             gameState.player.hp = gameState.player.maxHp;
-            gameState.player.atk = 10 + (targetLv - 1) * 3;
-            gameState.player.agi = 5 + Math.floor((targetLv - 1) * 1.5);
+            gameState.player.atk = 5 + (targetLv - 1) * 2;
+            gameState.player.def = Math.floor((targetLv - 1) * 0.8);
+            gameState.player.agi = 5 + Math.floor((targetLv - 1) * 0.5);
         }
-        // 互換性保持
-        gameState.playerLevel = targetLv;
-        if (window.renderMap) window.renderMap();
+        if (context && context.redraw) context.redraw();
     };
 
     document.getElementById("debug-lv15").onclick = () => {
@@ -107,16 +112,16 @@ function toggleDebugModal(gameState, context) {
         alert(`プレイヤーLvを 15 に設定しました（HP:${gameState.player.maxHp} に上昇・全回復）`);
     };
 
-    document.getElementById("debug-lv20").onclick = () => {
-        applyLevel(20);
-        alert(`プレイヤーLvを 20 に設定しました（HP:${gameState.player.maxHp} に上昇・全回復）`);
+    document.getElementById("debug-lv25").onclick = () => {
+        applyLevel(25);
+        alert(`プレイヤーLvを 25 に設定しました（HP:${gameState.player.maxHp} に上昇・全回復）`);
     };
 
     document.getElementById("debug-heal").onclick = () => {
         if (gameState.player) {
             gameState.player.hp = gameState.player.maxHp || 100;
         }
-        gameState.playerHp = gameState.playerMaxHp || 100;
+        if (context && context.redraw) context.redraw();
         alert("HPを全回復しました");
     };
 
@@ -124,17 +129,21 @@ function toggleDebugModal(gameState, context) {
         if (gameState.player) {
             gameState.player.money = (gameState.player.money || 0) + 10000;
         }
-        gameState.money = (gameState.money || 0) + 10000;
+        if (context && context.redraw) context.redraw();
         alert("所持金を +10,000 追加しました");
     };
 
     document.getElementById("debug-give-all-cards").onclick = () => {
         const fullCards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
         gameState.cards = fullCards;
+        gameState.hasExorcistInherited = true;
+        gameState.hasModelGun = true;
+        if (gameState.player) gameState.player.hasModelGun = true;
         if (!gameState.equippedCards || gameState.equippedCards.length === 0) {
             gameState.equippedCards = [1, 2, 3];
         }
-        alert("1〜9番の全ラミナカードを所持枠に追加しました");
+        if (gameState.updateEquippedCards) gameState.updateEquippedCards();
+        alert("全ラミナカード ＆ モデルガン ＆ スマホアプリ を付与しました");
     };
 
     document.getElementById("debug-give-keys").onclick = () => {
@@ -145,4 +154,82 @@ function toggleDebugModal(gameState, context) {
         gameState.flags.hasElevatorKey = true;
         alert("2F非常階段の鍵 ＆ エレベーターキー を付与しました");
     };
+}
+
+// フロア直行時の自動フラグ・ステータスセットアップ関数
+function setupFloorDebugState(floor, gameState) {
+    if (!gameState.flags) gameState.flags = {};
+
+    // 基本装備の自動付与（アプリ、銃、全カード）
+    gameState.hasExorcistInherited = true;
+    gameState.hasModelGun = true;
+    if (gameState.player) gameState.player.hasModelGun = true;
+    gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
+    if (!gameState.equippedCards || gameState.equippedCards.length === 0) {
+        gameState.equippedCards = [1, 2, 3]; // デフォルト装填
+    }
+    
+    // ステータスとフラグのフロア別進行度設定
+    if (floor >= 2) {
+        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 5);
+        gameState.hasKey2F = true;
+    }
+    if (floor >= 3) {
+        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 10);
+        gameState.hasElevatorKey = true;
+        gameState.flags.cleared2F = true;
+        gameState.flags.hasSanadaRoomKey = true;
+    }
+    if (floor >= 4) {
+        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 15);
+        gameState.flags.cleared3F = true;
+        if (floor === 4) { // 4Fに着地した場合は4Fのイベントを未クリア状態にする
+            gameState.flags.cleared4F = false;
+            gameState.flags.hasBrandBag = false;   
+            gameState.flags.hasChampagne = false;  
+            gameState.flags.defeatedShineiA = false;
+            gameState.flags.defeatedShineiB = false;
+        }
+    }
+    if (floor >= 5) {
+        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 20);
+        gameState.flags.cleared4F = true;
+        if (floor === 5) { // 5Fに着地した場合は5Fのイベントを未クリア状態にする
+            gameState.flags.cleared5F = false;
+            gameState.isHirunumaDefeated = false;
+            gameState.flags.rabbitChaseStep = 0;
+            gameState.hasKeyLab5F = false;
+        }
+    }
+    if (floor >= 6) {
+        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 25);
+        gameState.flags.cleared5F = true;
+        gameState.isHirunumaDefeated = true;
+        if (floor === 6) { // 6Fに着地した場合は6Fのイベントを未クリア状態にする
+            gameState.flags.cleared6F = false;
+            gameState.flags.hasCat = false; // 黒猫はまだ救出していない状態
+            gameState.flags.hasSilverShears = false;
+            gameState.flags.cleared601 = false;
+            gameState.flags.cleared602 = false;
+        }
+    }
+    if (floor >= 7) {
+        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 30);
+        gameState.flags.cleared6F = true;
+        gameState.flags.hasCat = true; // 6Fクリア済みなので黒猫は連れている
+    }
+    
+    // 現在のレベルに基づいてステータス（HP/攻撃力等）を再計算
+    if (gameState.player) {
+        const targetLv = gameState.player.level;
+        gameState.player.maxHp = 20 + (targetLv - 1) * 7;
+        gameState.player.hp = gameState.player.maxHp;
+        gameState.player.atk = 5 + (targetLv - 1) * 2;
+        gameState.player.def = Math.floor((targetLv - 1) * 0.8);
+        gameState.player.agi = 5 + Math.floor((targetLv - 1) * 0.5);
+    }
+    
+    if (gameState.updateEquippedCards) {
+        gameState.updateEquippedCards();
+    }
 }
