@@ -1,261 +1,407 @@
-// maps/map7F.js - 7F「黄金の狂宴（VIPラウンジ）」＆ マダム・白鳥 決戦
+// maps/map7F.js - 7F「VIPラウンジ」完全版
+// 直線レッドカーペット・黄金剥製ボスラッシュ・闇カジノ・マダム白鳥決戦
 
 import { 
-    showMessageDialog, showConversationDialog, showItemAcquiredModal, 
-    playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI, openInquisitionUI 
+    showMessageDialog, showConversationDialog, 
+    playVideo, openCombatUI, playFloorTransition 
 } from '../ui.js';
 
-// 6Fからの階段を上がったスタート位置
-export const playerStart7F = { x: 5, y: 8, dir: 0 };
+export const playerStart7F = { x: 3, y: 8, dir: 0 };
 
-/*
-  1: 壁, 0: 通路(レッドカーペット), 2: 扉
-  4: 6Fへの下り階段 (5, 9)
-  5: 8Fへの上り階段 (5, 0)
-  
-  真っ直ぐなレッドカーペットの通路と、左右のVIPルームという構造
-*/
+// 1: 壁 / 0: 直線レッドカーペット通路
+// 4: 6Fへの階段 (3, 9) / 5: 8Fへの大階段 (3, 0)
+// 8: 白鳥のペントハウス扉 (3, 1)
+// 2: 各個室の扉（ボスラッシュ・カジノ・ラウンジ）
 export const map7F = [
-    [1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1], // y=0 (5: 8Fへの階段)
-    [1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1], // y=1 (2: ボス部屋の扉)
-    [1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1], // y=2
-    [1, 1, 2, 0, 0, 0, 0, 0, 2, 1, 1], // y=3 (左: 703 宝物庫 / 右: 704 鑑定室)
-    [1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1], // y=4
-    [1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1], // y=5
-    [1, 1, 2, 0, 0, 0, 0, 0, 2, 1, 1], // y=6 (左: 701 浪費の間 / 右: 702 スロットルーム)
-    [1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1], // y=7
-    [1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1], // y=8 (開始地点: 5,8)
-    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], // y=9 (4: 6Fへの階段)
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  // y=10
+    [1, 1, 1, 5, 1, 1, 1], // y=0 (5: 8Fへの大階段)
+    [1, 1, 1, 8, 1, 1, 1], // y=1 (8: 白鳥のペントハウス扉)
+    [1, 1, 1, 0, 1, 1, 1], // y=2
+    [1, 1, 2, 0, 2, 1, 1], // y=3 (西: 705 カジノ / 東: 706 シャンパンラウンジ)
+    [1, 1, 1, 0, 1, 1, 1], // y=4
+    [1, 1, 2, 0, 2, 1, 1], // y=5 (西: 703 剥製・里奈 / 東: 704 剥製・蛭沼)
+    [1, 1, 1, 0, 1, 1, 1], // y=6
+    [1, 1, 2, 0, 2, 1, 1], // y=7 (西: 701 剥製・影山 / 東: 702 剥製・真田)
+    [1, 1, 1, 0, 1, 1, 1], // y=8 (開始地点: 3, 8)
+    [1, 1, 1, 4, 1, 1, 1], // y=9 (4: 6Fへの階段)
+    [1, 1, 1, 1, 1, 1, 1]  // y=10
 ];
 
-export function check7FRandomEncounter(gameState, onEncounter) {
-    if (gameState.currentFloor !== 7) return;
-    
-    // 初回進入時の演出
-    if (!gameState.flags) gameState.flags = {};
-    if (!gameState.flags.seen7FIntro) {
-        gameState.flags.seen7FIntro = true;
-        showMessageDialog("【7階：VIPラウンジ】\n扉を開けた瞬間、むせ返るような高級香水の匂いが漂ってきた。\nコンクリート剥き出しの廃墟だったはずのマンションが、眩い白大理石と真紅のカーペットに彩られている。", () => {
-            showMessageDialog("「……なんだこの階は。ボロボロのコンクリート壁の上に、無理やり大理石のハリボテを貼り付けたのか？」\n\nよく見れば、黄金の装飾の端は剥がれ、みっともない廃墟の地肌が見え隠れしている。", () => {
-                showMessageDialog("壁の向こうから、女の高笑いが響いてきた。\n\n『あぁ、気分がいいわ！ 全てはお金、お金さえあれば誰も私を見下せない！』\n\n主人公「……悪趣味極まりないな。さっさと最奥にいる『強欲の主』を叩き潰して、上へ行こう」", () => {
-                    if (onEncounter) onEncounter(null);
-                });
-            });
-        });
-        return;
+const TAXIDERMY_CONFIG = {
+    kageyama: {
+        roomName: "701号室【黄金の剥製：影山】",
+        flag: "clearedTaxidermyKageyama",
+        video: "assets/images/demon/2f-kageyama.mp4",
+        introText: "【701号室：黄金の展示室】\n部屋の中央に、純金でコーティングされた2Fのボス・影山が鎖で繋がれている……！\nマダム・白鳥の魔力で操られ、獰猛な唸り声をあげて襲いかかってきた！",
+        enemy: {
+            name: "黄金の剥製・影山",
+            image: "assets/images/demon/demon17.png", // 予備画像兼用
+            hp: 110,
+            atk: 18,
+            def: 2,
+            weakness: [2, 5],
+            actions: ["は黄金の拳を振り下ろした！", "が鎖を引きちぎらんばかりに突進してくる！", "の濁った瞳から金粉がこぼれ落ちる"]
+        },
+        rewardMoney: 1500
+    },
+    sanada: {
+        roomName: "702号室【黄金の剥製：真田】",
+        flag: "clearedTaxidermySanada",
+        video: "assets/images/demon/3f-sanada.mp4",
+        introText: "【702号室：黄金の展示室】\n3Fで倒したはずの真田が、全身に宝石を埋め込まれた異様な剥製として鎮座している……！\n白鳥の強欲の呪いによって蘇り、怨嗟の声を上げながら飛びかかってきた！",
+        enemy: {
+            name: "黄金の剥製・真田",
+            image: "assets/images/demon/demon16.png",
+            hp: 140,
+            atk: 20,
+            def: 3,
+            weakness: [3, 8],
+            actions: ["の鋭利な爪が空を裂く！", "は宝石の光を乱反射させて目を眩ませてきた！", "の金縛りの怨念が体を締め付ける！"]
+        },
+        rewardMoney: 2000
+    },
+    rina: {
+        roomName: "703号室【黄金の剥製：里奈】",
+        flag: "clearedTaxidermyRina",
+        video: "assets/images/demon/4f-rina.mp4",
+        introText: "【703号室：黄金の展示室】\n4Fの里奈が、悪趣味な金のドレスを着せられ愛玩動物のように飾られている……！\n「アハハ……お金……綺麗なドレス……」\n虚ろな笑みを浮かべ、殺意に満ちた魔力弾を放ってきた！",
+        enemy: {
+            name: "黄金の剥製・里奈",
+            image: "assets/images/demon/7f-shiratori.png",
+            hp: 160,
+            atk: 22,
+            def: 2,
+            weakness: [1, 6],
+            actions: ["は冷酷な眼差しで魔弾を連射した！", "の金のドレスが禍々しい魔気を放つ！", "の甲高い笑い声が精神を蝕む！"]
+        },
+        rewardMoney: 2500
+    },
+    hirunuma: {
+        roomName: "704号室【黄金の剥製：蛭沼】",
+        flag: "clearedTaxidermyHirunuma",
+        video: "assets/images/demon/5f-hirunuma.mp4",
+        introText: "【704号室：黄金の展示室】\n5Fの巨漢・蛭沼が、分厚い純金の鎧を皮膚に直接ボルトで打ち込まれて固定されている……！\n知性を完全に失った怪物が、白鳥の命令に従い侵入者を叩き潰そうと迫り来る！",
+        enemy: {
+            name: "黄金の剥製・蛭沼",
+            image: "assets/images/demon/demon16.png",
+            hp: 200,
+            atk: 25,
+            def: 4,
+            weakness: [4, 7],
+            actions: ["の重厚な黄金の腕が薙ぎ払われる！", "の凄まじい地響きが部屋を揺るがす！", "は暴走し、周囲の壁を粉砕しながら突進してきた！"]
+        },
+        rewardMoney: 3000
     }
-
-    // 15%の確率で強欲をテーマにしたエンカウント
-    if (Math.random() < 0.15) {
-        const demonTypes = [
-            { id: 'DEVIL16_7F', name: '浪費の亡者', image: 'assets/images/demon/demon13.png', hp: 400, atk: 65, def: 15, weakness: [1], agi: 18 },
-            { id: 'DEVIL17_7F', name: '黄金の番犬', image: 'assets/images/demon/demon14.jpg', hp: 350, atk: 80, def: 10, weakness: [8], agi: 25 },
-            { id: 'DEVIL18_7F', name: '鑑定士の悪霊', image: 'assets/images/demon/demon15.png', hp: 450, atk: 55, def: 20, weakness: [5], agi: 15 }
-        ];
-        const chosenEnemy = demonTypes[Math.floor(Math.random() * demonTypes.length)];
-        if (onEncounter) onEncounter({ ...chosenEnemy });
-    }
-}
+};
 
 export function handleEvent7F(targetCell, gameState, context) {
-    if (!gameState.flags) gameState.flags = {};
+    const px = gameState.player.x;
+    const py = gameState.player.y;
+    const dir = gameState.player.dir;
+    const dx = [0, 1, 0, -1];
+    const dy = [-1, 0, 1, 0];
+    const frontX = px + dx[dir];
+    const frontY = py + dy[dir];
 
+    // 4: 6Fへの階段
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
-                showMessageDialog("【非常階段】\n6階へ降りますか？", () => {
-                    gameState.lastTransitMethod = 'stair_down';
-                    playFloorTransition(6, () => { context.changeFloor(6); onComplete(); });
+                gameState.lastTransitMethod = 'stairs';
+                playFloorTransition(6, () => {
+                    context.changeFloor(6);
+                    onComplete();
                 });
             }
         };
     }
 
+    // 5: 8Fへの大階段
     if (targetCell === 5) {
-        if (!gameState.flags.cleared7F) {
+        if (!gameState.flags || !gameState.flags.cleared7F) {
             return {
-                run: (onComplete) => showMessageDialog("【非常階段の扉】\n純金でコーティングされた巨大な南京錠がかかっている。\nフロアの主（マダム・白鳥）を倒さなければ開かないようだ。", onComplete)
+                run: (onComplete) => showMessageDialog("【8Fへの大階段】\n黄金の魔力で堅く閉ざされている。マダム・白鳥を討伐しないと進めない。", onComplete)
             };
         } else {
             return {
                 run: (onComplete) => {
-                    showMessageDialog("【非常階段】\n8階（最上階）へ昇りますか？", () => {
-                        gameState.lastTransitMethod = 'stair';
-                        playFloorTransition(8, () => { context.changeFloor(8); onComplete(); });
+                    gameState.lastTransitMethod = 'stairs';
+                    playFloorTransition(8, () => {
+                        context.changeFloor(8);
+                        onComplete();
                     });
                 }
             };
         }
     }
 
-    if (targetCell === 2) {
-        const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
-        const vec = dirVectors[gameState.player.dir];
-        const frontX = gameState.player.x + vec.x;
-        const frontY = gameState.player.y + vec.y;
+    // 8: マダム・白鳥のペントハウス扉
+    if (targetCell === 8) {
+        return {
+            run: (onComplete) => handleBossPenthouse(gameState, context, onComplete)
+        };
+    }
 
-        if (frontX === 2 && frontY === 6) return { run: (onComplete) => handleRoom701(gameState, context, onComplete) };
-        if (frontX === 8 && frontY === 6) return { run: (onComplete) => handleRoom702(gameState, context, onComplete) };
-        if (frontX === 2 && frontY === 3) return { run: (onComplete) => handleRoom703(gameState, context, onComplete) };
-        if (frontX === 8 && frontY === 3) return { run: (onComplete) => handleRoom704(gameState, context, onComplete) };
-        if (frontX === 5 && frontY === 1) return { run: (onComplete) => handleBossRoom7F(gameState, context, onComplete) };
+    // 2: 各個室の扉（ボスラッシュ・カジノ・ラウンジ）
+    if (targetCell === 2) {
+        if (frontX === 2 && frontY === 7) {
+            return { run: (onComplete) => handleTaxidermyRoom(gameState, context, "kageyama", onComplete) };
+        }
+        if (frontX === 4 && frontY === 7) {
+            return { run: (onComplete) => handleTaxidermyRoom(gameState, context, "sanada", onComplete) };
+        }
+        if (frontX === 2 && frontY === 5) {
+            return { run: (onComplete) => handleTaxidermyRoom(gameState, context, "rina", onComplete) };
+        }
+        if (frontX === 4 && frontY === 5) {
+            return { run: (onComplete) => handleTaxidermyRoom(gameState, context, "hirunuma", onComplete) };
+        }
+        if (frontX === 2 && frontY === 3) {
+            return { run: (onComplete) => openCasinoUI(gameState, onComplete) };
+        }
+        if (frontX === 4 && frontY === 3) {
+            return { run: (onComplete) => handleLoungeRest(gameState, onComplete) };
+        }
     }
 
     return null;
 }
 
-// ----------------------------------------------------
-// 各VIPルームのイベント
-// ----------------------------------------------------
+// 剥製展示室（ボスラッシュ）
+function handleTaxidermyRoom(gameState, context, bossKey, onComplete) {
+    if (!gameState.flags) gameState.flags = {};
+    const cfg = TAXIDERMY_CONFIG[bossKey];
 
-function handleRoom701(gameState, context, onComplete) {
-    if (gameState.flags.cleared701) {
-        showMessageDialog("【701：VIP客室】\n大量の高級ブランド品の空箱が散乱している。", onComplete);
+    if (gameState.flags[cfg.flag]) {
+        showMessageDialog(`【${cfg.roomName}】\n剥製は砕け散り、静まり返っている。ここにはもう用はない。`, onComplete);
         return;
     }
 
-    showConversationDialog("assets/images/human1.png", "【扉の前の悪霊】\n「おっと、この先はVIP専用だ。通るなら『入場料』として 300 💰 か、お前の『血（HP50）』を支払え」\n\n主人公（悪魔に通行料を払うつもりはないが、強行突破するか……？）", () => {
-        const entity = {
-            type: "demon", name: "強欲なドアマン", faceImage: "assets/images/human1.png",
-            realImage: "assets/images/demon/demon13.png", weakness: 1
-        };
-        openInquisitionUI(entity, gameState, (res) => {
-            if (res === "combat_win" || res === "kill_human") {
-                gameState.flags.cleared701 = true;
-                if (!gameState.bossHints) gameState.bossHints = [];
-                gameState.bossHints.push("【7F 術式メモ・壱】<br>「マダムの強欲を打ち砕く魔方陣の合計値は『30』。<br>頂点（①）には、全てを平らげる【Ⅷ 暴食】のカードを置け」");
-                showMessageDialog("【悪魔の討滅】\n倒れた悪霊の懐から、術式の手記を見つけた。\n（※悪魔手記に記録されました）", onComplete);
-            } else { onComplete(); }
-        }, context);
+    playVideo(cfg.video, () => {
+        showMessageDialog(cfg.introText, () => {
+            openCombatUI(cfg.enemy, gameState, (res) => {
+                if (res === "win") {
+                    gameState.flags[cfg.flag] = true;
+                    gameState.player.money += cfg.rewardMoney;
+                    
+                    const clearedCount = ["clearedTaxidermyKageyama", "clearedTaxidermySanada", "clearedTaxidermyRina", "clearedTaxidermyHirunuma"].filter(k => gameState.flags[k]).length;
+                    
+                    let unlockMsg = `【撃破成功！】\n${cfg.enemy.name} の呪縛を解き、粉砕した！\n剥製の中から宝石と金貨がこぼれ落ちる……（💰${cfg.rewardMoney} 獲得！）`;
+                    if (clearedCount >= 4) {
+                        unlockMsg += `\n\n【展示室完全制覇！】\n全ての剥製を破壊した！ 廊下の最奥、マダム・白鳥のペントハウスの封印扉が開錠された！`;
+                    } else {
+                        unlockMsg += `\n\n（ペントハウスの封印解除まで あと ${4 - clearedCount} 体）`;
+                    }
+                    showMessageDialog(unlockMsg, onComplete);
+                } else {
+                    onComplete();
+                }
+            }, context);
+        });
     });
 }
 
-function handleRoom702(gameState, context, onComplete) {
-    if (gameState.flags.cleared702) {
-        showMessageDialog("【702：カジノルーム】\nスロットマシンの残骸が転がっている。", onComplete);
-        return;
-    }
+// 706号室：シャンパンラウンジ（全回復）
+function handleLoungeRest(gameState, onComplete) {
+    showConversationDialog("assets/images/demon/7f-shiratori.png", "【706号室：シャンパンラウンジ】\nクリスタルのテーブルに、黄金に輝く最高級シャンパンが冷やされている。\n一口含むと、心地よい芳醇な香りと共に全身の傷が急速に癒えていく……。\n\n（主人公のHPが全快した！）", () => {
+        gameState.player.hp = gameState.player.maxHp;
+        onComplete();
+    });
+}
 
-    showMessageDialog("【702：カジノルーム】\n部屋の中に黄金に輝くスロットマシンがある。\n『1回 100 💰。当たれば体力全快！ 外れれば……』", () => {
-        const choice = confirm("100 💰 支払ってスロットを回しますか？（所持金: " + gameState.player.money + "）");
-        if (choice) {
+// 705号室：闇カジノ（ハイ＆ロー）
+function openCasinoUI(gameState, onComplete) {
+    const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
+    const modal = document.createElement("div");
+    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; color: #fff; box-sizing: border-box; padding: 15px;`;
+
+    let currentCard = Math.floor(Math.random() * 13) + 1;
+    let streak = 0;
+    const payouts = [0, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
+
+    const render = () => {
+        const nextReward = payouts[Math.min(streak + 1, payouts.length - 1)];
+        const currentReward = payouts[streak];
+        
+        modal.innerHTML = `
+            <div style="background: rgba(25, 10, 10, 0.95); border: 2px solid #c5a059; border-radius: 12px; width: 100%; max-width: 440px; padding: 20px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); text-align: center; box-sizing: border-box;">
+                <h2 style="color: #ffdd66; margin: 0 0 5px 0; font-size: 1.5em; text-shadow: 0 0 10px #c5a059;">【闇カジノ：ハイ＆ロー】</h2>
+                <div style="color: #bbb; font-size: 0.85em; margin-bottom: 15px;">白鳥が用意した遊戯盤。次のカードの数字を当て続けろ。</div>
+                
+                <div style="font-size: 0.95em; color: #ffdd66; margin-bottom: 10px;">所持金: 💰 ${gameState.player.money}</div>
+
+                <div style="margin: 15px auto; width: 110px; height: 155px; background: linear-gradient(135deg, #2a0808, #110000); border: 2px solid #ffdd66; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(255,221,102,0.4);">
+                    <div style="font-size: 0.75em; color: #aaa; margin-bottom: 5px;">現在の札</div>
+                    <div style="font-size: 3.2em; font-weight: bold; color: #ffdd66; text-shadow: 0 0 10px red;">${currentCard}</div>
+                    <div style="font-size: 0.7em; color: #888;">(1〜13)</div>
+                </div>
+
+                <div style="margin-bottom: 15px; font-size: 0.95em;">
+                    <span style="color: #00ff66; font-weight: bold;">連勝数: ${streak} 回</span>
+                    <span style="color: #ffaa00; margin-left: 12px; font-weight: bold;">現在の獲得賞金: 💰 ${currentReward}</span>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                    <button id="btn-high" style="flex: 1; padding: 12px; background: #660000; color: #ffdd66; border: 1px solid #ff3333; font-size: 1.1em; font-weight: bold; cursor: pointer; border-radius: 6px;">▲ HIGH (大きい)</button>
+                    <button id="btn-low" style="flex: 1; padding: 12px; background: #002244; color: #66ccff; border: 1px solid #3388ff; font-size: 1.1em; font-weight: bold; cursor: pointer; border-radius: 6px;">▼ LOW (小さい)</button>
+                </div>
+
+                <div style="font-size: 0.8em; color: #aaa; margin-bottom: 15px;">次の的中で【💰 ${nextReward}】に倍増！</div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-cashout" ${streak === 0 ? 'disabled style="flex:1; padding:8px; background:#333; color:#777; border:1px solid #555; border-radius:4px;"' : 'style="flex:1; padding:8px; background:#005500; color:#fff; border:1px solid #00ff66; font-weight:bold; cursor:pointer; border-radius:4px;"'}>賞金を確定して降りる</button>
+                    <button id="btn-leave" style="flex: 1; padding: 8px; background: #222; color: #bbb; border: 1px solid #555; cursor: pointer; border-radius: 4px;">やめる</button>
+                </div>
+            </div>
+        `;
+
+        modal.querySelector("#btn-high").onclick = () => playGuess("high");
+        modal.querySelector("#btn-low").onclick = () => playGuess("low");
+        modal.querySelector("#btn-cashout").onclick = () => {
+            gameState.player.money += currentReward;
+            modal.remove();
+            showMessageDialog(`【勝負終了！】\n賞金 💰${currentReward} を換金して受け取った！`, onComplete);
+        };
+        modal.querySelector("#btn-leave").onclick = () => {
+            modal.remove();
+            onComplete();
+        };
+    };
+
+    const playGuess = (choice) => {
+        if (streak === 0) {
             if (gameState.player.money >= 100) {
                 gameState.player.money -= 100;
-                if (Math.random() < 0.5) {
-                    gameState.player.hp = gameState.player.maxHp;
-                    gameState.flags.cleared702 = true;
-                    showMessageDialog("【大当たり！！】\nジャラジャラと回復薬が飛び出し、HPが全快した！\n……スロットマシンは満足して機能を停止した。", onComplete);
-                } else {
-                    gameState.player.hp = Math.max(1, gameState.player.hp - 50);
-                    showMessageDialog("【ハズレ】\nマシンから毒ガスが噴出し、50ダメージを受けた！", onComplete);
-                }
-            } else {
-                showMessageDialog("お金が足りないようだ……。", onComplete);
             }
-        } else {
-            onComplete();
         }
-    });
-}
 
-function handleRoom703(gameState, context, onComplete) {
-    if (gameState.flags.cleared703) {
-        showMessageDialog("【703：宝物庫】\nもう金目のものは残っていない。", onComplete);
-        return;
+        const nextCard = Math.floor(Math.random() * 13) + 1;
+        const isHigh = nextCard > currentCard;
+        const isLow = nextCard < currentCard;
+        const isWin = (choice === "high" && isHigh) || (choice === "low" && isLow);
+
+        if (nextCard === currentCard) {
+            alert(`【引き分け！】同じ数字「${nextCard}」が出た！ もう一度！`);
+            render();
+            return;
+        }
+
+        if (isWin) {
+            streak++;
+            currentCard = nextCard;
+            if (streak >= 8) {
+                const maxPrize = payouts[8];
+                gameState.player.money += maxPrize;
+                modal.remove();
+                showMessageDialog(`【前人未到の8連勝達成！！】\nディーラー悪魔が悲鳴をあげた！\n最高賞金 💰${maxPrize} を手に入れた！ これで漆黒コートも思いのままだ！`, onComplete);
+                return;
+            }
+            render();
+        } else {
+            modal.remove();
+            showMessageDialog(`【敗北……】\n引いたカードは「${nextCard}」だった！\n予想が外れ、これまでの賞金は全て白鳥の金庫へと没収された……。`, onComplete);
+        }
+    };
+
+    if (gameState.player.money < 100) {
+        showMessageDialog("【ディーラー悪魔】\n「ケケッ！ 所持金が100💰もない貧乏人か？\n……いいぜ、白鳥様の慈悲だ。1ゲーム目はタダで賭けさせてやるよ！ 勝ち上がってみせな！」", () => {
+            document.body.appendChild(modal);
+            render();
+        });
+    } else {
+        document.body.appendChild(modal);
+        render();
     }
-
-    showMessageDialog("【703：宝物庫】\n部屋の奥に、豪華な装飾が施された金庫がある。\nしかし、宝を守る『黄金の番犬』が襲い掛かってきた！", () => {
-        const miniBoss = { name: "黄金の番犬", image: "assets/images/demon/demon14.jpg", hp: 600, atk: 85, def: 25, weakness: [8], agi: 22 };
-        openCombatUI(miniBoss, gameState, (res) => {
-            if (res === "win" || res === "combat_win") {
-                gameState.flags.cleared703 = true;
-                gameState.player.money += 2000;
-                
-                if (!gameState.bossHints) gameState.bossHints = [];
-                gameState.bossHints.push("【7F 術式メモ・弐】<br>「マダムの足元（⑤）には、偽りの美を映す【Ⅱ 鏡】を。<br>右腕（④）には、虚無を切り裂く【Ⅰ 剣】を配置せよ」");
-                
-                showMessageDialog("番犬を撃破した！\n金庫の中から 2000 💰 と、ボスに関する手記の切れ端を発見した。\n（※悪魔手記に記録されました）", onComplete);
-            } else { onComplete(); }
-        }, context);
-    });
 }
 
-function handleRoom704(gameState, context, onComplete) {
-    showMessageDialog("【704：鑑定室】\nショーケースの中に大量の宝石が並べられているが、よく見るとすべてガラス玉だ。\n「所詮は見栄。本物なんて一つもない……」", onComplete);
-}
+// 最奥：マダム・白鳥のペントハウス
+function handleBossPenthouse(gameState, context, onComplete) {
+    if (!gameState.flags) gameState.flags = {};
 
-// ----------------------------------------------------
-// 7F ボス部屋（マダム・白鳥）
-// ----------------------------------------------------
-
-function handleBossRoom7F(gameState, context, onComplete) {
     if (gameState.flags.cleared7F) {
-        showMessageDialog("【ペントハウス：プレジデンシャルスイート】\nドロドロに溶けた黄金の跡だけが残り、静寂が支配している。\nいよいよ次は、最上階だ。", onComplete);
+        showMessageDialog("【ペントハウス：白鳥の間】\nマダム・白鳥の金ピカの虚飾は崩れ去り、ただの空室となっている。\n奥の大階段から8階へ進むことができる。", onComplete);
         return;
     }
 
-    showConversationDialog("assets/images/demon/demon13.png", "【タワマンマダム・白鳥】\n部屋の奥。毛皮のコートを着た女が、大量の札束や宝石に埋もれるように座っている。\nしかしその顔や身体は、どろどろに溶けた黄金のスライムと化していた。\n\n「あら、貧乏人が何の用？ ここの空気を吸うだけでも、あなたには高すぎるわよ」", () => {
-        showMessageDialog("主人公「……その惨めな姿を鏡で見てから言うんだな。死んでも金にしがみつく、その『強欲』の悪夢をここで終わらせる」\n\n白鳥「口の減らないガキね！ 愛も命も、結局はお金で買えるのよ！ 違うと言うなら、あなたの価値を証明してみなさい！！」", () => {
-            
-            const puzzleConfig = {
-                title: "【魔方陣術式】強欲の権化（マダム・白鳥）",
-                subTitle: "6マスの合計値を『30』にし、見栄と強欲を打ち砕け",
-                bossName: "マダム・白鳥",
-                slots: [
-                    { id: "slot-top", label: "①頂の玉座", gridPos: "grid-area: 1 / 2;" },
-                    { id: "slot-tl", label: "②虚飾の左腕", gridPos: "grid-area: 2 / 1;" },
-                    { id: "slot-tr", label: "③傲慢の右腕", gridPos: "grid-area: 2 / 3;" },
-                    { id: "slot-bl", label: "④強欲の左座", gridPos: "grid-area: 3 / 1;" },
-                    { id: "slot-bottom", label: "⑤泥沼の足元", gridPos: "grid-area: 3 / 2;" },
-                    { id: "slot-br", label: "⑥見栄の右座", gridPos: "grid-area: 3 / 3;" }
+    const clearedCount = ["clearedTaxidermyKageyama", "clearedTaxidermySanada", "clearedTaxidermyRina", "clearedTaxidermyHirunuma"].filter(k => gameState.flags[k]).length;
+    if (clearedCount < 4) {
+        showMessageDialog(`【白鳥のペントハウス扉】\n重厚な扉には4つの黄金の鎖が巻き付いている。\n（※フロア内の剥製展示室にいる4体のボスを全て撃破しないと開かない。現在: ${clearedCount}/4 体撃破）`, onComplete);
+        return;
+    }
+
+    showConversationDialog("assets/images/demon/7f-shiratori.png", "【タワマンマダム・白鳥】\n「あらあら……私の可愛いコレクションたちを全部壊しちゃったの？ 随分と乱暴な男ねえ。」\n\n「まあいいわ。あんな出来損ないより、あなたを純金で固めて、私の最高のコレクションにしてあげる！」", () => {
+        playVideo("assets/images/demon/7f-shiratori.mp4", () => {
+            const shiratoriBoss = {
+                name: "マダム・白鳥（強欲の化身）",
+                image: "assets/images/demon/7fshiratoriakuma.png",
+                hp: 360,
+                atk: 28,
+                def: 3,
+                weakness: [7, 9], // 7: 鐘 / 9: 銀杭
+                actions: [
+                    "の鋭利な角が黄金の魔力をスパークさせる！",
+                    "は『マネーストーム』を放った！ 猛烈な金貨の嵐が降り注ぐ！",
+                    "の宝石が妖しく輝き、強欲の波動が精神を締め付ける！",
+                    "は高笑いしながら宝石の爪で引き裂いてきた！"
                 ]
             };
 
-            openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
-                const getCardNum = (id) => typeof slots[id] === 'number' ? slots[id] : 0;
-                // 今回は 頂点(①)=top, 足元(⑤)=bottom, 右腕(③)=tr にヒントを割り当て
-                const valTop = getCardNum("slot-top");
-                const valTL = getCardNum("slot-tl");
-                const valTR = getCardNum("slot-tr");
-                const valBL = getCardNum("slot-bl");
-                const valBottom = getCardNum("slot-bottom");
-                const valBR = getCardNum("slot-br");
-
-                const allVals = [valTop, valTL, valTR, valBL, valBottom, valBR];
-                const sum = allVals.reduce((a, b) => a + b, 0);
-                const isUnique = new Set(allVals).size === 6;
-
-                // ヒント：①(top)=8, ⑤(bottom)=2, ③(tr)=1
-                let isPerfect = (valTop === 8 && valBottom === 2 && valTR === 1 && sum === 30 && isUnique);
-
-                const bossEnemy = {
-                    name: "マダム・白鳥", image: "assets/images/demon/demon13.png", 
-                    hp: isPerfect ? 600 : 1500, maxHp: 1500, atk: isPerfect ? 65 : 95, def: isPerfect ? 15 : 35, weakness: [1, 8], agi: 20
-                };
-
-                const startBossBattle = () => {
-                    openCombatUI(bossEnemy, gameState, (res) => {
-                        if (res === "win" || res === "combat_win") {
-                            gameState.flags.cleared7F = true;
-                            
-                            showMessageDialog("【強欲の討滅】\n「嘘よ……私の、私のお金がぁあああっ！！」\n白鳥の絶叫と共に、黄金の装飾がパラパラと砂のように崩れ落ち、ただのコンクリートの廃墟へと戻っていく。", () => {
-                                showMessageDialog("主人公「……終わったな。残るは8階……『御堂』だけだ。」\n\n主人公はふと息をつき、装備の劣化に気づく。\n「だが、この装備じゃ最上階は厳しいか……。そういえば、1階の郵便ポストから『高級防具の支給要請』が出せたんだったな」", () => {
-                                    showMessageDialog("【システムガイド】\n※マダム・白鳥を撃破し、最高ランクの防具解放フラグが立ちました！\n1Fのエントランスに戻って、ポストに手紙を投函してください！\n（非常階段で一気に1Fまで降りられます）", onComplete);
-                                });
-                            });
-                        } else { onComplete(); }
-                    }, context);
-                };
-
-                if (isPerfect) {
-                    showMessageDialog("【完全解呪成功！】\n魔方陣が黄金の光を放つ！ 白鳥の強欲の呪いが解け、防御力が大幅に低下した！", () => {
-                        startBossBattle();
-                    });
+            openCombatUI(shiratoriBoss, gameState, (res) => {
+                if (res === "win") {
+                    gameState.flags.cleared7F = true;
+                    gameState.player.money += 5000;
+                    showMessageDialog(
+                        "【マダム・白鳥 討滅！】\n「私の……お金……私の……美しい……身体が……っ！」\n\n白鳥の全身を覆っていた黄金がドロドロに溶け崩れ、ただの灰となって消滅した……。\n（💰5,000 を獲得！）",
+                        () => {
+                            showMessageDialog(
+                                "【次なる目的】\n強欲の魔女を倒した。\n1階の集合ポストへ要請書を投函すれば、決戦用防具『エクソシストの漆黒コート』を取り寄せられるはずだ。\n\n準備が整い次第、奥の大階段から【8F：最上階】へ挑もう！",
+                                onComplete
+                            );
+                        }
+                    );
                 } else {
-                    showMessageDialog(`【術式解呪失敗……（合計: ${sum}）】\n呪いを解ききれず、白鳥が黄金の魔力を纏って襲いかかってくる！`, startBossBattle);
+                    onComplete();
                 }
-            });
+            }, context);
         });
     });
+}
+
+// 7F 通常ランダムエンカウント（元警官 & 元極道）
+export function check7FRandomEncounter(gameState, context, onComplete) {
+    const roll = Math.random();
+    if (roll > 0.18) {
+        if (onComplete) onComplete();
+        return;
+    }
+
+    const isCop = Math.random() < 0.5;
+    const enemy = isCop ? {
+        name: "元警官の悪鬼",
+        image: "assets/images/demon/demon17.png",
+        hp: 65,
+        atk: 18,
+        def: 2,
+        weakness: [4, 7],
+        actions: [
+            "の構えた銃口から銃弾が放たれる！",
+            "は『公務執行妨害だ』と濁った声で呟き警棒を振り下ろした！",
+            "は白鳥の金バッジを握りしめ、獲物を威嚇している！"
+        ]
+    } : {
+        name: "元極道の亡霊",
+        image: "assets/images/demon/demon16.png",
+        hp: 80,
+        atk: 22,
+        def: 1,
+        weakness: [2, 9],
+        actions: [
+            "の抜き身のドスが閃光のように走る！",
+            "は胸の刺青を露わにして野獣のように咆哮した！",
+            "の凄まじい威圧感が全身を金縛りにする！"
+        ]
+    };
+
+    openCombatUI(enemy, gameState, (res) => {
+        if (onComplete) onComplete();
+    }, context);
 }
