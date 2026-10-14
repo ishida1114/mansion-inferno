@@ -1,4 +1,4 @@
-// renderer.js - エレベーター描画(3番対応)・5F階段案内修正 完全版
+// renderer.js - エレベーター描画(3番対応)・5F階段案内修正・7Fカーペット対応 完全版
 
 import { gameState } from './gameState.js';
 
@@ -22,7 +22,8 @@ const imageSources = {
     right1: "assets/images/rightwall1.png",
     right2: "assets/images/rightwall2.png",
     right3: "assets/images/rightwall3.png",
-    right4: "assets/images/rightwall4.png"
+    right4: "assets/images/rightwall4.png",
+    carpet: "assets/images/carpet.png" // ★ 7F用の赤いカーペットを追加！
 };
 
 let loadedCount = 0;
@@ -84,7 +85,8 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawEnvironment(ctx, canvas);
+    // ★ 引数に currentFloor を追加して床の描画へ渡す
+    drawEnvironment(ctx, canvas, currentFloor);
     const leftDir = (player.dir + 3) % 4, rightDir = (player.dir + 1) % 4;
 
     for (let depth = 4; depth >= 1; depth--) {
@@ -138,13 +140,11 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             const cellType = currentMap[fY][fX], b = frontBounds[depth];
             let targetImg = images.wall;
             
-            // ★ 修正：非常階段(4, 5)、エントランス(6)、エレベーター(3, 7)、通常扉(2, 8, 9)
             if ((cellType === 4 || cellType === 5) && images.stairDoor && images.stairDoor.complete) {
                 targetImg = images.stairDoor;
             } else if (cellType === 6 && images.entrance && images.entrance.complete) {
                 targetImg = images.entrance;
             } else if ((cellType === 3 || cellType === 7) && images.elevator && images.elevator.complete) {
-                // ★ 3番もエレベーター画像として描画
                 targetImg = images.elevator;
             } else if ([2, 8, 9].includes(cellType) && images.door && images.door.complete) {
                 targetImg = images.door;
@@ -184,7 +184,6 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     if ([2, 3, 4, 5, 6, 7, 8, 9].includes(target)) {
         let label = "[ SPACE ] 調べる";
         
-        // ★ 階段やエレベーターの案内テキストを完全に整合
         if (target === 4) {
             if (gameState.currentFloor === 2) {
                 label = "[ SPACE ] 1階へ降りる";
@@ -201,6 +200,10 @@ function drawActionHint(ctx, canvas, player, currentMap) {
                 label = "[ SPACE ] 5階へ登る";
             } else if (gameState.currentFloor === 5) {
                 label = "[ SPACE ] 4階へ降りる";
+            } else if (gameState.currentFloor === 6) {
+                label = "[ SPACE ] 7階へ登る"; // ★ 6Fから7Fへ
+            } else if (gameState.currentFloor === 7) {
+                label = "[ SPACE ] 8階へ登る"; // ★ 7Fから8Fへ
             }
         } else if (target === 3 || target === 7) {
             label = "[ SPACE ] エレベーターに乗る";
@@ -222,11 +225,19 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     }
 }
 
-function drawEnvironment(ctx, canvas) {
+// ★ 引数に currentFloor を追加し、7Fの時だけ床をカーペットにする
+function drawEnvironment(ctx, canvas, currentFloor) {
     ctx.fillStyle = "#0a0a0c"; 
     ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
-    ctx.fillStyle = "#140f0c"; 
-    ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+    
+    // ★ 7階の時は床を赤いカーペット画像にする
+    if (currentFloor === 7 && images.carpet && images.carpet.complete) {
+        ctx.drawImage(images.carpet, 0, canvas.height / 2, canvas.width, canvas.height / 2);
+    } else {
+        ctx.fillStyle = "#140f0c"; 
+        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+    }
+    
     ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; 
     ctx.lineWidth = 1;
     const cx = canvas.width / 2, cy = canvas.height / 2;
