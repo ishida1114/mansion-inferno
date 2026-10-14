@@ -381,10 +381,9 @@ function handleBossLab5F(gameState, context, onComplete) {
 
                                         openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
                                             const getCardNum = (slotId) => {
-                                                const cardStr = slots[slotId] || "";
-                                                const num = parseInt(cardStr.replace("Card.png", ""), 10);
-                                                return isNaN(num) ? 0 : num;
-                                            };
+    const val = slots[slotId];
+    return typeof val === 'number' ? val : 0;
+};
                                             const topVal = getCardNum("slot-top");
                                             const rightVal = getCardNum("slot-right");
                                             const leftVal = getCardNum("slot-left");
