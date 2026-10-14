@@ -1,4 +1,4 @@
-// main.js - 6F正式接続・デバッグ連動 完全版
+// main.js - 7FVIPラウンジ正式接続・デバッグ連動 完全版
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -8,6 +8,8 @@ import { map3F, playerStart3F, handleEvent3F, check3FRandomEncounter } from './m
 import { map4F, playerStart4F, handleEvent4F, check4FRandomEncounter } from './maps/map4F.js';
 import { map5F, playerStart5F, handleEvent5F, check5FRandomEncounter } from './maps/map5F.js';
 import { map6F, playerStart6F, handleEvent6F, check6FRandomEncounter } from './maps/map6F.js';
+// ★ 7Fのインポートを追加
+import { map7F, playerStart7F, handleEvent7F, check7FRandomEncounter } from './maps/map7F.js';
 import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI, playVideo } from './ui.js';
 import { initDebug } from './debug.js';
 
@@ -183,6 +185,9 @@ function interactFrontCell() {
     eventObj = handleEvent5F(cellType, gameState, context);
   } else if (gameState.currentFloor === 6) {
     eventObj = handleEvent6F(cellType, gameState, context);
+  } else if (gameState.currentFloor === 7) {
+    // ★ 7階の扉や階段を調べた時のイベント呼び出しを追加
+    eventObj = handleEvent7F(cellType, gameState, context);
   }
 
   if (eventObj && typeof eventObj.run === 'function') {
@@ -198,13 +203,25 @@ function changeFloor(floor) {
   gameState.currentFloor = floor;
 
   if (floor === 7) {
-    showMessageDialog("【7階への扉】\n最上階に近づくにつれ、異常なまでの悪寒が走る……（※開発中）", () => {
+    // ★ 7階への移動処理を完全実装
+    gameState.currentMap = map7F;
+    if (gameState.lastTransitMethod === 'stairs') {
+      gameState.player.x = playerStart7F.x;
+      gameState.player.y = playerStart7F.y;
+      gameState.player.dir = playerStart7F.dir;
+    } else {
+      gameState.player.x = playerStart7F.x;
+      gameState.player.y = playerStart7F.y;
+      gameState.player.dir = playerStart7F.dir;
+    }
+    
+    showMessageDialog("【7階 VIPラウンジ】\n豪華なレッドカーペットと白大理石の廊下。空気が金と欲望の匂いで充満している……。", () => {
       redraw();
     });
   }
   else if (floor === 6) {
     gameState.currentMap = map6F;
-    if (gameState.lastTransitMethod === 'stair') {
+    if (gameState.lastTransitMethod === 'stairs') { // ★呼び出し側の名前に統一
       gameState.player.x = 5;
       gameState.player.y = 8;
       gameState.player.dir = 0; // 北向き
@@ -386,7 +403,8 @@ function toggleDebugUI() {
             <button class="debug-warp-btn" data-floor="3" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">3F</button>
             <button class="debug-warp-btn" data-floor="4" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">4F</button>
             <button class="debug-warp-btn" data-floor="5" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">5F</button>
-            <button class="debug-warp-btn" data-floor="6" style="background:#004400; color:#00ff66; border:1px solid #00ff66; padding:4px 8px; cursor:pointer; font-size:11px;">6F直行(Lv25)</button>
+            <button class="debug-warp-btn" data-floor="6" style="background:#004400; color:#00ff66; border:1px solid #00ff66; padding:4px 8px; cursor:pointer; font-size:11px;">6F</button>
+            <button class="debug-warp-btn" data-floor="7" style="background:#c5a059; color:#000; border:1px solid #ffdd66; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:bold;">7F直行</button>
         </div>
       `;
       overlay.classList.remove('hidden');
@@ -411,111 +429,68 @@ function debugJumpToFloor(floor) {
     gameState.player.def = 0;
     gameState.player.agi = 5;
     gameState.player.money = 0;
-    gameState.currentFloor = 1;
-    gameState.currentMap = map1F;
-    gameState.player.x = playerStart1F.x;
-    gameState.player.y = playerStart1F.y;
-    gameState.player.dir = playerStart1F.dir;
+    changeFloor(1);
   } else if (floor === 2) {
     gameState.player.level = 5;
     gameState.player.maxHp = 50;
     gameState.player.hp = 50;
     gameState.player.def = 2;
-    gameState.player.agi = 8;
     gameState.player.money = 1000;
     gameState.hasKey2F = true;
-    gameState.currentFloor = 2;
-    gameState.currentMap = map2F;
-    gameState.player.x = playerStart2F.x;
-    gameState.player.y = playerStart2F.y;
-    gameState.player.dir = playerStart2F.dir;
+    changeFloor(2);
   } else if (floor === 3) {
     gameState.player.level = 10;
     gameState.player.maxHp = 80;
     gameState.player.hp = 80;
     gameState.player.def = 4;
-    gameState.player.agi = 10;
     gameState.player.money = 3000;
     gameState.hasKey2F = true;
     gameState.hasElevatorKey = true;
     gameState.flags.cleared2F = true;
-    gameState.flags.hasSanadaRoomKey = true;
-    gameState.currentFloor = 3;
-    gameState.currentMap = map3F;
-    gameState.player.x = playerStart3F.x;
-    gameState.player.y = playerStart3F.y;
-    gameState.player.dir = playerStart3F.dir;
+    changeFloor(3);
   } else if (floor === 4) {
     gameState.player.level = 15;
     gameState.player.maxHp = 120;
     gameState.player.hp = 120;
     gameState.player.def = 6;
-    gameState.player.agi = 12;
     gameState.player.money = 5000;
-    gameState.hasKey2F = true;
-    gameState.hasElevatorKey = true;
-    gameState.flags.cleared2F = true;
     gameState.flags.cleared3F = true;
-    gameState.currentFloor = 4;
-    gameState.currentMap = map4F;
-    gameState.player.x = 5;
-    gameState.player.y = 1;
-    gameState.player.dir = 0;
+    changeFloor(4);
   } else if (floor === 5) {
     gameState.player.level = 20;
     gameState.player.maxHp = 160;
     gameState.player.hp = 160;
     gameState.player.def = 8;
-    gameState.player.agi = 15;
     gameState.player.money = 8000;
-    gameState.hasKey2F = true;
-    gameState.hasElevatorKey = true;
-    gameState.flags.cleared2F = true;
-    gameState.flags.cleared3F = true;
     gameState.flags.cleared4F = true;
-    gameState.flags.cleared5F = false;
-    gameState.currentFloor = 5;
-    gameState.currentMap = map5F;
-    gameState.player.x = playerStart5F.x;
-    gameState.player.y = playerStart5F.y;
-    gameState.player.dir = playerStart5F.dir;
+    changeFloor(5);
   } else if (floor === 6) {
     gameState.player.level = 25;
     gameState.player.maxHp = 200;
     gameState.player.hp = 200;
     gameState.player.def = 10;
-    gameState.player.agi = 18;
     gameState.player.money = 12000;
-    gameState.hasKey2F = true;
-    gameState.hasElevatorKey = true;
-    gameState.flags.cleared2F = true;
-    gameState.flags.cleared3F = true;
-    gameState.flags.cleared4F = true;
     gameState.flags.cleared5F = true;
-    gameState.flags.cleared6F = false;
-    // 6階用に黒猫フラグだけはfalse（救出前）に設定
     gameState.flags.hasCat = false; 
-    gameState.flags.hasSilverShears = false;
-
-    gameState.currentFloor = 6;
-    gameState.currentMap = map6F;
-    gameState.player.x = playerStart6F.x;
-    gameState.player.y = playerStart6F.y;
-    gameState.player.dir = playerStart6F.dir;
+    changeFloor(6);
+  } else if (floor === 7) {
+    gameState.player.level = 30;
+    gameState.player.maxHp = 250;
+    gameState.player.hp = 250;
+    gameState.player.def = 12;
+    gameState.player.money = 20000;
+    gameState.flags.cleared6F = true;
+    gameState.flags.hasCat = true; 
+    changeFloor(7);
   }
 
   gameState.updateEquippedCards();
-  if (gameState.currentMap) {
-    gameState.markVisited(gameState.currentFloor, gameState.currentMap, gameState.player.x, gameState.player.y);
-  }
-
   toggleDebugUI();
   toggleDebugUI();
-
-  redraw();
 }
 
 function checkEncounterAfterMove() {
+  // ★ ランダムエンカウント後に戦闘結果を受け取る共通処理
   const handleBattleResult = (result) => {
     isProcessingEvent = false;
     if (result === 'defeat') {
@@ -534,6 +509,7 @@ function checkEncounterAfterMove() {
     }
   };
 
+  // 各階のランダムエンカウント判定
   if (gameState.currentFloor === 2) {
     check2FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
@@ -565,6 +541,15 @@ function checkEncounterAfterMove() {
         } else {
           redraw();
         }
+      });
+    }
+  } else if (gameState.currentFloor === 7) {
+    // ★ 7階のエンカウント呼び出し
+    if (typeof check7FRandomEncounter === 'function') {
+      isProcessingEvent = true;
+      check7FRandomEncounter(gameState, { changeFloor }, () => {
+        isProcessingEvent = false;
+        redraw();
       });
     }
   }
