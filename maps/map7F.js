@@ -400,7 +400,7 @@ export function check7FRandomEncounter(gameState, context, onComplete) {
 
     const isCop = Math.random() < 0.5;
     const enemy = isCop ? {
-        name: "元警官の悪鬼",
+        name: "取り憑かれた悪徳警官",
         image: "assets/images/demon/demon17.png",
         hp: 65,
         atk: 18,
@@ -412,7 +412,7 @@ export function check7FRandomEncounter(gameState, context, onComplete) {
             "は白鳥の金バッジを握りしめ、獲物を威嚇している！"
         ]
     } : {
-        name: "元極道の亡霊",
+        name: "極道ゾンビ",
         image: "assets/images/demon/demon16.png",
         hp: 80,
         atk: 22,
