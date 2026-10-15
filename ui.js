@@ -95,12 +95,17 @@ export function showMessageDialog(text, onClosed) {
 
 export function showConversationDialog(imageSrc, text, onClosed) {
     const html = `
-        <div style="width: 90%; max-width: 560px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; pointer-events: auto;">
-            <img src="${imageSrc}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; align-self: flex-start; object-fit: contain;" onerror="this.style.display='none'">
-            <div style="width: 100%; padding: 18px; background: rgba(10, 0, 0, 0.95); color: #dddddd; border: 2px solid #550000; border-radius: 6px; font-family: ${HORROR_FONT}; font-size: 1.05em; line-height: 1.6; white-space: pre-wrap; box-shadow: 0 0 20px rgba(0,0,0,0.9); box-sizing: border-box;">
+        <div style="width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; pointer-events: auto;">
+            
+            <!-- キャラクター立ち絵（背景として奥に配置） -->
+            <img src="${imageSrc}" style="max-height: 55vh; max-width: 90%; object-fit: contain; margin-bottom: -15px; z-index: 1;" onerror="this.style.display='none'">
+            
+            <!-- メッセージボックス（手前に配置、長文は枠内でスクロール） -->
+            <div style="width: 95%; max-width: 700px; padding: 20px 25px; background: rgba(10, 5, 5, 0.95); color: #eeeeee; border: 2px solid #880000; border-radius: 8px; font-family: ${HORROR_FONT}; font-size: 1.15em; line-height: 1.8; white-space: pre-wrap; box-shadow: 0 0 40px rgba(0,0,0,0.9); box-sizing: border-box; overflow-y: auto; max-height: 35vh; z-index: 2; position: relative;">
                 ${text}
-                <div style="margin-top: 10px; text-align: right; color: #888888; font-size: 0.8em;">▼ タップ または [ SPACE / Enter ] で閉じる</div>
+                <div style="margin-top: 15px; text-align: right; color: #ffaa00; font-size: 0.85em; font-weight: bold;">▼ タップ または [ SPACE / Enter ] で閉じる</div>
             </div>
+            
         </div>
     `;
     createGuardedDialogContainer(html, onClosed);
