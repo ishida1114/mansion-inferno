@@ -59,7 +59,7 @@ export const CONSUMABLE_ITEMS = {
     type: 'consumable',
     price: 500,
     description: '相手を 2ターン 行動不能（休止）にする。',
-    battleEffect: { type: 'STUN', turns: 2 },
+    battleEffect: { type: 'STUN', turns: 3 },
     battleUsable: true
   },
   clear_umbrella: {
