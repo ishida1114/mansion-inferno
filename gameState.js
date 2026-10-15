@@ -1,4 +1,4 @@
-// gameState.js - 1Fエレベーター復帰座標(x:6, y:1) ＆ モデルガンコスト撤廃・スロット自動解放版
+// gameState.js - 経験値バランス調整（敵5〜10体で1レベルアップ）完全版
 
 export const gameState = {
   player: {
@@ -90,31 +90,38 @@ export const gameState = {
     return this.visitedMaps[floor][y][x];
   },
 
-  // ★ 新仕様：モデルガンのコスト撤廃 ＆ スロット自動解放
   updateEquippedCards() {
     if (!this.player.hasModelGun && !this.hasModelGun) {
       this.equippedCards = [];
       return;
     }
 
-    // レベルに応じてスロット数を決定
     let slots = 1;
     if (this.player.level >= 20) slots = 3;
     else if (this.player.level >= 10) slots = 2;
 
-    // 所持しているカード(this.cards)から数字を抽出
     const availableNums = this.cards.map(cardStr => {
       const num = parseInt(cardStr.replace("Card.png", ""), 10);
       return isNaN(num) ? 0 : num;
     }).filter(n => n > 0);
 
-    // 強い順（降順）に並べ替えて、スロットの数だけ自動装備
     availableNums.sort((a, b) => b - a);
     this.equippedCards = availableNums.slice(0, slots);
   },
 
+  // ★ 敵5〜10体（平均約7体）で1レベル上がるように適正スケーリング
   gainExp(amount) {
-    this.player.exp += amount;
+    const maxGain = Math.floor(this.player.maxExp * 0.18); // 最速でも約5.5体
+    const minGain = Math.max(1, Math.floor(this.player.maxExp * 0.11)); // 最低でも約9体
+
+    let scaledExp = amount;
+    if (amount > maxGain) {
+      scaledExp = Math.floor(this.player.maxExp * 0.14); // 敵1体で約14%（約7体で1Lvアップ）
+    } else if (amount < minGain && amount > 0) {
+      scaledExp = Math.floor(this.player.maxExp * 0.12); // 約8体で1Lvアップ
+    }
+
+    this.player.exp += scaledExp;
     let leveledUp = false;
     while (this.player.exp >= this.player.maxExp) {
       this.player.exp -= this.player.maxExp;
@@ -130,7 +137,8 @@ export const gameState = {
     this.player.hp = this.player.maxHp;
     this.player.agi += 1 * amount;
 
-    this.player.maxExp = Math.floor(100 + (this.player.level - 1) * 60 + Math.pow(this.player.level, 1.3) * 10);
+    // 必要経験値カーブの適正化
+    this.player.maxExp = Math.floor(100 + (this.player.level - 1) * 80 + Math.pow(this.player.level, 1.5) * 15);
 
     if (this.player.level % 2 === 0) {
       this.player.def += 1;
@@ -140,11 +148,9 @@ export const gameState = {
       this.flags.hasCat = true;
     }
 
-    // レベルアップでスロットが増える可能性があるため装備更新
     this.updateEquippedCards();
   },
 
-  // エレベーター死戻り位置 (x: 6, y: 1)
   handlePlayerDeath() {
     const lostRate = Math.random() * 0.5;
     const lostMoney = Math.floor(this.player.money * lostRate);

@@ -1,4 +1,4 @@
-// maps/map7F.js - 7F「VIPラウンジ」完全版（エレベーター新設・動線修正・ステータス強化版）
+// maps/map7F.js - 7F「VIPラウンジ」完全版（706号室白鳥撃破後プレゼント表示・ステータス完全維持版）
 
 import { 
     showMessageDialog, showConversationDialog, 
@@ -10,7 +10,7 @@ export const playerStart7F = { x: 3, y: 8, dir: 0 };
 // 1: 壁 / 0: 直線通路
 // 4: 6Fへの階段 (3, 9) / 5: 8Fへの大階段 (3, 0)
 // 8: 白鳥のペントハウス扉 (3, 1)
-// 3: ★ 1F直通エレベーター (2, 8)
+// 3: 1F直通エレベーター (2, 8)
 // 2: 各個室の扉（ボスラッシュ・カジノ・ラウンジ）
 export const map7F = [
     [1, 1, 1, 5, 1, 1, 1], // y=0 (5: 8Fへの大階段)
@@ -21,7 +21,7 @@ export const map7F = [
     [1, 1, 2, 0, 2, 1, 1], // y=5 (西: 703 剥製・里奈 / 東: 704 剥製・蛭沼)
     [1, 1, 1, 0, 1, 1, 1], // y=6
     [1, 1, 2, 0, 2, 1, 1], // y=7 (西: 701 剥製・影山 / 東: 702 剥製・真田)
-    [1, 1, 3, 0, 1, 1, 1], // y=8 (★西の 2,8 にエレベーター新設！ 開始地点: 3, 8)
+    [1, 1, 3, 0, 1, 1, 1], // y=8 (西の 2,8 にエレベーター新設！ 開始地点: 3, 8)
     [1, 1, 1, 4, 1, 1, 1], // y=9 (4: 6Fへの階段)
     [1, 1, 1, 1, 1, 1, 1]  // y=10
 ];
@@ -35,9 +35,9 @@ const TAXIDERMY_CONFIG = {
         enemy: {
             name: "黄金の剥製・影山",
             image: "assets/images/demon/2f-kageyama2.jpg",
-            hp: 350, // ★ 強化 (110 -> 350)
-            atk: 50, // ★ 強化 (18 -> 50)
-            def: 5,  // ★ 強化 (2 -> 5)
+            hp: 350,
+            atk: 50,
+            def: 5,
             weakness: [2, 5],
             actions: ["は黄金の拳を振り下ろした！", "が鎖を引きちぎらんばかりに突進してくる！", "の濁った瞳から金粉がこぼれ落ちる"]
         },
@@ -51,9 +51,9 @@ const TAXIDERMY_CONFIG = {
         enemy: {
             name: "黄金の剥製・真田",
             image: "assets/images/demon/3f-sanada.jpg",
-            hp: 450, // ★ 強化 (140 -> 450)
-            atk: 55, // ★ 強化 (20 -> 55)
-            def: 6,  // ★ 強化 (3 -> 6)
+            hp: 450,
+            atk: 55,
+            def: 6,
             weakness: [3, 8],
             actions: ["の鋭利な爪が空を裂く！", "は宝石の光を乱反射させて目を眩ませてきた！", "の金縛りの怨念が体を締め付ける！"]
         },
@@ -67,9 +67,9 @@ const TAXIDERMY_CONFIG = {
         enemy: {
             name: "黄金の剥製・里奈",
             image: "assets/images/demon/4f-rina.jpg",
-            hp: 550, // ★ 強化 (160 -> 550)
-            atk: 60, // ★ 強化 (22 -> 60)
-            def: 8,  // ★ 強化 (2 -> 8)
+            hp: 550,
+            atk: 60,
+            def: 8,
             weakness: [1, 6],
             actions: ["は冷酷な眼差しで魔弾を連射した！", "の金のドレスが禍々しい魔気を放つ！", "の甲高い笑い声が精神を蝕む！"]
         },
@@ -83,9 +83,9 @@ const TAXIDERMY_CONFIG = {
         enemy: {
             name: "黄金の剥製・蛭沼",
             image: "assets/images/demon/5f-hirunuma.png",
-            hp: 650, // ★ 強化 (200 -> 650)
-            atk: 65, // ★ 強化 (25 -> 65)
-            def: 10, // ★ 強化 (4 -> 10)
+            hp: 650,
+            atk: 65,
+            def: 10,
             weakness: [4, 7],
             actions: ["の重厚な黄金の腕が薙ぎ払われる！", "の凄まじい地響きが部屋を揺るがす！", "は暴走し、周囲の壁を粉砕しながら突進してきた！"]
         },
@@ -102,7 +102,7 @@ export function handleEvent7F(targetCell, gameState, context) {
     const frontX = px + dx[dir];
     const frontY = py + dy[dir];
 
-    // ★ 3: 1F直通エレベーター
+    // 3: 1F直通エレベーター
     if (targetCell === 3) {
         return {
             run: (onComplete) => {
@@ -117,7 +117,7 @@ export function handleEvent7F(targetCell, gameState, context) {
         };
     }
 
-    // 4: 6Fへの階段（stair_down）
+    // 4: 6Fへの階段
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
@@ -218,9 +218,15 @@ function handleTaxidermyRoom(gameState, context, bossKey, onComplete) {
     }
 }
 
-// 706号室：シャンパンラウンジ
+// ★ 706号室：シャンパンラウンジ（白鳥撃破後は present.png に差し替え）
 function handleLoungeRest(gameState, onComplete) {
-    showConversationDialog("assets/images/demon/7f-shiratori.png", "【706号室：シャンパンラウンジ】\nクリスタルのテーブルに、黄金に輝く最高級シャンパンが冷やされている。\n一口含むと、心地よい芳醇な香りと共に全身の傷が急速に癒えていく……。\n\n（主人公のHPが全快した！）", () => {
+    const isCleared = gameState.flags && gameState.flags.cleared7F;
+    const dialogImage = isCleared ? "assets/images/present.png" : "assets/images/demon/7f-shiratori.png";
+    const dialogText = isCleared
+        ? "【706号室：シャンパンラウンジ】\nマダム・白鳥が消滅した部屋には、豪奢なプレゼントの小箱と冷えた高級シャンパンが残されている。\n一口含むと、心地よい芳醇な香りと共に全身の傷が急速に癒えていく……。\n\n（主人公のHPが全快した！）"
+        : "【706号室：シャンパンラウンジ】\nクリスタルのテーブルに、黄金に輝く最高級シャンパンが冷やされている。\n一口含むと、心地よい芳醇な香りと共に全身の傷が急速に癒えていく……。\n\n（主人公のHPが全快した！）";
+
+    showConversationDialog(dialogImage, dialogText, () => {
         gameState.player.hp = gameState.player.maxHp;
         onComplete();
     });
@@ -332,7 +338,6 @@ function openCasinoUI(gameState, onComplete) {
 function handleBossPenthouse(gameState, context, onComplete) {
     if (!gameState.flags) gameState.flags = {};
 
-    // 討伐後は8階へ直行
     if (gameState.flags.cleared7F) {
         showMessageDialog("【ペントハウス：白鳥の間】\nマダム・白鳥の金ピカの虚飾は崩れ去り、ただの空室となっている。\n奥の大階段から【8階】へ進みます……。", () => {
             gameState.lastTransitMethod = 'stairs';
@@ -358,9 +363,9 @@ function handleBossPenthouse(gameState, context, onComplete) {
                 const shiratoriBoss = {
                     name: "マダム・白鳥（強欲の化身）",
                     image: "assets/images/demon/7fshiratoriakuma.png",
-                    hp: 1200, // ★ 強化 (360 -> 1200)
-                    atk: 85,  // ★ 強化 (28 -> 85)
-                    def: 12,  // ★ 強化 (3 -> 12)
+                    hp: 1200,
+                    atk: 85,
+                    def: 12,
                     weakness: [7, 9],
                     actions: [
                         "の鋭利な角が黄金の魔力をスパークさせる！",
@@ -405,9 +410,9 @@ export function check7FRandomEncounter(gameState, context, onComplete) {
     const enemy = isCop ? {
         name: "取り憑かれた悪徳警官",
         image: "assets/images/demon/demon17.png",
-        hp: 250, // ★ 強化 (65 -> 250)
-        atk: 55, // ★ 強化 (18 -> 55)
-        def: 8,  // ★ 強化 (2 -> 8)
+        hp: 250,
+        atk: 55,
+        def: 8,
         weakness: [4, 7],
         actions: [
             "の構えた銃口から銃弾が放たれる！",
@@ -417,9 +422,9 @@ export function check7FRandomEncounter(gameState, context, onComplete) {
     } : {
         name: "極道ゾンビ",
         image: "assets/images/demon/demon16.png",
-        hp: 300, // ★ 強化 (80 -> 300)
-        atk: 60, // ★ 強化 (22 -> 60)
-        def: 5,  // ★ 強化 (1 -> 5)
+        hp: 300,
+        atk: 60,
+        def: 5,
         weakness: [2, 9],
         actions: [
             "の抜き身のドスが閃光のように走る！",

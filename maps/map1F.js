@@ -1,4 +1,4 @@
-// maps/map1F.js - エレベーター(セル3)統一・中庭扉(セル8)・段階的防具ポスト投函対応 完全版
+// maps/map1F.js - エレベーター(7Fボタン追加)・中庭扉・段階的防具ポスト投函対応 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -21,7 +21,7 @@ export const map1F = [
 ];
 
 export function handleEvent1F(targetCell, gameState, context) {
-    // 3: エレベーター（1F・3F・5F を選べる共通UI）
+    // 3: エレベーター（1F・3F・5F・7F を選べる共通UI）
     if (targetCell === 3) {
         if (!gameState.hasElevatorKey) {
             return { 
@@ -33,10 +33,24 @@ export function handleEvent1F(targetCell, gameState, context) {
                     const evModal = document.createElement("div");
                     evModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; font-family: monospace;";
                     
+                    // 7F解禁条件の判定（6Fクリア、7F到達済み、または7Fクリア済みのいずれか）
+                    const canGo7F = gameState.flags && (
+                        gameState.flags.cleared6F || 
+                        gameState.flags.cleared7F || 
+                        gameState.flags.seen7FIntro || 
+                        gameState.flags.unlocked7FElevator
+                    );
+
                     let html = `<h2 style="color: #66ccff; margin-bottom: 20px;">【エレベーター】</h2>`;
                     html += `<button class="ev-btn" data-floor="1" style="width: 220px; padding: 15px; margin: 5px; background: #004400; color: #00ff66; border: 1px solid #00ff66; font-size: 1.1em; cursor: pointer;">1F (現在地)</button>`;
                     html += `<button class="ev-btn" data-floor="3" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">3F (汚染フロア)</button>`;
                     html += `<button class="ev-btn" data-floor="5" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">5F (精神科病棟)</button>`;
+                    
+                    // ★ 7Fボタンの追加
+                    if (canGo7F) {
+                        html += `<button class="ev-btn" data-floor="7" style="width: 220px; padding: 15px; margin: 5px; background: linear-gradient(180deg, #664400, #221100); color: #ffdd66; border: 1px solid #ffcc00; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px rgba(255,200,0,0.4);">7F (VIPラウンジ)</button>`;
+                    }
+
                     html += `<button id="ev-cancel" style="width: 220px; padding: 15px; margin-top: 20px; background: #440000; color: #ff6666; border: 1px solid #ff3333; cursor: pointer;">閉じる</button>`;
                     evModal.innerHTML = html;
                     document.body.appendChild(evModal);
