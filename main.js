@@ -1,4 +1,4 @@
-// main.js - 7FVIPラウンジ正式接続・デバッグ連動 完全版
+// main.js - 7FVIPラウンジ正式接続・BGM＆デバッグ連動 完全版
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -8,10 +8,12 @@ import { map3F, playerStart3F, handleEvent3F, check3FRandomEncounter } from './m
 import { map4F, playerStart4F, handleEvent4F, check4FRandomEncounter } from './maps/map4F.js';
 import { map5F, playerStart5F, handleEvent5F, check5FRandomEncounter } from './maps/map5F.js';
 import { map6F, playerStart6F, handleEvent6F, check6FRandomEncounter } from './maps/map6F.js';
-// ★ 7Fのインポート
 import { map7F, playerStart7F, handleEvent7F, check7FRandomEncounter } from './maps/map7F.js';
 import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI, playVideo } from './ui.js';
 import { initDebug } from './debug.js';
+
+// ★ サウンドマネージャーのインポート
+import { sound } from './sound.js';
 
 let appUI;
 let renderer;
@@ -33,6 +35,7 @@ function init() {
     const target = e.target;
     if (!target) return;
 
+    // ★ タイトル画面のゲームスタート処理
     if (target.id === 'btn-start' || target.closest('#btn-start')) {
       const titleScreen = document.getElementById('title-screen');
       if (titleScreen) titleScreen.classList.add('hidden');
@@ -40,6 +43,7 @@ function init() {
       return;
     } 
     
+    // ★ タイトル画面のロード処理
     if (target.id === 'btn-load' || target.closest('#btn-load')) {
       const hasSave = gameState.loadGame();
       if (hasSave) {
@@ -88,6 +92,9 @@ function init() {
 }
 
 function startNewGame() {
+  // ★ ゲームスタート時にオープニングBGMを再生！
+  sound.playBGM("assets/audio/bgm/opening.mp3");
+
   gameState.resetGame();
   
   gameState.currentFloor = 1;
@@ -114,6 +121,9 @@ function startNewGame() {
 }
 
 function resumeGame() {
+  // ★ ロード直後にフィールド探索曲を再生！
+  sound.playBGM("assets/audio/bgm/field.mp3");
+
   const container = document.getElementById('app-ui-container');
   if (container) container.classList.add('hidden');
 
@@ -201,6 +211,9 @@ function interactFrontCell() {
 function changeFloor(floor) {
   gameState.currentFloor = floor;
 
+  // ★ 階層を移動したとき、戦闘曲になっていたらフィールド曲に戻す
+  sound.playBGM("assets/audio/bgm/field.mp3");
+
   if (floor === 7) {
     gameState.currentMap = map7F;
     if (gameState.lastTransitMethod === 'stairs') {
@@ -213,7 +226,6 @@ function changeFloor(floor) {
       gameState.player.dir = playerStart7F.dir;
     }
     
-    // ★ 7F初回到達時の館内放送イベント
     if (!gameState.flags) gameState.flags = {};
     if (!gameState.flags.seen7FIntro) {
       gameState.flags.seen7FIntro = true;
@@ -233,7 +245,7 @@ function changeFloor(floor) {
     if (gameState.lastTransitMethod === 'stairs') {
       gameState.player.x = 5;
       gameState.player.y = 8;
-      gameState.player.dir = 0; // 北向き
+      gameState.player.dir = 0;
     } else {
       gameState.player.x = playerStart6F.x;
       gameState.player.y = playerStart6F.y;
@@ -430,6 +442,9 @@ function debugJumpToFloor(floor) {
   gameState.hasModelGun = true;
   gameState.player.hasModelGun = true;
   gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
+
+  // ★ 途中階からデバッグ開始しても必ずフィールド曲を再生する
+  sound.playBGM("assets/audio/bgm/field.mp3");
 
   if (floor === 1) {
     gameState.player.level = 1;

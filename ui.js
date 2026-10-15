@@ -1,7 +1,8 @@
-// ui.js - 主人公Lv攻撃力反映・赤い傘3倍ロマン砲・戦闘UI統合完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・戦闘UI完全統合版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
+import { sound } from './sound.js'; // ★ サウンドマネージャー連携
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
@@ -80,7 +81,11 @@ export function showOpeningUI(onClosed) {
             <div style="color: #ffdd66; font-size: 0.85em; font-weight: bold; text-shadow: 0 0 5px red;">▼ タップ または [ SPACE / Enter ] で探索を開始する</div>
         </div>
     `;
-    createGuardedDialogContainer(html, onClosed);
+    createGuardedDialogContainer(html, () => {
+        // オープニング画面を閉じたらフィールド探索BGMを開始
+        sound.playBGM("assets/audio/bgm/field.mp3");
+        if (onClosed) onClosed();
+    });
 }
 
 export function showMessageDialog(text, onClosed) {
@@ -93,19 +98,15 @@ export function showMessageDialog(text, onClosed) {
     createGuardedDialogContainer(html, onClosed);
 }
 
+// ★ ノベルゲーム風会話ウィンドウ（立ち絵が大きく見え、メッセージが手前下に重なる）
 export function showConversationDialog(imageSrc, text, onClosed) {
     const html = `
         <div style="width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; pointer-events: auto;">
-            
-            <!-- キャラクター立ち絵（背景として奥に配置） -->
             <img src="${imageSrc}" style="max-height: 55vh; max-width: 90%; object-fit: contain; margin-bottom: -15px; z-index: 1;" onerror="this.style.display='none'">
-            
-            <!-- メッセージボックス（手前に配置、長文は枠内でスクロール） -->
             <div style="width: 95%; max-width: 700px; padding: 20px 25px; background: rgba(10, 5, 5, 0.95); color: #eeeeee; border: 2px solid #880000; border-radius: 8px; font-family: ${HORROR_FONT}; font-size: 1.15em; line-height: 1.8; white-space: pre-wrap; box-shadow: 0 0 40px rgba(0,0,0,0.9); box-sizing: border-box; overflow-y: auto; max-height: 35vh; z-index: 2; position: relative;">
                 ${text}
                 <div style="margin-top: 15px; text-align: right; color: #ffaa00; font-size: 0.85em; font-weight: bold;">▼ タップ または [ SPACE / Enter ] で閉じる</div>
             </div>
-            
         </div>
     `;
     createGuardedDialogContainer(html, onClosed);
@@ -294,13 +295,12 @@ export function openShopUI(onClosed) {
         }
     };
 
-   let html = "";
+    let html = "";
     Object.values(itemDefinitions).forEach(item => {
-        // ★ 新しい段階的防具解放（unlockStage）の判定
         if (item.type === "armor") {
             const currentStage = gameState.armorUnlockStage || 0;
             if (item.unlockStage > currentStage) {
-                return; // まだ解放されていない防具は店頭に出さない
+                return;
             }
         }
 
@@ -353,9 +353,12 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（Lv攻撃力反映・赤い傘3倍・黒猫・回避キャップ完全版）
+// 戦闘UI制御（BGM/SE・Lv攻撃力反映・赤い傘3倍・黒猫完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
+    // ★ 戦闘開始：戦闘BGM再生
+    sound.playBGM("assets/audio/bgm/battle.mp3");
+
     const ui = document.createElement("div");
     ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
 
@@ -364,12 +367,10 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const enemyDef = enemy.def || 0;
     const enemyWeakness = Array.isArray(enemy.weakness) ? enemy.weakness : [enemy.weaknessCard || 1];
     
-    // 傘バフ用フラグ群
-    let isGuarding = false;          // 青い傘（70%カット）
-    let isRedUmbrellaActive = false; // 赤い傘（次ターン攻撃3倍）
-    let extraAgi = 0;                // 透明傘（AGI底上げ用）
-
-    let isEnemyCharging = false;     // 敵のタメ技待機フラグ
+    let isGuarding = false;
+    let isRedUmbrellaActive = false;
+    let extraAgi = 0;
+    let isEnemyCharging = false;
 
     const visualHTML = `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;">`;
 
@@ -422,6 +423,9 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
         setTimeout(() => {
             ui.remove();
+            // ★ 探索曲へ復帰
+            sound.playBGM("assets/audio/bgm/field.mp3");
+
             const respawnMsg = gameState.handlePlayerDeath();
             if (context && context.changeFloor) {
                 context.changeFloor(1);
@@ -439,7 +443,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         return "の容赦ない攻撃が襲いかかる！";
     };
 
-    // 敵ターン処理
     const enemyTurn = (initialMessage) => {
         log.innerHTML = initialMessage;
 
@@ -504,7 +507,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 return;
             }
 
-            // 回避判定（最大30%キャップ設定）
             const rawDodge = ((gameState.player.agi || 5) + extraAgi) * 0.04;
             const dodgeChance = Math.min(0.30, rawDodge);
 
@@ -519,7 +521,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             let rawAtk = enemyAtk * damageMultiplier;
             let baseDamage = Math.max(1, rawAtk - (gameState.player.def || 0));
 
-            // 青いビニール傘判定：70%軽減
             let umbrellaApplied = false;
             if (isGuarding) {
                 baseDamage = Math.max(1, Math.floor(baseDamage * 0.3));
@@ -527,7 +528,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 umbrellaApplied = true;
             }
 
-            // 黒猫の割り込み判定
             let catAction = null;
             if (gameState.flags && gameState.flags.hasCat && !gameState.flags.isCatTrapped && Math.random() < 0.20) {
                 catAction = Math.random() < 0.5 ? "shield" : "claw";
@@ -547,7 +547,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             if (umbrellaApplied) dmgNotice += "（ビニール傘で70%カット！）";
             appendLog(dmgNotice);
 
-            // 黒猫の爪攻撃
             if (catAction === "claw") {
                 const catDmg = Math.max(8, Math.floor((gameState.player.level || 1) * 3.5));
                 enemyHp = Math.max(0, enemyHp - catDmg);
@@ -562,6 +561,9 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 appendLog(`\n【討滅】黒猫の追撃が決定打となり、悪魔は霧散した！`);
                 setTimeout(() => {
                     ui.remove();
+                    // ★ 探索曲へ復帰
+                    sound.playBGM("assets/audio/bgm/field.mp3");
+
                     const reward = gameState.calculateRewards ? gameState.calculateRewards(50, 150) : { exp: 50, money: 150 };
                     gameState.player.money += reward.money;
                     const isLvUp = gameState.gainExp(reward.exp);
@@ -578,7 +580,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }, 1400);
     };
 
-    // ★ 攻撃ボタン（Lv基礎攻撃力反映・赤い傘3倍化・弱点2倍完全統合）
+    // ★ 攻撃ボタン（銃声SE再生を追加）
     attackBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -594,6 +596,9 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             return;
         }
 
+        // ★ 銃撃SEを再生！
+        sound.playSE("assets/audio/se/gun.mp3");
+
         attackBtn.disabled = true;
         itemBtn.disabled = true;
         escapeBtn.disabled = true;
@@ -601,31 +606,23 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         log.innerText = "Vox Sacra……ラミナカードが神聖な言葉を弾丸に変える";
 
         setTimeout(() => {
-            // 1. 主人公レベルによる基礎攻撃力（Lv1: 8、Lv20: 46）
             const levelAtk = 8 + ((gameState.player.level || 1) - 1) * 2;
-
-            // 2. 装填カードの威力（カードの数字合計 × 2）
             const cardSum = equippedCards.reduce((sum, num) => sum + num, 0);
             const cardAtk = cardSum * 2;
-
-            // 3. 基礎ダメージ合算
             let baseDamage = levelAtk + cardAtk;
 
-            // 4. 弱点特効（2倍）
             const isWeaknessHit = equippedCards.some(num => enemyWeakness.includes(num));
             if (isWeaknessHit) {
                 baseDamage *= 2;
             }
 
-            // 5. 赤い傘バフ（3倍ロマン砲）
             let isRedApplied = false;
             if (isRedUmbrellaActive) {
-                baseDamage *= 3; // ★ 2倍から3倍へ強化
-                isRedUmbrellaActive = false; // 1回で消費
+                baseDamage *= 3;
+                isRedUmbrellaActive = false;
                 isRedApplied = true;
             }
 
-            // 6. 防御力減算とランダム幅（0.85 〜 1.15）
             const randomFactor = 0.85 + Math.random() * 0.3;
             const netDamage = Math.max(1, Math.floor((baseDamage - enemyDef) * randomFactor));
 
@@ -642,6 +639,9 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 
                 setTimeout(() => {
                     ui.remove();
+                    // ★ 探索曲へ復帰
+                    sound.playBGM("assets/audio/bgm/field.mp3");
+
                     const reward = gameState.calculateRewards ? gameState.calculateRewards(50, 150) : { exp: 50, money: 150 };
                     gameState.player.money += reward.money;
                     const isLvUp = gameState.gainExp(reward.exp);
@@ -659,7 +659,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }, 900);
     };
 
-    // 道具ボタン（各種傘の効果完全分岐）
+    // 道具ボタン
     itemBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -749,6 +749,9 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             const escapeRate = 0.55 + (((gameState.player.agi || 5) + extraAgi) * 0.04);
             if (Math.random() < escapeRate) {
                 ui.remove();
+                // ★ 探索曲へ復帰
+                sound.playBGM("assets/audio/bgm/field.mp3");
+
                 showMessageDialog("【逃走成功】\n暗闇の中、なんとか悪魔を振り切った！", () => {
                     if (onResult) onResult("escape");
                 });

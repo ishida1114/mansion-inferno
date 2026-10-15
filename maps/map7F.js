@@ -34,7 +34,7 @@ const TAXIDERMY_CONFIG = {
         introText: "【701号室：黄金の展示室】\n部屋の中央に、純金でコーティングされた2Fのボス・影山が鎖で繋がれている……！\nマダム・白鳥の魔力で操られ、獰猛な唸り声をあげて襲いかかってきた！",
         enemy: {
             name: "黄金の剥製・影山",
-            image: "assets/images/demon/demon17.png", // 予備画像兼用
+            image: "assets/images/demon/2f-kageyama2.jpg", // ★ 更新
             hp: 110,
             atk: 18,
             def: 2,
@@ -50,7 +50,7 @@ const TAXIDERMY_CONFIG = {
         introText: "【702号室：黄金の展示室】\n3Fで倒したはずの真田が、全身に宝石を埋め込まれた異様な剥製として鎮座している……！\n白鳥の強欲の呪いによって蘇り、怨嗟の声を上げながら飛びかかってきた！",
         enemy: {
             name: "黄金の剥製・真田",
-            image: "assets/images/demon/demon16.png",
+            image: "assets/images/demon/3f-sanada.jpg", // ★ 更新
             hp: 140,
             atk: 20,
             def: 3,
@@ -66,7 +66,7 @@ const TAXIDERMY_CONFIG = {
         introText: "【703号室：黄金の展示室】\n4Fの里奈が、悪趣味な金のドレスを着せられ愛玩動物のように飾られている……！\n「アハハ……お金……綺麗なドレス……」\n虚ろな笑みを浮かべ、殺意に満ちた魔力弾を放ってきた！",
         enemy: {
             name: "黄金の剥製・里奈",
-            image: "assets/images/demon/7f-shiratori.png",
+            image: "assets/images/demon/4f-rina.jpg", // ★ 更新
             hp: 160,
             atk: 22,
             def: 2,
@@ -82,7 +82,7 @@ const TAXIDERMY_CONFIG = {
         introText: "【704号室：黄金の展示室】\n5Fの巨漢・蛭沼が、分厚い純金の鎧を皮膚に直接ボルトで打ち込まれて固定されている……！\n知性を完全に失った怪物が、白鳥の命令に従い侵入者を叩き潰そうと迫り来る！",
         enemy: {
             name: "黄金の剥製・蛭沼",
-            image: "assets/images/demon/demon16.png",
+            image: "assets/images/demon/5f-hirunuma.png", // ★ 更新
             hp: 200,
             atk: 25,
             def: 4,
@@ -188,7 +188,7 @@ function handleTaxidermyRoom(gameState, context, bossKey, onComplete) {
                         
                         let unlockMsg = `【撃破成功！】\n${cfg.enemy.name} の呪縛を解き、粉砕した！\n剥製の中から宝石と金貨がこぼれ落ちる……（💰${cfg.rewardMoney} 獲得！）`;
                         
-                        // ★ 剥製破壊時の白鳥の激怒メッセージを追加
+                        // ★ 剥製破壊時の白鳥の激怒メッセージ
                         unlockMsg += `\n\n【館内放送・マダム白鳥】\n「ちょっと！！ あなた、私のコレクションに何してくれてるの！？\nそれを純金でコーティングするのに、いくらかかったと思ってるのよ！\nあんなゴミみたいな悪魔の魂でも、私が装飾してやったから『価値』が生まれたのに！\n弁償しなさい！ 今すぐその汚い臓器を全部売って、私の口座に振り込みなさい！！」`;
 
                         if (clearedCount >= 4) {
@@ -205,7 +205,7 @@ function handleTaxidermyRoom(gameState, context, bossKey, onComplete) {
         });
     };
 
-    // ★ 最初の剥製部屋に入った時だけ、自慢のメッセージを再生
+    // 最初の剥製部屋に入った時だけ、自慢のメッセージを再生
     if (!gameState.flags.seenTaxidermyIntro) {
         gameState.flags.seenTaxidermyIntro = true;
         showConversationDialog(
@@ -346,48 +346,47 @@ function handleBossPenthouse(gameState, context, onComplete) {
         return;
     }
 
-    // ★ 決戦前（ペントハウス突入時）の傲慢なセリフ
     showConversationDialog(
         "assets/images/demon/7f-shiratori.png", 
         "【タワマンマダム・白鳥】\n「本当つまらない庶民ね\n頭も良くないんでしょうね\n私のまぁまぁ気に入ってたコレクションを４つも台無しにして……あなたの無価値な命を何度すり潰しても足りないわ。\n肉は美味しそうだから削ぎ取って今夜のディナーのステーキと唐揚げにしてあげる\n……でも、そうね。ひとつ許される方法があるわ。\nあなた、神父の力を受け継いでいるんでしょう？ なかなか珍しいモノを持ってるじゃない。\nそれがあれば他の悪魔も支配できそうよね\nどう？ ここで私に土下座して『永遠の奴隷になります』って誓約書に血判を押すなら、命だけは助けてあげるわよ？\nほら、さっさとひざまずきなさい、頭が悪い庶民だけど、ペットぐらいならできるでしょ！」", 
         () => {
-        playVideo("assets/images/demon/7f-shiratori.mp4", () => {
-            const shiratoriBoss = {
-                name: "マダム・白鳥（強欲の化身）",
-                image: "assets/images/demon/7fshiratoriakuma.png",
-                hp: 360,
-                atk: 28,
-                def: 3,
-                weakness: [7, 9], // 7: 鐘 / 9: 銀杭
-                actions: [
-                    "の鋭利な角が黄金の魔力をスパークさせる！",
-                    "は『マネーストーム』を放った！ 猛烈な金貨の嵐が降り注ぐ！",
-                    "の宝石が妖しく輝き、強欲の波動が精神を締め付ける！",
-                    "は高笑いしながら宝石の爪で引き裂いてきた！"
-                ]
-            };
+            playVideo("assets/images/demon/7f-shiratori.mp4", () => {
+                const shiratoriBoss = {
+                    name: "マダム・白鳥（強欲の化身）",
+                    image: "assets/images/demon/7fshiratoriakuma.png",
+                    hp: 360,
+                    atk: 28,
+                    def: 3,
+                    weakness: [7, 9], // 7: 鐘 / 9: 銀杭
+                    actions: [
+                        "の鋭利な角が黄金の魔力をスパークさせる！",
+                        "は『マネーストーム』を放った！ 猛烈な金貨の嵐が降り注ぐ！",
+                        "の宝石が妖しく輝き、強欲の波動が精神を締め付ける！",
+                        "は高笑いしながら宝石の爪で引き裂いてきた！"
+                    ]
+                };
 
-            openCombatUI(shiratoriBoss, gameState, (res) => {
-                if (res === "win") {
-                    gameState.flags.cleared7F = true;
-                    gameState.player.money += 5000;
-                    
-                    // ★ 撃破時の白鳥の命乞いと主人公の冷徹な一言
-                    showMessageDialog(
-                        "【マダム・白鳥 討滅！】\n「私が偉そうだって？？当たり前じゃない、偉いんだから\nねぇ、見逃してくれたからあなたの好きにしていいのよ、私、今夜は飲みに行きたい気分\n\nぐはぁ（口から液体が溢れる）\n\nいや、崩れる、顔が崩れる\n助けなさいよ、このグズッ\n\nいやだ、庶民には戻りたくないぃぃぃぃっ……！！」\n\n主人公「庶民にも、戻す気はないよ」\n\n（白鳥の全身を覆っていた黄金がドロドロに溶け崩れ、ただの灰となって消滅した……。）\n（💰5,000 を獲得！）",
-                        () => {
-                            showMessageDialog(
-                                "【次なる目的】\n強欲の魔女を倒した。\n1階の集合ポストへ要請書を投函すれば、決戦用防具『エクソシストの漆黒コート』を取り寄せられるはずだ。\n\n準備が整い次第、奥の大階段から【8F：最上階】へ挑もう！",
-                                onComplete
-                            );
-                        }
-                    );
-                } else {
-                    onComplete();
-                }
-            }, context);
-        });
-    });
+                openCombatUI(shiratoriBoss, gameState, (res) => {
+                    if (res === "win") {
+                        gameState.flags.cleared7F = true;
+                        gameState.player.money += 5000;
+                        
+                        showMessageDialog(
+                            "【マダム・白鳥 討滅！】\n「私が偉そうだって？？当たり前じゃない、偉いんだから\nねぇ、見逃してくれたからあなたの好きにしていいのよ、私、今夜は飲みに行きたい気分\n\nぐはぁ（口から液体が溢れる）\n\nいや、崩れる、顔が崩れる\n助けなさいよ、このグズッ\n\nいやだ、庶民には戻りたくないぃぃぃぃっ……！！」\n\n主人公「庶民にも、戻す気はないよ」\n\n（白鳥の全身を覆っていた黄金がドロドロに溶け崩れ、ただの灰となって消滅した……。）\n（💰5,000 を獲得！）",
+                            () => {
+                                showMessageDialog(
+                                    "【次なる目的】\n強欲の魔女を倒した。\n1階の集合ポストへ要請書を投函すれば、決戦用防具『エクソシストの漆黒コート』を取り寄せられるはずだ。\n\n準備が整い次第、奥の大階段から【8F：最上階】へ挑もう！",
+                                    onComplete
+                                );
+                            }
+                        );
+                    } else {
+                        onComplete();
+                    }
+                }, context);
+            });
+        }
+    );
 }
 
 // 7F 通常ランダムエンカウント（元警官 & 元極道）
