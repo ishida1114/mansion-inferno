@@ -1,4 +1,4 @@
-// main.js - 7FVIPラウンジ正式接続・BGM＆デバッグ連動 完全版
+// main.js - 8F最上階正式接続・6F降下座標修正・BGM完全版
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -9,10 +9,11 @@ import { map4F, playerStart4F, handleEvent4F, check4FRandomEncounter } from './m
 import { map5F, playerStart5F, handleEvent5F, check5FRandomEncounter } from './maps/map5F.js';
 import { map6F, playerStart6F, handleEvent6F, check6FRandomEncounter } from './maps/map6F.js';
 import { map7F, playerStart7F, handleEvent7F, check7FRandomEncounter } from './maps/map7F.js';
+// ★ 8Fのインポートを追加
+import { map8F, playerStart8F, handleEvent8F, check8FRandomEncounter } from './maps/map8F.js';
+
 import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI, playVideo } from './ui.js';
 import { initDebug } from './debug.js';
-
-// ★ サウンドマネージャーのインポート
 import { sound } from './sound.js';
 
 let appUI;
@@ -35,7 +36,6 @@ function init() {
     const target = e.target;
     if (!target) return;
 
-    // ★ タイトル画面のゲームスタート処理
     if (target.id === 'btn-start' || target.closest('#btn-start')) {
       const titleScreen = document.getElementById('title-screen');
       if (titleScreen) titleScreen.classList.add('hidden');
@@ -43,7 +43,6 @@ function init() {
       return;
     } 
     
-    // ★ タイトル画面のロード処理
     if (target.id === 'btn-load' || target.closest('#btn-load')) {
       const hasSave = gameState.loadGame();
       if (hasSave) {
@@ -92,7 +91,6 @@ function init() {
 }
 
 function startNewGame() {
-  // ★ ゲームスタート時にオープニングBGMを再生！
   sound.playBGM("assets/audio/bgm/opening.mp3");
 
   gameState.resetGame();
@@ -121,7 +119,6 @@ function startNewGame() {
 }
 
 function resumeGame() {
-  // ★ ロード直後にフィールド探索曲を再生！
   sound.playBGM("assets/audio/bgm/field.mp3");
 
   const container = document.getElementById('app-ui-container');
@@ -197,6 +194,8 @@ function interactFrontCell() {
     eventObj = handleEvent6F(cellType, gameState, context);
   } else if (gameState.currentFloor === 7) {
     eventObj = handleEvent7F(cellType, gameState, context);
+  } else if (gameState.currentFloor === 8) { // ★ 8Fのイベント処理を追加
+    eventObj = handleEvent8F(cellType, gameState, context);
   }
 
   if (eventObj && typeof eventObj.run === 'function') {
@@ -211,10 +210,20 @@ function interactFrontCell() {
 function changeFloor(floor) {
   gameState.currentFloor = floor;
 
-  // ★ 階層を移動したとき、戦闘曲になっていたらフィールド曲に戻す
   sound.playBGM("assets/audio/bgm/field.mp3");
 
-  if (floor === 7) {
+  // ★ 8Fへの遷移処理を追加
+  if (floor === 8) {
+    gameState.currentMap = map8F;
+    gameState.player.x = playerStart8F.x;
+    gameState.player.y = playerStart8F.y;
+    gameState.player.dir = playerStart8F.dir;
+
+    showMessageDialog("【8階 最上階：悪魔王の祭壇】\n窓の外には街の夜景が広がり、不吉な魔力の稲妻が走っている……。\n奥から、狂気じみた演説の声が響き渡っている。", () => {
+      redraw();
+    });
+  }
+  else if (floor === 7) {
     gameState.currentMap = map7F;
     if (gameState.lastTransitMethod === 'stairs') {
       gameState.player.x = playerStart7F.x;
@@ -242,19 +251,23 @@ function changeFloor(floor) {
   }
   else if (floor === 6) {
     gameState.currentMap = map6F;
-    if (gameState.lastTransitMethod === 'stairs') {
+    // ★ 7Fから降りたときの座標修正
+    if (gameState.lastTransitMethod === 'stair_down') {
+      gameState.player.x = 5;
+      gameState.player.y = 2; // 6Fの「7F行き階段」の手前
+      gameState.player.dir = 2; // 南向き（階段に背を向ける）
+      showMessageDialog("【6階 非常階段前】\n7階から6階へ降りてきた……。", () => {
+        redraw();
+      });
+    } else {
+      // 5Fから昇ってきた場合
       gameState.player.x = 5;
       gameState.player.y = 8;
-      gameState.player.dir = 0;
-    } else {
-      gameState.player.x = playerStart6F.x;
-      gameState.player.y = playerStart6F.y;
-      gameState.player.dir = playerStart6F.dir;
+      gameState.player.dir = 0; // 北向き
+      showMessageDialog("【6階 非常階段前】\n6階へ到達した。冷たい蜘蛛の糸がまとわりつく……", () => {
+        redraw();
+      });
     }
-    
-    showMessageDialog("【6階 非常階段前】\n6階へ到達した。冷たい蜘蛛の糸がまとわりつく……", () => {
-      redraw();
-    });
   }
   else if (floor === 5) {
     gameState.currentMap = map5F;
@@ -425,7 +438,8 @@ function toggleDebugUI() {
             <button class="debug-warp-btn" data-floor="4" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">4F</button>
             <button class="debug-warp-btn" data-floor="5" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">5F</button>
             <button class="debug-warp-btn" data-floor="6" style="background:#004400; color:#00ff66; border:1px solid #00ff66; padding:4px 8px; cursor:pointer; font-size:11px;">6F</button>
-            <button class="debug-warp-btn" data-floor="7" style="background:#c5a059; color:#000; border:1px solid #ffdd66; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:bold;">7F直行</button>
+            <button class="debug-warp-btn" data-floor="7" style="background:#c5a059; color:#000; border:1px solid #ffdd66; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:bold;">7F</button>
+            <button class="debug-warp-btn" data-floor="8" style="background:#aa0000; color:#fff; border:1px solid #ff0000; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:bold; box-shadow:0 0 5px red;">8F最上階</button>
         </div>
       `;
       overlay.classList.remove('hidden');
@@ -443,7 +457,6 @@ function debugJumpToFloor(floor) {
   gameState.player.hasModelGun = true;
   gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
 
-  // ★ 途中階からデバッグ開始しても必ずフィールド曲を再生する
   sound.playBGM("assets/audio/bgm/field.mp3");
 
   if (floor === 1) {
@@ -506,6 +519,15 @@ function debugJumpToFloor(floor) {
     gameState.flags.cleared6F = true;
     gameState.flags.hasCat = true; 
     changeFloor(7);
+  } else if (floor === 8) { // ★ 8Fへのデバッグワープ
+    gameState.player.level = 35;
+    gameState.player.maxHp = 300;
+    gameState.player.hp = 300;
+    gameState.player.def = 15;
+    gameState.player.money = 30000;
+    gameState.flags.cleared7F = true;
+    gameState.flags.hasCat = true; 
+    changeFloor(8);
   }
 
   gameState.updateEquippedCards();
@@ -569,6 +591,14 @@ function checkEncounterAfterMove() {
     if (typeof check7FRandomEncounter === 'function') {
       isProcessingEvent = true;
       check7FRandomEncounter(gameState, { changeFloor }, () => {
+        isProcessingEvent = false;
+        redraw();
+      });
+    }
+  } else if (gameState.currentFloor === 8) { // ★ 8Fのエンカウント判定を追加
+    if (typeof check8FRandomEncounter === 'function') {
+      isProcessingEvent = true;
+      check8FRandomEncounter(gameState, { changeFloor }, () => {
         isProcessingEvent = false;
         redraw();
       });
