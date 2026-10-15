@@ -268,13 +268,24 @@ function startMidoBattleSequence(gameState, context, onComplete) {
 function triggerEndingSequence(gameState, onComplete) {
     const currentSin = gameState.player.sin || 0;
 
+    // タイトルへ戻る処理（少し余韻を残してリロードする）
+    const returnToTitle = () => {
+        const overlay = document.createElement("div");
+        overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; opacity: 0; transition: opacity 2s ease;";
+        document.body.appendChild(overlay);
+        
+        // 10ミリ秒後にフェードアウトを開始し、3秒後に完全にリロードしてタイトルに戻る
+        setTimeout(() => { overlay.style.opacity = "1"; }, 10);
+        setTimeout(() => { location.reload(); }, 3000);
+    };
+
     // ① TRUE END: Sin = 0
     if (currentSin === 0) {
         showConversationDialog(
             "assets/images/ending.png",
             "【マンションの解放・夜明け】\n眩い神聖光が御堂の核を貫き、悪魔の巨躯は光の塵となって霧散していった。\nタワマンを覆っていた禍々しい黒雲が裂け、窓から眩しい朝陽が街全体を照らし出す。\n\n静まり返ったフロアで、ポケットのスマホがピロンと鳴った。\n画面には就活サイトからの事務的な通知。『〇〇株式会社：二次面接の日程調整について』\n\n主人公はふっと苦笑し、スマホをポケットに突っ込んだ。\n足元にすっと寄り添い、優雅にしっぽを揺らす黒猫。朝陽に照らされた街の遠くを見つめながら、どこか誇らしげに目を細めている。\n\n主人公\n「さてと……これからどうする、相棒？ 就職活動でもするか？」\n\n（澄み渡る街を見渡して、手の中の銃を見つめる）\n\n主人公\n「…………いっそ、プロのエクソシスト（悪魔祓い）になるか。」\n\n黒猫は楽しそうに喉を鳴らし、「ニャー」と短く鳴いた。\n二人の影が、朝陽に長く伸びていく――。",
             () => {
-                showMessageDialog("【 TRUE END : プロのエクソシスト 】\n\nマンション・インフェルノ クリア！\n完全な潔白証明、おめでとうございます！", onComplete);
+                showMessageDialog("【 TRUE END : プロのエクソシスト 】\n\nマンション・インフェルノ クリア！\n完全な潔白証明、おめでとうございます！", returnToTitle);
             }
         );
     } 
@@ -284,7 +295,7 @@ function triggerEndingSequence(gameState, onComplete) {
             "assets/images/knife.jpg",
             "【終わらない贖罪】\n御堂は滅び、黒雲の裂け目から朝陽が差し込む。\nしかし、主人公の胸の奥に残る「人間を撃ってしまった罪悪感」は消えない。\n\nスマホが鳴り、就活の面接通知が表示されるが、主人公は画面を見つめたまま立ち尽くす。\n\n主人公\n「……俺の手は、もう綺麗じゃないな。\nこんな血で汚れた手で、普通の生活に戻れるわけがない……。」\n\n黒猫はじゃれつくことなく、少し離れた瓦礫の上から、試すような冷たい瞳でじっと主人公を見つめている。\n主人公は血に濡れた武器を強く握りしめ、影を落とした瞳で前を向いた。\n\n主人公\n「就活は辞退だ。\n……背負った罪は消えない。なら、街に残った悪魔をすべて狩り尽くすまで、俺は戦うのをやめない。……付き合ってくれるか、相棒。」\n\n黒猫は小さく頷くように目を細め、静かに主人公の影の中へと溶けていった――。",
             () => {
-                showMessageDialog("【 NORMAL END : 贖罪の執行人 】\n\nマンション・インフェルノ クリア。\n（※1階の無人レジで罪を全て浄化していれば、別の結末が……？）", onComplete);
+                showMessageDialog("【 NORMAL END : 贖罪の執行人 】\n\nマンション・インフェルノ クリア。\n（※1階の無人レジで罪を全て浄化していれば、別の結末が……？）", returnToTitle);
             }
         );
     } 
@@ -294,7 +305,7 @@ function triggerEndingSequence(gameState, onComplete) {
             showMessageDialog(
                 "【新・悪魔王の誕生】\n御堂が絶叫とともに爆散した瞬間――その体から吹き出した大量の黒煙と怨念が、浄化されることなく主人公の全身へと吸い込まれていく。\n罪に染まりきった主人公の肉体は、悪魔の瘴気を拒絶するどころか、極上の苗床として貪り食ったのだ。\n\n窓の外の黒雲は晴れず、むしろマンションを中心に赤黒い雷光が渦を巻き始める。\nスマホが鳴り、就活の通知が届くが――主人公はそれを床に叩き落とし、踵で無残に踏み砕いた。\n\n主人公\n「ハハ……ハハハッ！\nなんだこれは……全身に力が漲る……！ 就職活動？ 面接？ 馬鹿馬鹿しい……！」\n\n瞳が禍々しい紅蓮に染まり、背中から黒い魔気の翼が広がっていく。\n足元の黒猫は毛を逆立て、主人公を「新たな怪物」として激しく威嚇したあと、闇の中へと逃げ去っていった。\n\n主人公\n「御堂の言ってたことも、あながち間違いじゃなかったな。\n愚民どもめ……今日からこの俺が、貴様らの新しい『悪魔王』だ。」\n\nマンション・インフェルノに、新たな絶望の支配者が君臨した――。",
                 () => {
-                    showMessageDialog("【 BAD END : 新・悪魔王誕生 】\n\nゲームオーバー……。\n（※人間を撃ちすぎです。1階の無人レジでお金を払って罪を浄化してください）", onComplete);
+                    showMessageDialog("【 BAD END : 新・悪魔王誕生 】\n\nゲームオーバー……。\n（※人間を撃ちすぎです。1階の無人レジでお金を払って罪を浄化してください）", returnToTitle);
                 }
             );
         });
@@ -311,7 +322,7 @@ export function check8FRandomEncounter(gameState, context, onComplete) {
 
     const enemy = {
         name: "御堂の後援会狂信者",
-        image: "assets/images/demon/demon17.png",
+        image: "assets/images/demon/demon18.png",
         hp: 350, // ★ 強化 (75 -> 350)
         atk: 75,  // ★ 強化 (22 -> 75)
         def: 5,   // ★ 強化 (2 -> 5)
