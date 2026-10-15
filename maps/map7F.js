@@ -1,4 +1,4 @@
-// maps/map7F.js - 7F「VIPラウンジ」完全版（エレベーター新設・動線修正版）
+// maps/map7F.js - 7F「VIPラウンジ」完全版（エレベーター新設・動線修正・ステータス強化版）
 
 import { 
     showMessageDialog, showConversationDialog, 
@@ -35,9 +35,9 @@ const TAXIDERMY_CONFIG = {
         enemy: {
             name: "黄金の剥製・影山",
             image: "assets/images/demon/2f-kageyama2.jpg",
-            hp: 110,
-            atk: 18,
-            def: 2,
+            hp: 350, // ★ 強化 (110 -> 350)
+            atk: 50, // ★ 強化 (18 -> 50)
+            def: 5,  // ★ 強化 (2 -> 5)
             weakness: [2, 5],
             actions: ["は黄金の拳を振り下ろした！", "が鎖を引きちぎらんばかりに突進してくる！", "の濁った瞳から金粉がこぼれ落ちる"]
         },
@@ -51,9 +51,9 @@ const TAXIDERMY_CONFIG = {
         enemy: {
             name: "黄金の剥製・真田",
             image: "assets/images/demon/3f-sanada.jpg",
-            hp: 140,
-            atk: 20,
-            def: 3,
+            hp: 450, // ★ 強化 (140 -> 450)
+            atk: 55, // ★ 強化 (20 -> 55)
+            def: 6,  // ★ 強化 (3 -> 6)
             weakness: [3, 8],
             actions: ["の鋭利な爪が空を裂く！", "は宝石の光を乱反射させて目を眩ませてきた！", "の金縛りの怨念が体を締め付ける！"]
         },
@@ -67,9 +67,9 @@ const TAXIDERMY_CONFIG = {
         enemy: {
             name: "黄金の剥製・里奈",
             image: "assets/images/demon/4f-rina.jpg",
-            hp: 160,
-            atk: 22,
-            def: 2,
+            hp: 550, // ★ 強化 (160 -> 550)
+            atk: 60, // ★ 強化 (22 -> 60)
+            def: 8,  // ★ 強化 (2 -> 8)
             weakness: [1, 6],
             actions: ["は冷酷な眼差しで魔弾を連射した！", "の金のドレスが禍々しい魔気を放つ！", "の甲高い笑い声が精神を蝕む！"]
         },
@@ -83,9 +83,9 @@ const TAXIDERMY_CONFIG = {
         enemy: {
             name: "黄金の剥製・蛭沼",
             image: "assets/images/demon/5f-hirunuma.png",
-            hp: 200,
-            atk: 25,
-            def: 4,
+            hp: 650, // ★ 強化 (200 -> 650)
+            atk: 65, // ★ 強化 (25 -> 65)
+            def: 10, // ★ 強化 (4 -> 10)
             weakness: [4, 7],
             actions: ["の重厚な黄金の腕が薙ぎ払われる！", "の凄まじい地響きが部屋を揺るがす！", "は暴走し、周囲の壁を粉砕しながら突進してきた！"]
         },
@@ -117,11 +117,11 @@ export function handleEvent7F(targetCell, gameState, context) {
         };
     }
 
-    // 4: 6Fへの階段（★stair_down に修正）
+    // 4: 6Fへの階段（stair_down）
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
-                gameState.lastTransitMethod = 'stair_down'; // 下りフラグ
+                gameState.lastTransitMethod = 'stair_down';
                 playFloorTransition(6, () => {
                     context.changeFloor(6);
                     onComplete();
@@ -358,9 +358,9 @@ function handleBossPenthouse(gameState, context, onComplete) {
                 const shiratoriBoss = {
                     name: "マダム・白鳥（強欲の化身）",
                     image: "assets/images/demon/7fshiratoriakuma.png",
-                    hp: 360,
-                    atk: 28,
-                    def: 3,
+                    hp: 1200, // ★ 強化 (360 -> 1200)
+                    atk: 85,  // ★ 強化 (28 -> 85)
+                    def: 12,  // ★ 強化 (3 -> 12)
                     weakness: [7, 9],
                     actions: [
                         "の鋭利な角が黄金の魔力をスパークさせる！",
@@ -405,9 +405,9 @@ export function check7FRandomEncounter(gameState, context, onComplete) {
     const enemy = isCop ? {
         name: "取り憑かれた悪徳警官",
         image: "assets/images/demon/demon17.png",
-        hp: 65,
-        atk: 18,
-        def: 2,
+        hp: 250, // ★ 強化 (65 -> 250)
+        atk: 55, // ★ 強化 (18 -> 55)
+        def: 8,  // ★ 強化 (2 -> 8)
         weakness: [4, 7],
         actions: [
             "の構えた銃口から銃弾が放たれる！",
@@ -417,9 +417,9 @@ export function check7FRandomEncounter(gameState, context, onComplete) {
     } : {
         name: "極道ゾンビ",
         image: "assets/images/demon/demon16.png",
-        hp: 80,
-        atk: 22,
-        def: 1,
+        hp: 300, // ★ 強化 (80 -> 300)
+        atk: 60, // ★ 強化 (22 -> 60)
+        def: 5,  // ★ 強化 (1 -> 5)
         weakness: [2, 9],
         actions: [
             "の抜き身のドスが閃光のように走る！",

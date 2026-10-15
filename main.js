@@ -1,4 +1,4 @@
-// main.js - 8F最上階正式接続・6F降下座標修正・BGM完全版
+// main.js - 8F最上階正式接続・階段座標完全修正・BGM完全版
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -9,7 +9,6 @@ import { map4F, playerStart4F, handleEvent4F, check4FRandomEncounter } from './m
 import { map5F, playerStart5F, handleEvent5F, check5FRandomEncounter } from './maps/map5F.js';
 import { map6F, playerStart6F, handleEvent6F, check6FRandomEncounter } from './maps/map6F.js';
 import { map7F, playerStart7F, handleEvent7F, check7FRandomEncounter } from './maps/map7F.js';
-// ★ 8Fのインポートを追加
 import { map8F, playerStart8F, handleEvent8F, check8FRandomEncounter } from './maps/map8F.js';
 
 import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI, playVideo } from './ui.js';
@@ -194,7 +193,7 @@ function interactFrontCell() {
     eventObj = handleEvent6F(cellType, gameState, context);
   } else if (gameState.currentFloor === 7) {
     eventObj = handleEvent7F(cellType, gameState, context);
-  } else if (gameState.currentFloor === 8) { // ★ 8Fのイベント処理を追加
+  } else if (gameState.currentFloor === 8) {
     eventObj = handleEvent8F(cellType, gameState, context);
   }
 
@@ -212,7 +211,6 @@ function changeFloor(floor) {
 
   sound.playBGM("assets/audio/bgm/field.mp3");
 
-  // ★ 8Fへの遷移処理を追加
   if (floor === 8) {
     gameState.currentMap = map8F;
     gameState.player.x = playerStart8F.x;
@@ -225,7 +223,16 @@ function changeFloor(floor) {
   }
   else if (floor === 7) {
     gameState.currentMap = map7F;
-    if (gameState.lastTransitMethod === 'stairs') {
+    
+    // ★ 8Fから降りてきたときの座標修正
+    if (gameState.lastTransitMethod === 'stair_down') {
+      gameState.player.x = 3;
+      gameState.player.y = 1; // 8F行き大階段の前
+      gameState.player.dir = 2; // 南向き（階段に背を向ける）
+      showMessageDialog("【7階 VIPラウンジ】\n8階から降りてきた。ペントハウスの静寂が広がっている……。", () => {
+        redraw();
+      });
+    } else if (gameState.lastTransitMethod === 'stairs') {
       gameState.player.x = playerStart7F.x;
       gameState.player.y = playerStart7F.y;
       gameState.player.dir = playerStart7F.dir;
@@ -236,14 +243,14 @@ function changeFloor(floor) {
     }
     
     if (!gameState.flags) gameState.flags = {};
-    if (!gameState.flags.seen7FIntro) {
+    if (!gameState.flags.seen7FIntro && gameState.lastTransitMethod !== 'stair_down') {
       gameState.flags.seen7FIntro = true;
       showMessageDialog("【7階 VIPラウンジ】\n豪華なレッドカーペットと白大理石の廊下。空気が金と欲望の匂いで充満している……。", () => {
         showConversationDialog("assets/images/demon/7f-shiratori.png", "【館内放送・マダム白鳥】\n「あぁら、また小汚い庶民が迷い込んだの？ 庶民の匂いは本当に吐き気がするわね。\n……まさか、一階でくたばった『あの神父』の仇でも取りに来たつもり？\nアハハ！ 傑作ね！ あんな男、私がちょっと札束を積んで『私の専属になりなさい』って言ってやったら、偉そうに説教なんて始めて……\nだから御堂先生にお願いして、ちょっと『再教育』してもらったの。今頃、泥水の中で惨めな姿になってるでしょうね。\nいいこと？ このマンションの住人も、迷い込んだ愚か者も、ぜーんぶ私の『資産』よ。命の価値なんてね、通帳の残高で決まるの。\nあなたの残高いくらかしら？\n精々、私のペットたちの餌になって、少しでも私の利益に貢献しなさいな。失せな！」", () => {
           redraw();
         });
       });
-    } else {
+    } else if (gameState.lastTransitMethod !== 'stair_down') {
       showMessageDialog("【7階 VIPラウンジ】\n豪華なレッドカーペットと白大理石の廊下。静けさの中に不気味な気配が漂っている……", () => {
         redraw();
       });
@@ -439,7 +446,7 @@ function toggleDebugUI() {
             <button class="debug-warp-btn" data-floor="5" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">5F</button>
             <button class="debug-warp-btn" data-floor="6" style="background:#004400; color:#00ff66; border:1px solid #00ff66; padding:4px 8px; cursor:pointer; font-size:11px;">6F</button>
             <button class="debug-warp-btn" data-floor="7" style="background:#c5a059; color:#000; border:1px solid #ffdd66; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:bold;">7F</button>
-            <button class="debug-warp-btn" data-floor="8" style="background:#aa0000; color:#fff; border:1px solid #ff0000; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:bold; box-shadow:0 0 5px red;">8F最上階</button>
+            <button class="debug-warp-btn" data-floor="8" style="background:#aa0000; color:#fff; border:1px solid #ff0000; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:bold; box-shadow:0 0 5px red;">8F</button>
         </div>
       `;
       overlay.classList.remove('hidden');
@@ -514,16 +521,16 @@ function debugJumpToFloor(floor) {
     gameState.player.level = 30;
     gameState.player.maxHp = 250;
     gameState.player.hp = 250;
-    gameState.player.def = 12;
+    gameState.player.def = 15;
     gameState.player.money = 20000;
     gameState.flags.cleared6F = true;
     gameState.flags.hasCat = true; 
     changeFloor(7);
-  } else if (floor === 8) { // ★ 8Fへのデバッグワープ
+  } else if (floor === 8) {
     gameState.player.level = 35;
     gameState.player.maxHp = 300;
     gameState.player.hp = 300;
-    gameState.player.def = 15;
+    gameState.player.def = 20;
     gameState.player.money = 30000;
     gameState.flags.cleared7F = true;
     gameState.flags.hasCat = true; 
@@ -595,7 +602,7 @@ function checkEncounterAfterMove() {
         redraw();
       });
     }
-  } else if (gameState.currentFloor === 8) { // ★ 8Fのエンカウント判定を追加
+  } else if (gameState.currentFloor === 8) {
     if (typeof check8FRandomEncounter === 'function') {
       isProcessingEvent = true;
       check8FRandomEncounter(gameState, { changeFloor }, () => {

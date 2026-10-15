@@ -1,5 +1,5 @@
 // maps/map8F.js - 8F「最上階：悪魔王の祭壇」完全版
-// セリフ演出強化・ケルベロス戦黒猫お休みギミック・Sinマルチエンディング対応
+// セリフ演出・黒猫お休みギミック・階段動線同期・ステータス強化・Sinマルチエンディング対応
 
 import { 
     showMessageDialog, showConversationDialog, 
@@ -28,10 +28,11 @@ export function handleEvent8F(targetCell, gameState, context) {
     const frontX = px + dx[dir];
     const frontY = py + dy[dir];
 
+    // ★ 4: 7Fへの階段（main.jsと連動して7Fの大階段前に着地させる）
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
-                gameState.lastTransitMethod = 'stairs';
+                gameState.lastTransitMethod = 'stair_down'; // 下り判定
                 playFloorTransition(7, () => {
                     context.changeFloor(7);
                     onComplete();
@@ -63,7 +64,7 @@ function handleCerberusRoom(gameState, context, onComplete) {
         return;
     }
 
-    // ★ ケルベロスのセリフ ＆ 黒猫が怯える心理描写
+    // ケルベロスのセリフ ＆ 黒猫が怯える心理描写
     showConversationDialog(
         "assets/images/demon/Cerberus.jpg",
         "【地獄の番犬・ケルベロス】\n「ワレヲ喚ビ出シタノハ誰ダ…貴様カッ、頭ガ高イィッ！」\n\n（使い魔が怯えている……相手が地獄の猛犬のせいか、この戦闘で使い魔の助けは期待できないかもしれない！）",
@@ -71,9 +72,9 @@ function handleCerberusRoom(gameState, context, onComplete) {
             const cerberusBoss = {
                 name: "地獄の番犬・ケルベロス",
                 image: "assets/images/demon/Cerberus.jpg",
-                hp: 260,
-                atk: 24,
-                def: 3,
+                hp: 1000, // ★ 強化 (260 -> 1000)
+                atk: 90,  // ★ 強化 (24 -> 90)
+                def: 10,  // ★ 強化 (3 -> 10)
                 weakness: [1, 6],
                 actions: [
                     "の３つの顎が同時に噛みついてきた！",
@@ -82,19 +83,19 @@ function handleCerberusRoom(gameState, context, onComplete) {
                 ]
             };
 
-            // ★ ケルベロス戦のみ、黒猫サポートを一時停止
+            // ケルベロス戦のみ黒猫サポートを一時停止
             const prevCatState = gameState.flags.isCatTrapped;
             gameState.flags.isCatTrapped = true;
 
             openCombatUI(cerberusBoss, gameState, (res) => {
-                // 戦闘終了後に黒猫フラグを元に戻す
+                // 戦闘終了後に黒猫フラグを復元
                 gameState.flags.isCatTrapped = prevCatState;
 
                 if (res === "win") {
                     gameState.flags.clearedCerberus = true;
                     gameState.player.money += 3000;
 
-                    // ★ 主人公と黒猫のアフタートーク
+                    // 主人公と黒猫のアフタートーク
                     showMessageDialog(
                         "【ケルベロス 討滅！】\n３つの首を討ち果たし、巨獣は黒煙を上げて崩れ落ちた！\n\n主人公「大丈夫か、いけるか、相棒」\n黒猫はすまなそうに主人公を見上げると、（ニヤッ）と短く鳴き、強い瞳で前を向きなおした。\n\n部屋の隅に、踏みにじられた父親のペンとノートの切れ端が落ちている……！",
                         () => {
@@ -121,7 +122,7 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
         return;
     }
 
-    // ★ 牛頭と馬頭のセリフ
+    // 牛頭と馬頭のセリフ
     showConversationDialog(
         "assets/images/demon/gozumezu.png",
         "【地獄の獄卒・牛頭＆馬頭】\n牛頭「ここはどこだ？？ お前は罪人か？ ならば己の罪を数えよ」\n\n馬頭「いや、数える必要もあるまい、ここは地獄、判決は、死刑よ！」",
@@ -129,9 +130,9 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
             const gozuMezuBoss = {
                 name: "地獄の獄卒・牛頭＆馬頭",
                 image: "assets/images/demon/gozumezu.png",
-                hp: 300,
-                atk: 26,
-                def: 4,
+                hp: 1100, // ★ 強化 (300 -> 1100)
+                atk: 95,  // ★ 強化 (26 -> 95)
+                def: 12,  // ★ 強化 (4 -> 12)
                 weakness: [2, 7],
                 actions: [
                     "の牛頭が巨大な金棒を狂乱しながら振り下ろした！",
@@ -204,9 +205,9 @@ function startMidoBattleSequence(gameState, context, onComplete) {
     const midoBoss = {
         name: "悪魔王・御堂（自己顕示の化身）",
         image: "assets/images/demon/midouakuma.png",
-        hp: 420,
-        atk: 30,
-        def: 4,
+        hp: 2800, // ★ 強化 (420 -> 2800)
+        atk: 120, // ★ 強化 (30 -> 120)
+        def: 18,  // ★ 強化 (4 -> 18)
         weakness: [4, 9],
         actions: [
             "は『俺の大義が分からんか！』と逆上し、血の業火を放った！",
@@ -235,7 +236,8 @@ function startMidoBattleSequence(gameState, context, onComplete) {
                             };
 
                             openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
-                                const isCorrect = (slots["slot_3"] === 2 && slots["slot_1"] === 6 && slots["slot_5"] === 9) || true;
+                                // ★ 左: 2(鏡)、中央: 6(聖炎)、右: 9(銀杭) の完全一致判定
+                                const isCorrect = (Number(slots["slot_3"]) === 2 && Number(slots["slot_1"]) === 6 && Number(slots["slot_5"]) === 9);
 
                                 if (isCorrect) {
                                     showConversationDialog(
@@ -248,8 +250,8 @@ function startMidoBattleSequence(gameState, context, onComplete) {
                                         }
                                     );
                                 } else {
-                                    gameState.player.hp = Math.max(1, gameState.player.hp - 30);
-                                    showMessageDialog("【神聖陣の暴走！】\n印の波長が合わず、魔方陣が激しく反発した！（30ダメージ）\n\n御堂「ガハハ！ 無駄だと言っただろうが！」", onComplete);
+                                    gameState.player.hp = Math.max(1, gameState.player.hp - 50);
+                                    showMessageDialog("【神聖陣の暴走！】\n印の波長が合わず、魔方陣が激しく反発した！（50ダメージ！）\n\n御堂「ガハハ！ 無駄だと言っただろうが！ 愚民にこの神聖なる儀式は止められん！」\n\n（※もう一度魔方陣を調べて正しいカードをセットしよう！）", onComplete);
                                 }
                             });
                         }
@@ -310,9 +312,9 @@ export function check8FRandomEncounter(gameState, context, onComplete) {
     const enemy = {
         name: "御堂の後援会狂信者",
         image: "assets/images/demon/demon17.png",
-        hp: 75,
-        atk: 22,
-        def: 2,
+        hp: 350, // ★ 強化 (75 -> 350)
+        atk: 75,  // ★ 強化 (22 -> 75)
+        def: 5,   // ★ 強化 (2 -> 5)
         weakness: [3, 5],
         actions: [
             "は『御堂先生こそ真の市長だ！』と叫び襲いかかってきた！",
