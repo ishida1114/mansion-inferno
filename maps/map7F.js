@@ -176,28 +176,46 @@ function handleTaxidermyRoom(gameState, context, bossKey, onComplete) {
         return;
     }
 
-    playVideo(cfg.video, () => {
-        showMessageDialog(cfg.introText, () => {
-            openCombatUI(cfg.enemy, gameState, (res) => {
-                if (res === "win") {
-                    gameState.flags[cfg.flag] = true;
-                    gameState.player.money += cfg.rewardMoney;
-                    
-                    const clearedCount = ["clearedTaxidermyKageyama", "clearedTaxidermySanada", "clearedTaxidermyRina", "clearedTaxidermyHirunuma"].filter(k => gameState.flags[k]).length;
-                    
-                    let unlockMsg = `【撃破成功！】\n${cfg.enemy.name} の呪縛を解き、粉砕した！\n剥製の中から宝石と金貨がこぼれ落ちる……（💰${cfg.rewardMoney} 獲得！）`;
-                    if (clearedCount >= 4) {
-                        unlockMsg += `\n\n【展示室完全制覇！】\n全ての剥製を破壊した！ 廊下の最奥、マダム・白鳥のペントハウスの封印扉が開錠された！`;
+    const startCombatSequence = () => {
+        playVideo(cfg.video, () => {
+            showMessageDialog(cfg.introText, () => {
+                openCombatUI(cfg.enemy, gameState, (res) => {
+                    if (res === "win") {
+                        gameState.flags[cfg.flag] = true;
+                        gameState.player.money += cfg.rewardMoney;
+                        
+                        const clearedCount = ["clearedTaxidermyKageyama", "clearedTaxidermySanada", "clearedTaxidermyRina", "clearedTaxidermyHirunuma"].filter(k => gameState.flags[k]).length;
+                        
+                        let unlockMsg = `【撃破成功！】\n${cfg.enemy.name} の呪縛を解き、粉砕した！\n剥製の中から宝石と金貨がこぼれ落ちる……（💰${cfg.rewardMoney} 獲得！）`;
+                        
+                        // ★ 剥製破壊時の白鳥の激怒メッセージを追加
+                        unlockMsg += `\n\n【館内放送・マダム白鳥】\n「ちょっと！！ あなた、私のコレクションに何してくれてるの！？\nそれを純金でコーティングするのに、いくらかかったと思ってるのよ！\nあんなゴミみたいな悪魔の魂でも、私が装飾してやったから『価値』が生まれたのに！\n弁償しなさい！ 今すぐその汚い臓器を全部売って、私の口座に振り込みなさい！！」`;
+
+                        if (clearedCount >= 4) {
+                            unlockMsg += `\n\n【展示室完全制覇！】\n全ての剥製を破壊した！ 廊下の最奥、マダム・白鳥のペントハウスの封印扉が開錠された！`;
+                        } else {
+                            unlockMsg += `\n\n（ペントハウスの封印解除まで あと ${4 - clearedCount} 体）`;
+                        }
+                        showMessageDialog(unlockMsg, onComplete);
                     } else {
-                        unlockMsg += `\n\n（ペントハウスの封印解除まで あと ${4 - clearedCount} 体）`;
+                        onComplete();
                     }
-                    showMessageDialog(unlockMsg, onComplete);
-                } else {
-                    onComplete();
-                }
-            }, context);
+                }, context);
+            });
         });
-    });
+    };
+
+    // ★ 最初の剥製部屋に入った時だけ、自慢のメッセージを再生
+    if (!gameState.flags.seenTaxidermyIntro) {
+        gameState.flags.seenTaxidermyIntro = true;
+        showConversationDialog(
+            "assets/images/demon/7f-shiratori.png", 
+            "【館内放送・マダム白鳥】\n「ふふふ……驚いた？ それはね、私が特別に作らせた『アート』よ。\nあなたが下の階で倒したゴミ屑たち……魂を買い取って、純金と宝石でドレスアップしてあげたの！\n生きていた時よりもずっと美しくて、価値のある存在になったと思わない？\n愛も、憎しみも、最後はこうして『私だけのモノ』になる。\nあぁ、なんて素晴らしいコレクションかしら！\nさあ、私の可愛いペットたち。その貧相な闖入者を引き裂いて、新しい赤い絨毯の染料にしておしまい！」", 
+            startCombatSequence
+        );
+    } else {
+        startCombatSequence();
+    }
 }
 
 // 706号室：シャンパンラウンジ（全回復）
@@ -328,7 +346,11 @@ function handleBossPenthouse(gameState, context, onComplete) {
         return;
     }
 
-    showConversationDialog("assets/images/demon/7f-shiratori.png", "【タワマンマダム・白鳥】\n「あらあら……私の可愛いコレクションたちを全部壊しちゃったの？ 随分と乱暴な男ねえ。」\n\n「まあいいわ。あんな出来損ないより、あなたを純金で固めて、私の最高のコレクションにしてあげる！」", () => {
+    // ★ 決戦前（ペントハウス突入時）の傲慢なセリフ
+    showConversationDialog(
+        "assets/images/demon/7f-shiratori.png", 
+        "【タワマンマダム・白鳥】\n「本当つまらない庶民ね\n頭も良くないんでしょうね\n私のまぁまぁ気に入ってたコレクションを４つも台無しにして……あなたの無価値な命を何度すり潰しても足りないわ。\n肉は美味しそうだから削ぎ取って今夜のディナーのステーキと唐揚げにしてあげる\n……でも、そうね。ひとつ許される方法があるわ。\nあなた、神父の力を受け継いでいるんでしょう？ なかなか珍しいモノを持ってるじゃない。\nそれがあれば他の悪魔も支配できそうよね\nどう？ ここで私に土下座して『永遠の奴隷になります』って誓約書に血判を押すなら、命だけは助けてあげるわよ？\nほら、さっさとひざまずきなさい、頭が悪い庶民だけど、ペットぐらいならできるでしょ！」", 
+        () => {
         playVideo("assets/images/demon/7f-shiratori.mp4", () => {
             const shiratoriBoss = {
                 name: "マダム・白鳥（強欲の化身）",
@@ -349,8 +371,10 @@ function handleBossPenthouse(gameState, context, onComplete) {
                 if (res === "win") {
                     gameState.flags.cleared7F = true;
                     gameState.player.money += 5000;
+                    
+                    // ★ 撃破時の白鳥の命乞いと主人公の冷徹な一言
                     showMessageDialog(
-                        "【マダム・白鳥 討滅！】\n「私の……お金……私の……美しい……身体が……っ！」\n\n白鳥の全身を覆っていた黄金がドロドロに溶け崩れ、ただの灰となって消滅した……。\n（💰5,000 を獲得！）",
+                        "【マダム・白鳥 討滅！】\n「私が偉そうだって？？当たり前じゃない、偉いんだから\nねぇ、見逃してくれたからあなたの好きにしていいのよ、私、今夜は飲みに行きたい気分\n\nぐはぁ（口から液体が溢れる）\n\nいや、崩れる、顔が崩れる\n助けなさいよ、このグズッ\n\nいやだ、庶民には戻りたくないぃぃぃぃっ……！！」\n\n主人公「庶民にも、戻す気はないよ」\n\n（白鳥の全身を覆っていた黄金がドロドロに溶け崩れ、ただの灰となって消滅した……。）\n（💰5,000 を獲得！）",
                         () => {
                             showMessageDialog(
                                 "【次なる目的】\n強欲の魔女を倒した。\n1階の集合ポストへ要請書を投函すれば、決戦用防具『エクソシストの漆黒コート』を取り寄せられるはずだ。\n\n準備が整い次第、奥の大階段から【8F：最上階】へ挑もう！",

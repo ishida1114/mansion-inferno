@@ -8,7 +8,7 @@ import { map3F, playerStart3F, handleEvent3F, check3FRandomEncounter } from './m
 import { map4F, playerStart4F, handleEvent4F, check4FRandomEncounter } from './maps/map4F.js';
 import { map5F, playerStart5F, handleEvent5F, check5FRandomEncounter } from './maps/map5F.js';
 import { map6F, playerStart6F, handleEvent6F, check6FRandomEncounter } from './maps/map6F.js';
-// ★ 7Fのインポートを追加
+// ★ 7Fのインポート
 import { map7F, playerStart7F, handleEvent7F, check7FRandomEncounter } from './maps/map7F.js';
 import { showMessageDialog, showConversationDialog, openCombatUI, openInquisitionUI, showOpeningUI, playVideo } from './ui.js';
 import { initDebug } from './debug.js';
@@ -186,7 +186,6 @@ function interactFrontCell() {
   } else if (gameState.currentFloor === 6) {
     eventObj = handleEvent6F(cellType, gameState, context);
   } else if (gameState.currentFloor === 7) {
-    // ★ 7階の扉や階段を調べた時のイベント呼び出しを追加
     eventObj = handleEvent7F(cellType, gameState, context);
   }
 
@@ -203,7 +202,6 @@ function changeFloor(floor) {
   gameState.currentFloor = floor;
 
   if (floor === 7) {
-    // ★ 7階への移動処理を完全実装
     gameState.currentMap = map7F;
     if (gameState.lastTransitMethod === 'stairs') {
       gameState.player.x = playerStart7F.x;
@@ -215,13 +213,24 @@ function changeFloor(floor) {
       gameState.player.dir = playerStart7F.dir;
     }
     
-    showMessageDialog("【7階 VIPラウンジ】\n豪華なレッドカーペットと白大理石の廊下。空気が金と欲望の匂いで充満している……。", () => {
-      redraw();
-    });
+    // ★ 7F初回到達時の館内放送イベント
+    if (!gameState.flags) gameState.flags = {};
+    if (!gameState.flags.seen7FIntro) {
+      gameState.flags.seen7FIntro = true;
+      showMessageDialog("【7階 VIPラウンジ】\n豪華なレッドカーペットと白大理石の廊下。空気が金と欲望の匂いで充満している……。", () => {
+        showConversationDialog("assets/images/demon/7f-shiratori.png", "【館内放送・マダム白鳥】\n「あぁら、また小汚い庶民が迷い込んだの？ 庶民の匂いは本当に吐き気がするわね。\n……まさか、一階でくたばった『あの神父』の仇でも取りに来たつもり？\nアハハ！ 傑作ね！ あんな男、私がちょっと札束を積んで『私の専属になりなさい』って言ってやったら、偉そうに説教なんて始めて……\nだから御堂先生にお願いして、ちょっと『再教育』してもらったの。今頃、泥水の中で惨めな姿になってるでしょうね。\nいいこと？ このマンションの住人も、迷い込んだ愚か者も、ぜーんぶ私の『資産』よ。命の価値なんてね、通帳の残高で決まるの。\nあなたの残高いくらかしら？\n精々、私のペットたちの餌になって、少しでも私の利益に貢献しなさいな。失せな！」", () => {
+          redraw();
+        });
+      });
+    } else {
+      showMessageDialog("【7階 VIPラウンジ】\n豪華なレッドカーペットと白大理石の廊下。静けさの中に不気味な気配が漂っている……", () => {
+        redraw();
+      });
+    }
   }
   else if (floor === 6) {
     gameState.currentMap = map6F;
-    if (gameState.lastTransitMethod === 'stairs') { // ★呼び出し側の名前に統一
+    if (gameState.lastTransitMethod === 'stairs') {
       gameState.player.x = 5;
       gameState.player.y = 8;
       gameState.player.dir = 0; // 北向き
@@ -490,7 +499,6 @@ function debugJumpToFloor(floor) {
 }
 
 function checkEncounterAfterMove() {
-  // ★ ランダムエンカウント後に戦闘結果を受け取る共通処理
   const handleBattleResult = (result) => {
     isProcessingEvent = false;
     if (result === 'defeat') {
@@ -509,7 +517,6 @@ function checkEncounterAfterMove() {
     }
   };
 
-  // 各階のランダムエンカウント判定
   if (gameState.currentFloor === 2) {
     check2FRandomEncounter(gameState, (enemy) => {
       isProcessingEvent = true;
@@ -544,7 +551,6 @@ function checkEncounterAfterMove() {
       });
     }
   } else if (gameState.currentFloor === 7) {
-    // ★ 7階のエンカウント呼び出し
     if (typeof check7FRandomEncounter === 'function') {
       isProcessingEvent = true;
       check7FRandomEncounter(gameState, { changeFloor }, () => {
