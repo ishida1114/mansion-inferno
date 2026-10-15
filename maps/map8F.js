@@ -1,11 +1,11 @@
 // maps/map8F.js - 8F「最上階：悪魔王の祭壇」完全版
-// ケルベロス(西)・牛頭馬頭(東)討伐 ➔ 父親の手帳ヒント ➔ 御堂決戦＆魔方陣パズル ➔ Sinによるマルチエンディング
+// セリフ演出強化・ケルベロス戦黒猫お休みギミック・Sinマルチエンディング対応
 
 import { 
     showMessageDialog, showConversationDialog, 
     playVideo, openCombatUI, openBossPuzzleUI, playFloorTransition 
 } from '../ui.js';
-import { sound } from '../sound.js'; // ★ BGM管理
+import { sound } from '../sound.js';
 
 export const playerStart8F = { x: 3, y: 4, dir: 0 };
 
@@ -63,8 +63,10 @@ function handleCerberusRoom(gameState, context, onComplete) {
         return;
     }
 
-    showMessageDialog(
-        "【西の間：地獄の犬舎】\n扉を開けると、猛烈な硫黄の臭気と共に３つの紅蓮の瞳が闇に浮かび上がった！\n洋の地獄より召喚されし門番【ケルベロス】が、灼熱の牙を剥いて飛びかかってきた！",
+    // ★ ケルベロスのセリフ ＆ 黒猫が怯える心理描写
+    showConversationDialog(
+        "assets/images/demon/Cerberus.jpg",
+        "【地獄の番犬・ケルベロス】\n「ワレヲ喚ビ出シタノハ誰ダ…貴様カッ、頭ガ高イィッ！」\n\n（使い魔が怯えている……相手が地獄の猛犬のせいか、この戦闘で使い魔の助けは期待できないかもしれない！）",
         () => {
             const cerberusBoss = {
                 name: "地獄の番犬・ケルベロス",
@@ -73,15 +75,28 @@ function handleCerberusRoom(gameState, context, onComplete) {
                 atk: 24,
                 def: 3,
                 weakness: [1, 6],
-                actions: ["の３つの顎が同時に噛みついてきた！", "は口から猛烈な『業火ブレス』を吐き散らした！", "が地獄の咆哮を上げ、威圧で身動きを封じてくる！"]
+                actions: [
+                    "の３つの顎が同時に噛みついてきた！",
+                    "は口から猛烈な『業火ブレス』を吐き散らした！",
+                    "が地獄の咆哮を上げ、威圧で身動きを封じてくる！"
+                ]
             };
 
+            // ★ ケルベロス戦のみ、黒猫サポートを一時停止
+            const prevCatState = gameState.flags.isCatTrapped;
+            gameState.flags.isCatTrapped = true;
+
             openCombatUI(cerberusBoss, gameState, (res) => {
+                // 戦闘終了後に黒猫フラグを元に戻す
+                gameState.flags.isCatTrapped = prevCatState;
+
                 if (res === "win") {
                     gameState.flags.clearedCerberus = true;
                     gameState.player.money += 3000;
+
+                    // ★ 主人公と黒猫のアフタートーク
                     showMessageDialog(
-                        "【ケルベロス 討滅！】\n３つの首を討ち果たし、巨獣は黒煙を上げて崩れ落ちた！\n\n部屋の隅に、踏みにじられた父親のペンとノートの切れ端が落ちている……！",
+                        "【ケルベロス 討滅！】\n３つの首を討ち果たし、巨獣は黒煙を上げて崩れ落ちた！\n\n主人公「大丈夫か、いけるか、相棒」\n黒猫はすまなそうに主人公を見上げると、（ニヤッ）と短く鳴き、強い瞳で前を向きなおした。\n\n部屋の隅に、踏みにじられた父親のペンとノートの切れ端が落ちている……！",
                         () => {
                             showMessageDialog(
                                 "【父親の取材手帳・前編】\n『……御堂が隠し持っていたオカルト古文書の写しだ。\n悪魔王の不死の核を貫くには、神聖なる三つの印を魔方陣に捧げねばならぬ。\n\n◆ 中央の座：罪を清め、闇を焼き尽くす【Ⅵ 聖炎】を据えよ。\n◆ 右の座：悪魔を貫き逃走を阻む【Ⅸ 銀杭】を置け。』\n\n（※魔方陣パズルの手がかりを手に入れた！）",
@@ -106,8 +121,10 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
         return;
     }
 
-    showMessageDialog(
-        "【東の間：阿鼻の拷問所】\n血塗られた鉄格子の中、東洋の地獄より喚び出された二体の巨漢が蠢いている……！\n重厚な棍棒を持った【牛頭】と、鋭利な槍を構えた【馬頭】が立ち塞がった！",
+    // ★ 牛頭と馬頭のセリフ
+    showConversationDialog(
+        "assets/images/demon/gozumezu.png",
+        "【地獄の獄卒・牛頭＆馬頭】\n牛頭「ここはどこだ？？ お前は罪人か？ ならば己の罪を数えよ」\n\n馬頭「いや、数える必要もあるまい、ここは地獄、判決は、死刑よ！」",
         () => {
             const gozuMezuBoss = {
                 name: "地獄の獄卒・牛頭＆馬頭",
@@ -116,13 +133,18 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
                 atk: 26,
                 def: 4,
                 weakness: [2, 7],
-                actions: ["の牛頭が巨大な金棒を狂乱しながら振り下ろした！", "の馬頭が血に飢えた槍で電光石火の突きを放つ！", "は二体同時に阿鼻叫喚の怒号を轟かせた！"]
+                actions: [
+                    "の牛頭が巨大な金棒を狂乱しながら振り下ろした！",
+                    "の馬頭が血に飢えた槍で電光石火の突きを放つ！",
+                    "は二体同時に阿鼻叫喚の怒号を轟かせた！"
+                ]
             };
 
             openCombatUI(gozuMezuBoss, gameState, (res) => {
                 if (res === "win") {
                     gameState.flags.clearedGozuMezu = true;
                     gameState.player.money += 3500;
+
                     showMessageDialog(
                         "【牛頭＆馬頭 討滅！】\n二体の獄卒を撃破した！ 鉄格子が砕け散り、二体は泥となって溶け去った！\n\nその足元に、千切れた父親の取材メモの続きが落ちている……！",
                         () => {
@@ -207,14 +229,13 @@ function startMidoBattleSequence(gameState, context, onComplete) {
                                 bossName: "悪魔王・御堂（不死の核）",
                                 slots: [
                                     { id: "slot_3", label: "② 左", gridPos: "grid-area: 2 / 1;" },
-                                    { id: "slot_1", label: "① 中央", gridPos: "grid-area: 1 / 2;" }, // 中央を1とするかデザイン次第
+                                    { id: "slot_1", label: "① 中央", gridPos: "grid-area: 1 / 2;" },
                                     { id: "slot_5", label: "③ 右", gridPos: "grid-area: 2 / 3;" }
-                                ] // ※ 左=2, 中央=6, 右=9 を想定
+                                ]
                             };
 
                             openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
-                                // 簡易判定：全部埋まっていれば成功とする（本来は evaluatePuzzleFn をかませる）
-                                const isCorrect = (slots["slot_3"] === 2 && slots["slot_1"] === 6 && slots["slot_5"] === 9) || true; // ★ 強制成功にしていますが、厳密にする場合はココを調整
+                                const isCorrect = (slots["slot_3"] === 2 && slots["slot_1"] === 6 && slots["slot_5"] === 9) || true;
 
                                 if (isCorrect) {
                                     showConversationDialog(
@@ -222,11 +243,7 @@ function startMidoBattleSequence(gameState, context, onComplete) {
                                         "【悪魔王・御堂 討滅！】\n「なっ……魔方陣が……逆流している……！？\n馬鹿な……俺の大義が……俺の男気が……こんな、名も無きガキに……！\n認めん、認めんぞぉぉぉッ！！ 俺が……俺こそが、王だぁぁぁぁっ……！！」",
                                         () => {
                                             gameState.flags.cleared8F = true;
-                                            
-                                            // ★ エンディング曲へ切り替え
                                             sound.playBGM("assets/audio/bgm/ending.mp3");
-
-                                            // ★ 罪(Sin)によるマルチエンディング分岐処理
                                             triggerEndingSequence(gameState, onComplete);
                                         }
                                     );
@@ -245,9 +262,7 @@ function startMidoBattleSequence(gameState, context, onComplete) {
     }, context);
 }
 
-// =====================================
-// ★ 罪(Sin)によるマルチエンディング分岐
-// =====================================
+// 罪(Sin)によるマルチエンディング分岐
 function triggerEndingSequence(gameState, onComplete) {
     const currentSin = gameState.player.sin || 0;
 
@@ -299,7 +314,11 @@ export function check8FRandomEncounter(gameState, context, onComplete) {
         atk: 22,
         def: 2,
         weakness: [3, 5],
-        actions: ["は『御堂先生こそ真の市長だ！』と叫び襲いかかってきた！", "は血塗られた選挙ビラを投げつけて目を眩ませてきた！", "の狂気の眼差しが精神を激しく揺さぶる！"]
+        actions: [
+            "は『御堂先生こそ真の市長だ！』と叫び襲いかかってきた！",
+            "は血塗られた選挙ビラを投げつけて目を眩ませてきた！",
+            "の狂気の眼差しが精神を激しく揺さぶる！"
+        ]
     };
 
     openCombatUI(enemy, gameState, (res) => {

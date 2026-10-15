@@ -1,4 +1,4 @@
-// appUI.js - 全機能完全維持 ＆ 最大3スロット装填システム実装版
+// appUI.js - 全機能完全維持 ＆ 最大3スロット装填 ＆ 8F悪魔手記実装版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -99,7 +99,7 @@ export class AppUI {
       gameState.equippedCards = [];
     }
 
-    const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
+    const familiarPercent = gameState.flags?.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
     const nextExp = Math.max(0, (gameState.player.maxExp || 100) - (gameState.player.exp || 0));
 
     appContainer.innerHTML = `
@@ -110,7 +110,7 @@ export class AppUI {
             <span style="color:#aaa; font-weight:normal; font-size:0.85em;">(残:${nextExp})</span>
           </div>
           <span>HP:${gameState.player.hp}/${gameState.player.maxHp}</span>
-          <span>罪:${gameState.player.sin}</span>
+          <span>罪:${gameState.player.sin || 0}</span>
           <span>使:${familiarPercent}%</span>
           <span class="app-close-x" id="btn-app-close-x" title="閉じる">✕</span>
         </div>
@@ -197,12 +197,10 @@ export class AppUI {
     const equipped = gameState.equippedCards || [];
     const totalPower = equipped.reduce((a, b) => a + b, 0);
 
-    // 最大スロット数の決定
     let maxSlots = 1;
     if (pLevel >= 15) { maxSlots = 3; }
     else if (pLevel >= 5) { maxSlots = 2; }
     
-    // スロットの描画用HTML生成
     let slotsHTML = "";
     for (let i = 0; i < maxSlots; i++) {
         if (equipped[i]) {
@@ -242,7 +240,6 @@ export class AppUI {
       <div class="sub-title" style="font-size: 0.85em; text-align: left; margin: 10px 0 5px 0; color:#ffdd66;">タップして装填するカードを選択</div>
       <div class="card-list">
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
-          // 単体コストがプレイヤーレベルを超えていればロック
           const isAllowed = hasGun && (num <= pLevel);
           return `
             <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
@@ -287,13 +284,38 @@ export class AppUI {
   }
 
   renderNotesView() {
+    // 既存の動的ヒント
     const hints = gameState.bossHints || [];
     let hintsHTML = "";
     if (hints.length > 0) {
       hintsHTML = hints.map(hintText => {
         return '<div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5; color: #dddddd; border-color: #770000; background: #1a0505; margin-bottom: 8px;">' + hintText + '</div>';
       }).join('');
-    } else {
+    }
+
+    // ★ 8F 父親の手記の表示判定
+    let midoHint1 = "";
+    let midoHint2 = "";
+    if (gameState.flags?.clearedCerberus) {
+      midoHint1 = `
+        <div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5; color: #ffdd66; border-color: #aa8800; background: #1a1a00; margin-bottom: 8px;">
+          <div style="font-weight: bold; color: #ffaa00; margin-bottom: 4px;">【父親の取材手帳・前編】</div>
+          「悪魔王の不死の核を貫くには、神聖なる三つの印を魔方陣に捧げねばならぬ。<br><br>
+          ◆ 中央の座：【Ⅵ 聖炎】<br>
+          ◆ 右の座：【Ⅸ 銀杭】」
+        </div>`;
+    }
+    if (gameState.flags?.clearedGozuMezu) {
+      midoHint2 = `
+        <div class="loadout-slot" style="border-style: solid; text-align: left; line-height: 1.5; color: #ffdd66; border-color: #aa8800; background: #1a1a00; margin-bottom: 8px;">
+          <div style="font-weight: bold; color: #ffaa00; margin-bottom: 4px;">【父親の取材手帳・後編】</div>
+          「左に【Ⅱ 鏡】、中央に【Ⅵ 聖炎】、右に【Ⅸ 銀杭】……<br>
+          この三位一体の神聖陣が揃った瞬間、神の裁きが発動し、悪魔の核を撃ち抜くだろう！」
+        </div>`;
+    }
+
+    // どちらもない場合のメッセージ
+    if (hints.length === 0 && !midoHint1 && !midoHint2) {
       hintsHTML = '<div class="loadout-slot" style="color:#666;">（まだ攻略ヒントを入手していません）</div>';
     }
 
@@ -305,12 +327,14 @@ export class AppUI {
           <div>「ボスの魔方陣に合わせて適切な弱点カードを撃ち抜くのだ……」</div>
         </div>
         ${hintsHTML}
+        ${midoHint1}
+        ${midoHint2}
       </div>
     `;
   }
 
   renderFamiliarView() {
-    const familiarPercent = gameState.flags.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
+    const familiarPercent = gameState.flags?.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
     return `
       <div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">使い魔</h3></div>
       <div style="text-align: center; padding: 10px 0;">
@@ -355,7 +379,6 @@ export class AppUI {
         };
     }
 
-    // 全スロット解除ボタン
     const clearBtn = document.getElementById('btn-clear-slots');
     if (clearBtn) {
         clearBtn.onclick = () => {
@@ -409,20 +432,17 @@ export class AppUI {
         const num = parseInt(item.getAttribute('data-card-num'));
         if (isNaN(num)) return;
 
-        // レベル制限のチェック
         if (num > gameState.player.level) {
             alert(`主人公のレベル（Lv.${gameState.player.level}）を超えるカード【${num}】は装填できません！`);
             return;
         }
 
-        // 最大スロット数の再計算
         let maxSlots = 1;
         if (gameState.player.level >= 15) { maxSlots = 3; }
         else if (gameState.player.level >= 5) { maxSlots = 2; }
 
         if (!gameState.equippedCards) gameState.equippedCards = [];
 
-        // スロットの空きチェック
         if (gameState.equippedCards.length >= maxSlots) {
             alert(`スロットが全て埋まっています！\n「全スロット解除」ボタンを押して空きを作ってください。`);
             return;
