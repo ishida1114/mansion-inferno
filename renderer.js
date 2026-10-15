@@ -207,8 +207,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
 
                 if (isImageReady(targetImg)) {
                     if (is7FCustom) {
-                        // ★ 重要：画像内の黒い天井(上6%)と黒い床(下12%)をトリミングし、
-                        // 大理石の壁だけをCanvasの床ラインにピタリと接地させる
                         const nw = targetImg.naturalWidth;
                         const nh = targetImg.naturalHeight;
                         const cropTop = nh * 0.055;
@@ -236,12 +234,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
         drawCompass(ctx, canvas, player, currentFloor);
         drawActionHint(ctx, canvas, player, currentMap);
 
-        ctx.fillStyle = "rgba(0,0,0,0.5)"; 
-        ctx.fillRect(10, canvas.height - 30, 260, 25);
-        ctx.fillStyle = "#fff"; 
-        ctx.font = `12px ${HORROR_FONT}`; 
-        ctx.textAlign = "left";
-        ctx.fillText("[ ESC ] アプリ  |  [ F2 ] デバッグ", 20, canvas.height - 13);
+        // ★ 左下の [ ESC ] アプリ | [ F2 ] デバッグ の表示処理を削除しました
     } catch (e) {
         console.error("Renderer draw error:", e);
     }
@@ -295,12 +288,10 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     }
 }
 
-// ★ 最終調整：交差点の黒抜けをごまかす自然なライティング
 function drawEnvironment(ctx, canvas, currentFloor) {
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
 
-    // 天井（真っ黒をやめ、壁の色に合わせたアンティークな暗がりに）
     if (currentFloor === 7) {
         ctx.fillStyle = "#0c0a08"; 
     } else {
@@ -309,7 +300,6 @@ function drawEnvironment(ctx, canvas, currentFloor) {
     ctx.fillRect(0, 0, canvas.width, cy);
     
     if (currentFloor === 7) {
-        // 交差点で壁が抜けた奥に見える「床のベース色」を、黒大理石とカーペットの暗がりに設定
         ctx.fillStyle = "#151012"; 
         ctx.fillRect(0, cy, canvas.width, cy);
 
@@ -318,7 +308,7 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             
             const botLeftX = 75;
             const botRightX = 525;
-            const topY = 202; // 奥のライン
+            const topY = 202;
             const topLeftX = 290;
             const topRightX = 310;
 
@@ -343,9 +333,8 @@ function drawEnvironment(ctx, canvas, currentFloor) {
             }
             ctx.fillRect(0, cy, canvas.width, cy);
 
-            // ★ 修正：カーペットの奥を真っ黒に塗りつぶすのをやめ、自然な影に留める
             const shadowGrad = ctx.createLinearGradient(0, topY, 0, canvas.height);
-            shadowGrad.addColorStop(0, "rgba(10, 0, 5, 0.75)");  // 真っ黒(0.95)から自然な影(0.75)へ
+            shadowGrad.addColorStop(0, "rgba(10, 0, 5, 0.75)");
             shadowGrad.addColorStop(0.4, "rgba(20, 0, 5, 0.25)");
             shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
             ctx.fillStyle = shadowGrad;
@@ -353,7 +342,6 @@ function drawEnvironment(ctx, canvas, currentFloor) {
 
             ctx.restore();
 
-            // 金色の縁取りライン
             ctx.lineWidth = 2.5;
             ctx.strokeStyle = "#c5a059"; 
             ctx.beginPath();

@@ -1,4 +1,4 @@
-// main.js - スマホ用デバッグボタン(🛠️)追加・6F降下座標(y:1)・8F最上階連動 完全版
+// main.js - スマホ用デバッグボタン(左上配置)・6F降下座標(y:1)・8F最上階連動 完全版
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -29,7 +29,7 @@ function init() {
   appUI = new AppUI();
   renderer = new Renderer();
 
-  // ★ スマホ用デバッグ起動ボタン（画面右上に🛠️を常駐生成）
+  // ★ スマホ用デバッグ起動ボタン（音声ボタンと被らないよう「画面左上」に生成）
   if (!document.getElementById('btn-mobile-debug')) {
     const debugBtn = document.createElement('button');
     debugBtn.id = 'btn-mobile-debug';
@@ -38,7 +38,7 @@ function init() {
     debugBtn.style.cssText = `
       position: fixed;
       top: 10px;
-      right: 10px;
+      left: 10px;
       z-index: 2500;
       background: rgba(15, 15, 20, 0.75);
       border: 1px solid #774444;
@@ -58,7 +58,6 @@ function init() {
     const target = e.target;
     if (!target) return;
 
-    // タイトル画面関連
     if (target.id === 'btn-start' || target.closest('#btn-start')) {
       const titleScreen = document.getElementById('title-screen');
       if (titleScreen) titleScreen.classList.add('hidden');
@@ -78,14 +77,12 @@ function init() {
       return;
     }
 
-    // デバッグ用ワープボタン（いつでも最優先で反応）
     if (target.classList.contains('debug-warp-btn')) {
       const floor = parseInt(target.getAttribute('data-floor'));
       if (!isNaN(floor)) debugJumpToFloor(floor);
       return;
     }
 
-    // ★ スマホ用デバッグボタン または 閉じるボタン
     if (target.id === 'btn-mobile-debug' || target.closest('#btn-mobile-debug') || target.id === 'btn-close-debug') {
       toggleDebugUI();
       return;
@@ -404,7 +401,7 @@ function checkEncounterAfterMove() {
   if (gameState.currentFloor === 2) { check2FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
   else if (gameState.currentFloor === 3) { check3FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
   else if (gameState.currentFloor === 4) { check4FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
-  else if (gameState.currentFloor === 5) { if (typeof check5FRandomEncounter === 'function') check5FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
+  else if (gameState.currentFloor === 5) { if (typeof check5FRounter === 'function') check5FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
   else if (gameState.currentFloor === 6) { if (typeof check6FRandomEncounter === 'function') check6FRandomEncounter(gameState, (enemy) => { if (enemy) { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); } else { redraw(); } }); }
   else if (gameState.currentFloor === 7) { if (typeof check7FRandomEncounter === 'function') { isProcessingEvent = true; check7FRandomEncounter(gameState, { changeFloor }, () => { isProcessingEvent = false; redraw(); }); } }
   else if (gameState.currentFloor === 8) { if (typeof check8FRandomEncounter === 'function') { isProcessingEvent = true; check8FRandomEncounter(gameState, { changeFloor }, () => { isProcessingEvent = false; redraw(); }); } }
