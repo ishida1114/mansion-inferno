@@ -1,4 +1,4 @@
-// main.js - 6F降下座標修正(y:1)・BGM・8F最上階連動 完全版
+// main.js - スマホ用デバッグボタン(🛠️)追加・6F降下座標(y:1)・8F最上階連動 完全版
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -29,10 +29,36 @@ function init() {
   appUI = new AppUI();
   renderer = new Renderer();
 
+  // ★ スマホ用デバッグ起動ボタン（画面右上に🛠️を常駐生成）
+  if (!document.getElementById('btn-mobile-debug')) {
+    const debugBtn = document.createElement('button');
+    debugBtn.id = 'btn-mobile-debug';
+    debugBtn.innerText = '🛠️';
+    debugBtn.title = 'デバッグメニュー';
+    debugBtn.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 2500;
+      background: rgba(15, 15, 20, 0.75);
+      border: 1px solid #774444;
+      color: #ffdd66;
+      font-size: 18px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+    `;
+    document.body.appendChild(debugBtn);
+  }
+
   document.addEventListener('click', (e) => {
     const target = e.target;
     if (!target) return;
 
+    // タイトル画面関連
     if (target.id === 'btn-start' || target.closest('#btn-start')) {
       const titleScreen = document.getElementById('title-screen');
       if (titleScreen) titleScreen.classList.add('hidden');
@@ -52,9 +78,16 @@ function init() {
       return;
     }
 
+    // デバッグ用ワープボタン（いつでも最優先で反応）
     if (target.classList.contains('debug-warp-btn')) {
       const floor = parseInt(target.getAttribute('data-floor'));
       if (!isNaN(floor)) debugJumpToFloor(floor);
+      return;
+    }
+
+    // ★ スマホ用デバッグボタン または 閉じるボタン
+    if (target.id === 'btn-mobile-debug' || target.closest('#btn-mobile-debug') || target.id === 'btn-close-debug') {
+      toggleDebugUI();
       return;
     }
 
@@ -67,11 +100,17 @@ function init() {
     else if (id === 'btn-right') { gameState.player.dir = (gameState.player.dir + 1) % 4; redraw(); }
     else if (id === 'btn-action') interactFrontCell();
     else if (id === 'btn-app-toggle') toggleAppUI();
-    else if (id === 'btn-close-debug') toggleDebugUI();
   });
 
   window.onkeydown = (e) => {
+    if (e.key === 'F2') {
+      e.preventDefault();
+      toggleDebugUI();
+      return;
+    }
+
     if (isProcessingEvent || isActionBlocked()) return;
+
     switch (e.key) {
       case 'ArrowUp': case 'w': case 'W': moveForward(); break;
       case 'ArrowDown': case 's': case 'S': moveBackward(); break;
@@ -79,7 +118,6 @@ function init() {
       case 'ArrowRight': case 'd': case 'D': gameState.player.dir = (gameState.player.dir + 1) % 4; redraw(); break;
       case ' ': case 'Spacebar': e.preventDefault(); interactFrontCell(); break;
       case 'Escape': toggleAppUI(); break;
-      case 'F2': e.preventDefault(); toggleDebugUI(); break;
     }
   };
 }
@@ -199,7 +237,6 @@ function changeFloor(floor) {
   else if (floor === 6) {
     gameState.currentMap = map6F;
     if (gameState.lastTransitMethod === 'stair_down') {
-      // ★ 修正：yを2から1に変更（階段の真ん前に正しく降り立つ）
       gameState.player.x = 5;
       gameState.player.y = 1; 
       gameState.player.dir = 2; 
