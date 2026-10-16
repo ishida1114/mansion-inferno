@@ -1,4 +1,4 @@
-// maps/map2F.js - 影山パズル完全正解時のみ魔方陣動画再生対応・エレベーター重複修正版
+// maps/map2F.js - 教え子セリフ(御堂の伏線＆コンビニ避難指示)追加版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -8,13 +8,14 @@ import { ENEMIES, evaluateKageyamaPuzzle } from '../enemies.js';
 
 export const playerStart2F = { x: 1, y: 1, dir: 2 };
 
-// ★ 修正：普通のドアだった「3」を「9」に変更
+// 1: 壁 / 0: 通路 
+// 4: 下り階段 / 2: 教え子の部屋 / 8: ボス・探索部屋 / 9: ドア
 export const map2F = [
-    [1, 4, 1, 1, 1, 1, 1, 1, 1], // 4: 下り階段
+    [1, 4, 1, 1, 1, 1, 1, 1, 1], 
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
-    [1, 0, 1, 0, 2, 0, 1, 0, 1], // 2: コンビニ（教え子）
+    [1, 0, 1, 0, 2, 0, 1, 0, 1], 
     [1, 0, 1, 0, 0, 0, 1, 0, 1],
-    [1, 8, 1, 1, 1, 0, 1, 8, 1], // 8: ボス・探索部屋
+    [1, 8, 1, 1, 1, 0, 1, 8, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
@@ -60,7 +61,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         if (!gameState.hasModelGun) {
             return {
                 run: (onComplete) => {
-                    showConversationDialog("assets/images/human1.png", "【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nこれ……父親の部屋にあったモデルガンと魔除けのお守りなんだ。使って！」", () => {
+                    showConversationDialog("assets/images/human1.png", " 【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nお父さんが『御堂を止めに行く』って非常階段を上がったきり、戻ってこないんだ……。\nこれ……お父さんの部屋にあったモデルガンと魔除けのお守りなんだ。お願い、お父さんを探して！」\n主人公（おいおい、本気か、無理だよ、こんなモデルガンで…）", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
                         gameState.player.def += 1;
@@ -75,7 +76,13 @@ export function handleEvent2F(targetCell, gameState, context) {
                                         if (context && context.openLoadoutApp) {
                                             context.openLoadoutApp();
                                         }
-                                        onComplete();
+                                        
+                                        // ★ 修正：先生から避難の指示を出す会話を追加
+                                        showMessageDialog("【主人公】\n「（くそっ、やるしかないのか！？）ここは危険だ。今すぐ1階のコンビニに避難するんだ。あそこなら比較的安全なはず。\nお父さんのことは…なんとか、やってみる」", () => {
+                                            showConversationDialog("assets/images/human1.png", "【教え子】\n「わかった……！ 先生もどうか気をつけてね！」\n\n（教え子は足早に部屋を飛び出し、1階へと向かった……）", () => {
+                                                onComplete();
+                                            });
+                                        });
                                     });
                                 });
                             }
@@ -90,7 +97,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         }
     }
 
-    // ★ 8を通常のドアとして処理
+    // 8を通常のドア（ボス・探索部屋）として処理
     if (targetCell === 8) {
         return {
             run: (onComplete) => {
@@ -113,7 +120,6 @@ export function handleEvent2F(targetCell, gameState, context) {
                             "【覗き魔・影山】\n「中学生の父親？？さぁな、男には興味がなくてねぇ、邪魔するなら、お前のトラウマを覗いて闇の檻に閉じ込めるぞ」", 
                             () => {
                                 openBossPuzzleUI(kageyamaPuzzleConfig, gameState, (slots) => {
-                                    // 修正：数値での取得に統一
                                     const getCardNum = (slotId) => {
                                         const val = slots[slotId];
                                         return typeof val === 'number' ? val : 0;
