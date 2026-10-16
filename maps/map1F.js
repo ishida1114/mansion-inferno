@@ -80,7 +80,7 @@ export function handleEvent1F(targetCell, gameState, context) {
     if (targetCell === 4) {
         if (!gameState.hasKey2F) {
             return { 
-                run: (onComplete) => showMessageDialog("【非常階段の扉】\n重厚な鉄の扉に頑丈な錠前がかかっている……。\n2階へ上がるには『2F非常階段の鍵』が必要のようだ。", onComplete) 
+                run: (onComplete) => showMessageDialog("【非常階段の扉】\n重厚な鉄の扉に頑丈な錠前がかかっている……。\n2階へ上がるには『2F非常階段の鍵』が必要のようだ。\n真後ろから異様な空気を感じる、左を2回か右を2回で振り返ってみよう。", onComplete) 
             };
         } else {
             return { 

@@ -133,6 +133,12 @@ function startNewGame() {
 
   showOpeningUI(() => {
     if (!isRunning) { isRunning = true; gameLoop(); } else { redraw(); }
+    // ★ 追加されたブロック（ここから）
+    showMessageDialog("眼前に2Fへの非常口がある。\n右下の『調べる（SPACE）』で調べてみよう。", () => {
+      redraw();
+    });
+    // ★ 追加されたブロック（ここまで）
+
   });
 }
 
