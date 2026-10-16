@@ -1,4 +1,4 @@
-// enemies.js - 敵ステータス・個別技メッセージ・5Fボス＆パズル統合完全版[cite: 2]
+// enemies.js - 敵ステータス・個別技メッセージ・5Fボス＆パズル統合完全版
 
 export const ENEMIES = {
   // ==========================================
@@ -118,14 +118,14 @@ export const ENEMIES = {
   },
 
   // ==========================================
-  // 4F 雑魚 ＆ 中ボス
+  // 4F 雑魚 ＆ 中ボス（テンポ改善微調整）
   // ==========================================
   DEVIL7_4F: {
     name: 'リナちゃんのスマホ',
     image: 'assets/images/demon/demon7.png',
-    hp: 110,
-    atk: 32,
-    satk: 18,
+    hp: 95,
+    atk: 30,
+    satk: 16,
     def: 3,
     agi: 9,
     rewardMoney: 300,
@@ -138,9 +138,9 @@ export const ENEMIES = {
   DEVIL8_4F: {
     name: '悪魔の赤ちゃん',
     image: 'assets/images/demon/demon8.png',
-    hp: 140,
-    atk: 35,
-    satk: 20,
+    hp: 120,
+    atk: 32,
+    satk: 18,
     def: 4,
     agi: 8,
     rewardMoney: 330,
@@ -153,9 +153,9 @@ export const ENEMIES = {
   DEVIL9_4F: {
     name: '偽りの美貌',
     image: 'assets/images/demon/demon9.png',
-    hp: 100,
-    atk: 38,
-    satk: 22,
+    hp: 85,
+    atk: 35,
+    satk: 20,
     def: 2,
     agi: 10,
     rewardMoney: 310,
@@ -168,8 +168,8 @@ export const ENEMIES = {
   SHINEI_A_4F: {
     name: 'リナ親衛隊A（狂乱の元富裕層）',
     image: 'assets/images/demon/shineia.png',
-    hp: 250,
-    atk: 40,
+    hp: 220,
+    atk: 38,
     def: 4,
     agi: 7,
     rewardMoney: 600,
@@ -182,8 +182,8 @@ export const ENEMIES = {
   SHINEI_B_4F: {
     name: 'リナ親衛隊B（狂信的ガチ恋）',
     image: 'assets/images/demon/shineib.png',
-    hp: 280,
-    atk: 45,
+    hp: 240,
+    atk: 42,
     def: 5,
     agi: 8,
     rewardMoney: 700,
@@ -200,9 +200,9 @@ export const ENEMIES = {
   DEVIL10_5F: {
     name: '融解したキメラ',
     image: 'assets/images/demon/demon10.png',
-    hp: 180,
-    atk: 48,
-    satk: 25,
+    hp: 170,
+    atk: 46,
+    satk: 24,
     def: 5,
     agi: 9,
     rewardMoney: 450,
@@ -215,8 +215,8 @@ export const ENEMIES = {
   DEVIL11_5F: {
     name: '猟犬キメラ',
     image: 'assets/images/demon/demon11.png',
-    hp: 210,
-    atk: 54,
+    hp: 195,
+    atk: 50,
     satk: 20,
     def: 4,
     agi: 13,
@@ -230,8 +230,8 @@ export const ENEMIES = {
   DEVIL12_5F: {
     name: '甲殻合成キメラ',
     image: 'assets/images/demon/demon12.png',
-    hp: 250,
-    atk: 50,
+    hp: 230,
+    atk: 48,
     satk: 22,
     def: 8,
     agi: 7,
@@ -249,8 +249,8 @@ export const ENEMIES = {
   KIMERA_HUMAN_5F: {
     name: '改造キメラ人間',
     image: 'assets/images/demon/5f-kimera.png',
-    hp: 360,
-    atk: 58,
+    hp: 340,
+    atk: 55,
     def: 7,
     agi: 9,
     rewardMoney: 900,
@@ -267,8 +267,8 @@ export const ENEMIES = {
   FATHER_5F: {
     name: 'キメラ化した父親',
     image: 'assets/images/demon/5f-father.png',
-    hp: 520,
-    atk: 64,
+    hp: 480,
+    atk: 60,
     def: 8,
     agi: 11,
     rewardMoney: 1200,
@@ -280,10 +280,10 @@ export const ENEMIES = {
   },
 
   // ==========================================
-  // フロアボス（パズル戦あり）[cite: 2]
+  // フロアボス（パズル戦あり）
   // ==========================================
   
-  // 2F フロアボス：ストーカー影山[cite: 2]
+  // 2F フロアボス：ストーカー影山
   KAGEYAMA_2F: {
     name: 'ストーカー影山',
     video: 'assets/images/demon/2f-kageyama.mp4',
@@ -295,6 +295,7 @@ export const ENEMIES = {
     agi: 6,
     rewardMoney: 500,
     baseLevel: 5,
+    weakness: [2, 3],
     puzzle: {
       openSlots: [1, 3, 5, 7],
       correctSolution: { 1: 2, 7: 3, 3: 1, 5: 4 },
@@ -306,7 +307,7 @@ export const ENEMIES = {
     ]
   },
 
-  // 3F フロアボス：ゴミ屋敷の狂人・真田[cite: 2]
+  // 3F フロアボス：ゴミ屋敷の狂人・真田
   SANADA_3F: {
     name: 'ゴミ屋敷の狂人・真田',
     video: 'assets/images/demon/3f-sanada.mp4',
@@ -318,6 +319,7 @@ export const ENEMIES = {
     agi: 6,
     rewardMoney: 800,
     baseLevel: 10,
+    weakness: [8, 6],
     puzzle: {
       openSlots: [1, 3, 5, 7],
       correctSolution: { 1: 8, 7: 6, 3: 1, 5: 3 },
@@ -329,18 +331,19 @@ export const ENEMIES = {
     ]
   },
 
-  // 4F フロアボス：色欲のパパ活女子・リナ[cite: 2]
+  // 4F フロアボス：色欲のパパ活女子・リナ
   RINA_4F: {
     name: '色欲のパパ活女子・リナ',
     video: 'assets/images/demon/4f-rina.mp4',
     image: 'assets/images/demon/4f-rina.jpg',
-    hp: 500,
-    atk: 60,
-    satk: 35,
-    def: 8,
+    hp: 480,
+    atk: 56,
+    satk: 32,
+    def: 7,
     agi: 10,
     rewardMoney: 2000,
     baseLevel: 15,
+    weakness: [2, 5],
     puzzle: {
       openSlots: [1, 3, 5, 7],
       correctSolution: { 1: 2, 3: 1, 5: 5, 7: 3 },
@@ -352,22 +355,21 @@ export const ENEMIES = {
     ]
   },
 
-  // 5F フロアボス：傲慢の執刀医・ドクター蛭沼[cite: 2]
+  // 5F フロアボス：傲慢の執刀医・ドクター蛭沼
   HIRUNUMA_5F: {
     name: '傲慢の執刀医・蛭沼',
     video: 'assets/images/demon/5f-hirunuma.mp4',
     image: 'assets/images/demon/5f-hirunuma.png',
-    hp: 850,
-    atk: 72,
-    satk: 40,
-    def: 10,
+    hp: 800,
+    atk: 68,
+    satk: 38,
+    def: 9,
     agi: 13,
     rewardMoney: 3000,
     baseLevel: 20,
+    weakness: [5, 4, 9, 2],
     puzzle: {
       openSlots: [1, 3, 5, 7],
-      // ①上(頭脳)=聖書(5), ③左(心臓)=十字架(4), ⑤右(腕)=銀の杭(9), ⑦下(足元)=鏡(2)
-      // 合計値: 5 + 4 + 9 + 2 = 20[cite: 2]
       correctSolution: { 1: 5, 3: 4, 5: 9, 7: 2 },
       targetSum: 20
     },
@@ -379,23 +381,28 @@ export const ENEMIES = {
 };
 
 // ==========================================
-// パズル解読判定関数群[cite: 2]
+// パズル解読判定関数群（キー表記ゆれ完全ガード仕様）
 // ==========================================
 
 export function evaluateKageyamaPuzzle(placedCards) {
-  const solution = ENEMIES.KAGEYAMA_2F.puzzle.correctSolution;
-  let correctCount = 0;
-  let currentSum = 0;
+  const getCard = (id) => {
+    const val = placedCards[id] !== undefined ? placedCards[id] : (placedCards['slot' + id] !== undefined ? placedCards['slot' + id] : placedCards['slot' + (id === 1 ? 1 : id === 3 ? 2 : id === 5 ? 3 : 4)]);
+    return typeof val === 'number' ? val : 0;
+  };
 
-  for (const slotId of [1, 3, 5, 7]) {
-    const card = placedCards[slotId];
-    if (card) {
-      currentSum += card;
-      if (card === solution[slotId]) correctCount++;
-    }
-  }
+  const c1 = getCard(1); // 顔（上）: 2
+  const c3 = getCard(3); // 腕1: 1 または 4
+  const c5 = getCard(5); // 腕2: 4 または 1
+  const c7 = getCard(7); // 足（下）: 3
 
-  if (correctCount === 4 && currentSum === 10) {
+  const currentSum = c1 + c3 + c5 + c7;
+  const isFace = c1 === 2;
+  const isFoot = c7 === 3;
+  const isArms = (c3 === 1 && c5 === 4) || (c3 === 4 && c5 === 1);
+
+  let correctCount = (isFace ? 1 : 0) + (isFoot ? 1 : 0) + (isArms ? 2 : 0);
+
+  if (isFace && isFoot && isArms && currentSum === 10) {
     return { result: 'PERFECT', correctCount: 4 };
   } else if (correctCount > 0) {
     return { result: 'PARTIAL', correctCount: Math.min(correctCount, 3) };
@@ -410,8 +417,9 @@ export function evaluateSanadaPuzzle(placedCards) {
   let currentSum = 0;
 
   for (const slotId of [1, 3, 5, 7]) {
-    const card = placedCards[slotId];
-    if (card) {
+    const raw = placedCards[slotId] !== undefined ? placedCards[slotId] : placedCards[String(slotId)];
+    const card = typeof raw === 'number' ? raw : 0;
+    if (card > 0) {
       currentSum += card;
       if (card === solution[slotId]) correctCount++;
     }
@@ -431,8 +439,9 @@ export function evaluateRinaPuzzle(placedCards) {
   let correctCount = 0;
 
   for (const slotId of [1, 3, 5, 7]) {
-    const card = placedCards[slotId];
-    if (card && card === solution[slotId]) {
+    const raw = placedCards[slotId] !== undefined ? placedCards[slotId] : placedCards[String(slotId)];
+    const card = typeof raw === 'number' ? raw : 0;
+    if (card > 0 && card === solution[slotId]) {
       correctCount++;
     }
   }
@@ -452,14 +461,14 @@ export function evaluateHirunumaPuzzle(placedCards) {
   let currentSum = 0;
 
   for (const slotId of [1, 3, 5, 7]) {
-    const card = placedCards[slotId];
-    if (card) {
+    const raw = placedCards[slotId] !== undefined ? placedCards[slotId] : placedCards[String(slotId)];
+    const card = typeof raw === 'number' ? raw : 0;
+    if (card > 0) {
       currentSum += card;
       if (card === solution[slotId]) correctCount++;
     }
   }
 
-  // 4箇所正解かつ合計値がピッタリ20
   if (correctCount === 4 && currentSum === 20) {
     return { result: 'PERFECT', correctCount: 4 };
   } else if (correctCount > 0) {

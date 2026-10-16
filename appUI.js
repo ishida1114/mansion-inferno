@@ -314,7 +314,6 @@ export class AppUI {
         </div>`;
     }
 
-    // どちらもない場合のメッセージ
     if (hints.length === 0 && !midoHint1 && !midoHint2) {
       hintsHTML = '<div class="loadout-slot" style="color:#666;">（まだ攻略ヒントを入手していません）</div>';
     }

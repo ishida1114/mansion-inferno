@@ -1,4 +1,4 @@
-// gameState.js - 経験値バランス調整（敵5〜10体で1レベルアップ）完全版
+// gameState.js - appUI連動スロット枠整合・悪魔手記永続化・経験値バランス適正化 完全版
 
 export const gameState = {
   player: {
@@ -33,7 +33,7 @@ export const gameState = {
   cards: [],
 
   clearedRooms: {},
-  bossHints: [],
+  bossHints: [], // ★ 悪魔手記に記録される討伐ヒント配列
 
   inventory: {
     items: [],
@@ -41,6 +41,10 @@ export const gameState = {
 
   flags: {
     cleared2F: false,
+    cleared3F: false,
+    cleared4F: false,
+    cleared5F: false,
+    cleared6F: false,
     cleared7F: false,
     postedArmorLetter: false,
     unlockedAdvancedArmor: false,
@@ -90,6 +94,7 @@ export const gameState = {
     return this.visitedMaps[floor][y][x];
   },
 
+  // ★ appUI.js と整合：Lv.5で2枠、Lv.15で3枠に統一 ＆ 手動装填の保護
   updateEquippedCards() {
     if (!this.player.hasModelGun && !this.hasModelGun) {
       this.equippedCards = [];
@@ -97,28 +102,36 @@ export const gameState = {
     }
 
     let slots = 1;
-    if (this.player.level >= 20) slots = 3;
-    else if (this.player.level >= 10) slots = 2;
+    if (this.player.level >= 15) slots = 3;
+    else if (this.player.level >= 5) slots = 2;
 
-    const availableNums = this.cards.map(cardStr => {
-      const num = parseInt(cardStr.replace("Card.png", ""), 10);
-      return isNaN(num) ? 0 : num;
-    }).filter(n => n > 0);
+    // 手動で選んだカードがある場合は、レベル制限・スロット上限だけを安全にチェックして維持する
+    if (this.equippedCards && this.equippedCards.length > 0) {
+      this.equippedCards = this.equippedCards
+        .filter(c => c <= this.player.level)
+        .slice(0, slots);
+    } else {
+      // 未装填の場合（デバッグ等）のみ、使用可能なカードを自動装備
+      const availableNums = this.cards.map(cardStr => {
+        const num = parseInt(cardStr.replace("Card.png", ""), 10);
+        return isNaN(num) ? 0 : num;
+      }).filter(n => n > 0 && n <= this.player.level);
 
-    availableNums.sort((a, b) => b - a);
-    this.equippedCards = availableNums.slice(0, slots);
+      availableNums.sort((a, b) => b - a);
+      this.equippedCards = availableNums.slice(0, slots);
+    }
   },
 
-  // ★ 敵5〜10体（平均約7体）で1レベル上がるように適正スケーリング
+  // 敵5〜10体（平均約7体）で1レベル上がるように適正スケーリング
   gainExp(amount) {
-    const maxGain = Math.floor(this.player.maxExp * 0.18); // 最速でも約5.5体
-    const minGain = Math.max(1, Math.floor(this.player.maxExp * 0.11)); // 最低でも約9体
+    const maxGain = Math.floor(this.player.maxExp * 0.18);
+    const minGain = Math.max(1, Math.floor(this.player.maxExp * 0.11));
 
     let scaledExp = amount;
     if (amount > maxGain) {
-      scaledExp = Math.floor(this.player.maxExp * 0.14); // 敵1体で約14%（約7体で1Lvアップ）
+      scaledExp = Math.floor(this.player.maxExp * 0.14);
     } else if (amount < minGain && amount > 0) {
-      scaledExp = Math.floor(this.player.maxExp * 0.12); // 約8体で1Lvアップ
+      scaledExp = Math.floor(this.player.maxExp * 0.12);
     }
 
     this.player.exp += scaledExp;
@@ -145,6 +158,7 @@ export const gameState = {
     }
 
     if (this.player.level >= 15) {
+      if (!this.flags) this.flags = {};
       this.flags.hasCat = true;
     }
 
@@ -242,8 +256,13 @@ export const gameState = {
     this.inventory.items = [];
     this.visitedMaps = {};
     
+    // 全フロアのフラグを完全リセット
     this.flags = {
       cleared2F: false,
+      cleared3F: false,
+      cleared4F: false,
+      cleared5F: false,
+      cleared6F: false,
       cleared7F: false,
       postedArmorLetter: false,
       unlockedAdvancedArmor: false,
@@ -269,6 +288,8 @@ export const gameState = {
       if (data) {
         Object.assign(this, JSON.parse(data));
         if (!this.visitedMaps) this.visitedMaps = {};
+        if (!this.bossHints) this.bossHints = []; // ★ セーブデータ復元時の保険
+        if (!this.flags) this.flags = {};
         return true;
       }
       return false;

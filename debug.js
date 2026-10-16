@@ -1,12 +1,25 @@
-// debug.js - 開発テスト用デバッグコントローラー（全機能保持＆ステータス・フラグ完全自動セット版）
+// debug.js - 開発テスト用デバッグコントローラー（8F対応＆スマホ🛠️連動 完全版）
 
 export function initDebug(gameState, context) {
-    // F2キーでデバッグメニューの開閉
+    // グローバルに関数を公開
+    window.openDebugModal = () => toggleDebugModal(gameState, context);
+
+    // PC：F2キーでデバッグメニュー開閉
     window.addEventListener("keydown", (e) => {
         if (e.key === "F2") {
             toggleDebugModal(gameState, context);
         }
     });
+
+    // スマホ：画面左上の「🛠️」ボタンをタップした時も、このフル機能メニューを開く
+    document.addEventListener("click", (e) => {
+        const target = e.target;
+        if (target && (target.id === "btn-mobile-debug" || target.closest("#btn-mobile-debug"))) {
+            e.preventDefault();
+            e.stopPropagation(); // main.js側の簡易メニュー発火を抑止
+            toggleDebugModal(gameState, context);
+        }
+    }, true);
 }
 
 function toggleDebugModal(gameState, context) {
@@ -20,7 +33,7 @@ function toggleDebugModal(gameState, context) {
     overlay.id = "debug-modal-overlay";
     overlay.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.7); z-index: 9999;
+        background: rgba(0, 0, 0, 0.75); z-index: 9999;
         display: flex; justify-content: center; align-items: center;
         font-family: monospace;
     `;
@@ -28,45 +41,46 @@ function toggleDebugModal(gameState, context) {
     const panel = document.createElement("div");
     panel.style.cssText = `
         background: #0a150a; border: 2px solid #00ff66; border-radius: 8px;
-        padding: 20px; width: 420px; max-height: 80vh; overflow-y: auto;
-        color: #00ff66; box-shadow: 0 0 20px rgba(0, 255, 100, 0.4);
+        padding: 20px; width: 420px; max-height: 85vh; overflow-y: auto;
+        color: #00ff66; box-shadow: 0 0 25px rgba(0, 255, 100, 0.4); box-sizing: border-box;
     `;
 
-    // フロアワープボタンHTML生成
-    const warpButtonsHTML = [1, 2, 3, 4, 5, 6, 7].map(floor => `
-        <button class="debug-btn-warp" data-floor="${floor}" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">
-            ${floor}F
+    // ★ 8Fを追加したフロアワープボタンHTML生成
+    const warpButtonsHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(floor => `
+        <button class="debug-btn-warp" data-floor="${floor}" style="background:${floor === 8 ? '#550000' : '#003311'}; color:${floor === 8 ? '#ffdd66' : '#00ff66'}; border:1px solid ${floor === 8 ? '#ff3333' : '#00aa44'}; padding:8px 4px; cursor:pointer; font-weight:${floor === 8 ? 'bold' : 'normal'}; border-radius:4px;">
+            ${floor}F${floor === 8 ? ' (最上階)' : ''}
         </button>
     `).join('');
 
     panel.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #00ff66; padding-bottom:8px; margin-bottom:12px;">
-            <strong style="font-size:1.1em;">[ DEBUG CONSOLE (F2) ]</strong>
-            <button id="debug-close-btn" style="background:#220000; color:#ff4444; border:1px solid #ff4444; cursor:pointer; padding:2px 8px;">✕</button>
+            <strong style="font-size:1.1em;">[ DEBUG CONSOLE (F2 / 🛠️) ]</strong>
+            <button id="debug-close-btn" style="background:#220000; color:#ff4444; border:1px solid #ff4444; cursor:pointer; padding:4px 10px; font-weight:bold; border-radius:4px;">✕</button>
         </div>
         
-        <div style="margin-bottom: 12px;">
-            <div style="font-weight:bold; margin-bottom:4px; color:#aaffaa;">■ フロア直行ワープ（フラグ全セット済）</div>
+        <div style="margin-bottom: 14px;">
+            <div style="font-weight:bold; margin-bottom:6px; color:#aaffaa;">■ フロア直行ワープ（フラグ全セット済）</div>
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
                 ${warpButtonsHTML}
             </div>
         </div>
 
-        <div style="margin-bottom: 12px;">
-            <div style="font-weight:bold; margin-bottom:4px; color:#aaffaa;">■ プレイヤー強化・育成</div>
+        <div style="margin-bottom: 14px;">
+            <div style="font-weight:bold; margin-bottom:6px; color:#aaffaa;">■ プレイヤー強化・育成</div>
             <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
-                <button id="debug-lv15" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">Lv.15にする (4F想定)</button>
-                <button id="debug-lv25" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">Lv.25にする (6F想定)</button>
-                <button id="debug-heal" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">HP全回復</button>
-                <button id="debug-money" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">所持金 +10,000</button>
+                <button id="debug-lv15" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:8px; cursor:pointer; border-radius:4px;">Lv.15にする (4F用)</button>
+                <button id="debug-lv25" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:8px; cursor:pointer; border-radius:4px;">Lv.25にする (6F用)</button>
+                <button id="debug-lv35" style="background:#443300; color:#ffdd66; border:1px solid #ffaa00; padding:8px; cursor:pointer; border-radius:4px; font-weight:bold;">Lv.35にする (8F用)</button>
+                <button id="debug-heal" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:8px; cursor:pointer; border-radius:4px;">HP全回復</button>
+                <button id="debug-money" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:8px; cursor:pointer; border-radius:4px; grid-column: span 2;">所持金 +10,000 💰</button>
             </div>
         </div>
 
         <div>
-            <div style="font-weight:bold; margin-bottom:4px; color:#aaffaa;">■ フラグ・カード</div>
+            <div style="font-weight:bold; margin-bottom:6px; color:#aaffaa;">■ フラグ・装備</div>
             <div style="display:grid; grid-template-columns: 1fr; gap: 6px;">
-                <button id="debug-give-all-cards" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">全ラミナカード (1〜9) ＆銃 付与</button>
-                <button id="debug-give-keys" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:6px; cursor:pointer;">主要な鍵 (2F鍵/EV鍵) 付与</button>
+                <button id="debug-give-all-cards" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:8px; cursor:pointer; border-radius:4px;">全ラミナカード (1〜9) ＆ モデルガン付与</button>
+                <button id="debug-give-keys" style="background:#003311; color:#00ff66; border:1px solid #00aa44; padding:8px; cursor:pointer; border-radius:4px;">主要な鍵 (2F鍵/EV鍵) 付与</button>
             </div>
         </div>
     `;
@@ -81,8 +95,6 @@ function toggleDebugModal(gameState, context) {
     panel.querySelectorAll(".debug-btn-warp").forEach(btn => {
         btn.onclick = () => {
             const f = parseInt(btn.dataset.floor, 10);
-            
-            // ワープ前に必要なフラグ・カード・ステータスをフロアに合わせて自動設定する
             setupFloorDebugState(f, gameState);
 
             if (context && context.changeFloor) {
@@ -97,14 +109,12 @@ function toggleDebugModal(gameState, context) {
     const applyLevel = (targetLv) => {
         if (gameState.player) {
             gameState.player.level = targetLv;
-            // 基礎ステータスの再計算
             gameState.player.maxHp = 20 + (targetLv - 1) * 7; 
             gameState.player.hp = gameState.player.maxHp;
             gameState.player.atk = 5 + (targetLv - 1) * 2;
             gameState.player.def = Math.floor((targetLv - 1) * 0.8);
             gameState.player.agi = 5 + Math.floor((targetLv - 1) * 0.5);
             
-            // ★ レベルに応じたポート（スロット）の強制解放
             if (targetLv >= 15) {
                 gameState.unlockedSlots = 3;
             } else if (targetLv >= 5) {
@@ -118,12 +128,17 @@ function toggleDebugModal(gameState, context) {
 
     document.getElementById("debug-lv15").onclick = () => {
         applyLevel(15);
-        alert(`プレイヤーLvを 15 に設定しました（HP:${gameState.player.maxHp} に上昇・全回復・ポート3つ解放）`);
+        alert(`プレイヤーLvを 15 に設定しました（HP:${gameState.player.maxHp}・ポート3枠解放）`);
     };
 
     document.getElementById("debug-lv25").onclick = () => {
         applyLevel(25);
-        alert(`プレイヤーLvを 25 に設定しました（HP:${gameState.player.maxHp} に上昇・全回復・ポート3つ解放）`);
+        alert(`プレイヤーLvを 25 に設定しました（HP:${gameState.player.maxHp}・ポート3枠解放）`);
+    };
+
+    document.getElementById("debug-lv35").onclick = () => {
+        applyLevel(35);
+        alert(`プレイヤーLvを 35 に設定しました（HP:${gameState.player.maxHp}・8Fラスボス戦適正ステータス）`);
     };
 
     document.getElementById("debug-heal").onclick = () => {
@@ -175,24 +190,24 @@ function setupFloorDebugState(floor, gameState) {
     if (gameState.player) gameState.player.hasModelGun = true;
     gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
     if (!gameState.equippedCards || gameState.equippedCards.length === 0) {
-        gameState.equippedCards = [1, 2, 3]; // デフォルト装填
+        gameState.equippedCards = [1, 2, 3];
     }
     
     // ステータスとフラグのフロア別進行度設定
     if (floor >= 2) {
-        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 5);
+        if (gameState.player) gameState.player.level = Math.max(gameState.player.level, 5);
         gameState.hasKey2F = true;
     }
     if (floor >= 3) {
-        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 10);
+        if (gameState.player) gameState.player.level = Math.max(gameState.player.level, 10);
         gameState.hasElevatorKey = true;
         gameState.flags.cleared2F = true;
         gameState.flags.hasSanadaRoomKey = true;
     }
     if (floor >= 4) {
-        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 15);
+        if (gameState.player) gameState.player.level = Math.max(gameState.player.level, 15);
         gameState.flags.cleared3F = true;
-        if (floor === 4) { // 4Fに着地した場合は4Fのイベントを未クリア状態にする
+        if (floor === 4) {
             gameState.flags.cleared4F = false;
             gameState.flags.hasBrandBag = false;   
             gameState.flags.hasChampagne = false;  
@@ -201,9 +216,9 @@ function setupFloorDebugState(floor, gameState) {
         }
     }
     if (floor >= 5) {
-        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 20);
+        if (gameState.player) gameState.player.level = Math.max(gameState.player.level, 20);
         gameState.flags.cleared4F = true;
-        if (floor === 5) { // 5Fに着地した場合は5Fのイベントを未クリア状態にする
+        if (floor === 5) {
             gameState.flags.cleared5F = false;
             gameState.isHirunumaDefeated = false;
             gameState.flags.rabbitChaseStep = 0;
@@ -211,21 +226,34 @@ function setupFloorDebugState(floor, gameState) {
         }
     }
     if (floor >= 6) {
-        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 25);
+        if (gameState.player) gameState.player.level = Math.max(gameState.player.level, 25);
         gameState.flags.cleared5F = true;
         gameState.isHirunumaDefeated = true;
-        if (floor === 6) { // 6Fに着地した場合は6Fのイベントを未クリア状態にする
+        if (floor === 6) {
             gameState.flags.cleared6F = false;
-            gameState.flags.hasCat = false; // 黒猫はまだ救出していない状態
+            gameState.flags.hasCat = false;
             gameState.flags.hasSilverShears = false;
             gameState.flags.cleared601 = false;
             gameState.flags.cleared602 = false;
         }
     }
     if (floor >= 7) {
-        if(gameState.player) gameState.player.level = Math.max(gameState.player.level, 30);
+        if (gameState.player) gameState.player.level = Math.max(gameState.player.level, 30);
         gameState.flags.cleared6F = true;
-        gameState.flags.hasCat = true; // 6Fクリア済みなので黒猫は連れている
+        gameState.flags.hasCat = true;
+    }
+    // ★ 8Fへのセットアップ追加
+    if (floor >= 8) {
+        if (gameState.player) gameState.player.level = Math.max(gameState.player.level, 35);
+        gameState.flags.cleared6F = true;
+        gameState.flags.cleared7F = true;
+        gameState.flags.hasCat = true;
+        gameState.flags.unlocked7FElevator = true;
+        if (floor === 8) {
+            gameState.flags.clearedCerberus = false;
+            gameState.flags.clearedGozuMezu = false;
+            gameState.flags.cleared8F = false;
+        }
     }
     
     // 現在のレベルに基づいてステータス（HP/攻撃力等）を再計算
@@ -237,7 +265,6 @@ function setupFloorDebugState(floor, gameState) {
         gameState.player.def = Math.floor((targetLv - 1) * 0.8);
         gameState.player.agi = 5 + Math.floor((targetLv - 1) * 0.5);
 
-        // ★ フロアワープ時にもポート（スロット）を自動解放
         if (targetLv >= 15) {
             gameState.unlockedSlots = 3;
         } else if (targetLv >= 5) {

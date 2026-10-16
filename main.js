@@ -1,4 +1,4 @@
-// main.js - スマホ用デバッグボタン(左上配置)・6F降下座標(y:1)・8F最上階連動 完全版
+// main.js - スマホ用デバッグボタン(左上配置)・3F初回セリフ・6F降下座標(y:1)・8F最上階連動 完全版
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -133,12 +133,9 @@ function startNewGame() {
 
   showOpeningUI(() => {
     if (!isRunning) { isRunning = true; gameLoop(); } else { redraw(); }
-    // ★ 追加されたブロック（ここから）
     showMessageDialog("眼前に2Fへの非常口がある。\n右下の『調べる（SPACE）』で調べてみよう。", () => {
       redraw();
     });
-    // ★ 追加されたブロック（ここまで）
-
   });
 }
 
@@ -294,12 +291,21 @@ function changeFloor(floor) {
   } 
   else if (floor === 3) {
     gameState.currentMap = map3F;
+    if (!gameState.flags) gameState.flags = {};
+
     if (gameState.lastTransitMethod === 'stair_down') {
       gameState.player.x = 5; gameState.player.y = 1; gameState.player.dir = 2;
       showMessageDialog("【3階 非常階段前】\n4階から3階へ降りてきた。漂うヘドロと強烈な異臭が鼻をつく……", () => redraw());
     } else {
       gameState.player.x = playerStart3F.x; gameState.player.y = playerStart3F.y; gameState.player.dir = playerStart3F.dir;
-      showMessageDialog("【3階 エレベーター前】\n3階へ到着した。漂うヘドロと強烈な異臭が鼻をつく……", () => redraw());
+      
+      // ★ 3階初回到達時のみ表示
+      if (!gameState.flags.seen3FIntro) {
+        gameState.flags.seen3FIntro = true;
+        showMessageDialog("【3階 エレベーター前】\n3階へ到着した。漂うヘドロと強烈な異臭が鼻をつく……\n\n「父親が、ここにいる、のか…？ なんだこの強烈な臭いは…」", () => redraw());
+      } else {
+        showMessageDialog("【3階 エレベーター前】\n3階へ到着した。漂うヘドロと強烈な異臭が鼻をつく……", () => redraw());
+      }
     }
   } 
   else if (floor === 2) {
@@ -407,7 +413,7 @@ function checkEncounterAfterMove() {
   if (gameState.currentFloor === 2) { check2FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
   else if (gameState.currentFloor === 3) { check3FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
   else if (gameState.currentFloor === 4) { check4FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
-  else if (gameState.currentFloor === 5) { if (typeof check5FRounter === 'function') check5FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
+  else if (gameState.currentFloor === 5) { if (typeof check5FRandomEncounter === 'function') check5FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
   else if (gameState.currentFloor === 6) { if (typeof check6FRandomEncounter === 'function') check6FRandomEncounter(gameState, (enemy) => { if (enemy) { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); } else { redraw(); } }); }
   else if (gameState.currentFloor === 7) { if (typeof check7FRandomEncounter === 'function') { isProcessingEvent = true; check7FRandomEncounter(gameState, { changeFloor }, () => { isProcessingEvent = false; redraw(); }); } }
   else if (gameState.currentFloor === 8) { if (typeof check8FRandomEncounter === 'function') { isProcessingEvent = true; check8FRandomEncounter(gameState, { changeFloor }, () => { isProcessingEvent = false; redraw(); }); } }

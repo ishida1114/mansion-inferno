@@ -1,4 +1,4 @@
-// maps/map3F.js - エレベーター(3)統一・真田部屋(8)修正・行き先選択メニュー対応版
+// maps/map3F.js - エレベーター(3)統一・真田部屋(8)修正・構文エラー修正版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -8,18 +8,19 @@ import { ENEMIES, evaluateSanadaPuzzle } from '../enemies.js';
 
 export const playerStart3F = { x: 5, y: 8, dir: 0 };
 
-// ★ 修正：(1,1)のボス部屋を「8」に、(5,9)のエレベーターを「3」に変更
+// 1: 壁 / 0: 通路 
+// 4: 4Fへの上り階段 / 8: 真田の部屋 / 2: 住人の部屋 / 3: エレベーター
 export const map3F = [
-    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], // 4: 4Fへの上り階段
-    [1, 8, 1, 0, 0, 0, 0, 0, 1, 2, 1], // 8: 真田の部屋 / 2: 住人の部屋
+    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], 
+    [1, 8, 1, 0, 0, 0, 0, 0, 1, 2, 1], 
     [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1], // 2: 住人の部屋
+    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1],
     [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
     [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 3, 1, 1, 1, 0, 1], // 3: エレベーター
+    [1, 0, 1, 1, 1, 3, 1, 1, 1, 0, 1], 
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
@@ -34,7 +35,7 @@ export function check3FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent3F(targetCell, gameState, context) {
-    // ★ 3: エレベーター（行き先選択メニュー）
+    // 3: エレベーター（行き先選択メニュー）
     if (targetCell === 3) {
         return { 
             run: (onComplete) => {
@@ -95,7 +96,7 @@ export function handleEvent3F(targetCell, gameState, context) {
         };
     }
 
-    // ★ 8: ボス部屋（真田）
+    // 8: ボス部屋（真田）
     if (targetCell === 8) {
         if (gameState.flags && gameState.flags.cleared3F) {
             return {
