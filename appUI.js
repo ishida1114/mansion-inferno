@@ -221,7 +221,7 @@ export class AppUI {
           <img id="loadout-gun-img" src="assets/images/modelgun.jpg" alt="モデルガン" style="max-width: 100px; max-height: 60px; object-fit: contain; display: block; margin: 0 auto 5px auto; border-radius: 4px;" />
           <span style="color:#00ff66; font-size:0.8em; font-weight:bold;">モデルガン連携中</span>
         ` : `
-          <span style="color:#ff4444; font-size:0.8em;">※モデルガン未所持（装填不可）</span>
+          <span style="color:#ff4444; font-size:0.8em;">※武器未所持（装填不可）</span>
         `}
       </div>
 
@@ -425,7 +425,7 @@ export class AppUI {
       item.onclick = () => {
         const hasGun = gameState.player.hasModelGun || gameState.hasModelGun;
         if (!hasGun) {
-          alert("モデルガンを所有していないため、ラミナを装填できません。");
+          alert("武器を所有していないため、ラミナを装填できません。");
           return;
         }
 
