@@ -46,7 +46,7 @@ export function handleEvent1F(targetCell, gameState, context) {
                     html += `<button class="ev-btn" data-floor="3" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">3F (汚染フロア)</button>`;
                     html += `<button class="ev-btn" data-floor="5" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">5F (精神科病棟)</button>`;
                     
-                    // ★ 7Fボタンの追加
+                    // 7Fボタンの追加
                     if (canGo7F) {
                         html += `<button class="ev-btn" data-floor="7" style="width: 220px; padding: 15px; margin: 5px; background: linear-gradient(180deg, #664400, #221100); color: #ffdd66; border: 1px solid #ffcc00; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px rgba(255,200,0,0.4);">7F (VIPラウンジ)</button>`;
                     }
@@ -211,7 +211,12 @@ function startExorcistSequence(gameState, redraw, onComplete) {
                             gameState.hasKey2F = true; 
                             gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
                             if (redraw) redraw(); 
-                            onComplete();
+
+                            // ★ 追加：悪魔辞典アプリの解説メッセージ
+                            showMessageDialog(
+                                "【悪魔辞典アプリ】\n悪魔辞典を使えるようになった。\n400年にわたる悪魔との戦いの知見を、何十冊もの辞典にまとめた『悪魔辞典』。\nこのアプリはとても持ち運びできない膨大な辞典をアプリに集約したもののようだ。\n\n右下の『悪魔辞典（ESC）』をクリックすると開く。\n進捗の保存もここから出来る。",
+                                onComplete
+                            );
                         });
                     });
                 });
