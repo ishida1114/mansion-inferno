@@ -1,4 +1,4 @@
-// renderer.js - 7F完全VIP対応（画像トリミング・自動ファイル検索・角度パース完全整合版）
+// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示 完全版
 
 import { gameState } from './gameState.js';
 
@@ -230,11 +230,11 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
+        // ★ 最初から常時表示されるミニマップ
         drawMiniMap(ctx, player, currentMap, currentFloor);
         drawCompass(ctx, canvas, player, currentFloor);
         drawActionHint(ctx, canvas, player, currentMap);
 
-        // ★ 左下の [ ESC ] アプリ | [ F2 ] デバッグ の表示処理を削除しました
     } catch (e) {
         console.error("Renderer draw error:", e);
     }
@@ -388,8 +388,8 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 
+// ★ 最初から常時ミニマップを表示
 function drawMiniMap(ctx, player, currentMap, currentFloor) {
-    if (!gameState.hasExorcistInherited) return; 
     const size = 10, margin = 10;
     const mapW = currentMap[0].length * size, mapH = currentMap.length * size;
     
