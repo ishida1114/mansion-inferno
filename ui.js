@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・戦闘UI完全統合版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・戦闘ダメージ演出＆黄色い傘2回攻撃対応 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -7,6 +7,34 @@ import { sound } from './sound.js';
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
 window.lastDialogCloseTime = 0;
+
+// ★ 戦闘用アニメーションスタイルの自動注入
+function ensureCombatStyles() {
+    if (document.getElementById("combat-dynamic-style")) return;
+    const style = document.createElement("style");
+    style.id = "combat-dynamic-style";
+    style.textContent = `
+        @keyframes damagePopupFloat {
+            0% { opacity: 0; transform: translate(-50%, 10px) scale(0.6); }
+            20% { opacity: 1; transform: translate(-50%, -15px) scale(1.2); }
+            75% { opacity: 1; transform: translate(-50%, -35px) scale(1.0); }
+            100% { opacity: 0; transform: translate(-50%, -50px) scale(0.85); }
+        }
+        @keyframes enemyHurtShake {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-8px, 4px) scale(0.98); filter: brightness(2) contrast(1.4); }
+            40% { transform: translate(8px, -4px) scale(1.02); }
+            60% { transform: translate(-6px, 2px); }
+            80% { transform: translate(6px, -2px); }
+            100% { transform: translate(0, 0); filter: none; }
+        }
+        @keyframes yellowUmbrellaFlash {
+            0% { opacity: 0.9; }
+            100% { opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 export function applyChromaKey(element) {
     if (!element) return;
@@ -348,9 +376,11 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（音響対応・個別報酬対応 完全版）
+// 戦闘UI制御（2連続攻撃・スタン管理対応 完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
+    ensureCombatStyles();
+
     // ★ 戦闘開始SE と BGM再生
     sound.playSE("assets/audio/se/sentoukaisi.mp3");
     sound.playBGM("assets/audio/bgm/battle.mp3");
@@ -367,8 +397,14 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     let isRedUmbrellaActive = false;
     let extraAgi = 0;
     let isEnemyCharging = false;
+    let enemyStunTurns = 0; // ★ 黄色い傘のスタン残りターン管理
 
-    const visualHTML = `<img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; margin-bottom: 10px; object-fit: contain;">`;
+    const visualHTML = `
+        <div style="position: relative; display: inline-block; margin-bottom: 10px;">
+            <img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; object-fit: contain; transition: transform 0.1s ease;">
+            <div id="damage-popup-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible;"></div>
+        </div>
+    `;
 
     ui.innerHTML = `
         <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>
@@ -391,6 +427,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     document.body.appendChild(ui);
 
     const enemyImg = document.getElementById("combat-enemy-img");
+    const damageLayer = document.getElementById("damage-popup-layer");
     applyChromaKey(enemyImg);
 
     const log = document.getElementById("combat-log");
@@ -399,6 +436,46 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const attackBtn = document.getElementById("btn-attack");
     const itemBtn = document.getElementById("btn-item");
     const escapeBtn = document.getElementById("btn-escape");
+
+    // 敵画像の上にダメージ数値をポップアップ表示
+    const showEnemyDamagePopup = (damageValue, isWeakness = false, prefix = "-") => {
+        if (!damageLayer) return;
+
+        if (enemyImg) {
+            enemyImg.style.animation = "none";
+            void enemyImg.offsetWidth;
+            enemyImg.style.animation = "enemyHurtShake 0.4s ease-out";
+        }
+
+        const popup = document.createElement("div");
+        popup.style.cssText = `
+            position: absolute;
+            left: 50%;
+            top: 45%;
+            transform: translate(-50%, -50%);
+            font-family: ${HORROR_FONT};
+            font-size: ${isWeakness ? "2.5em" : "2.1em"};
+            font-weight: 900;
+            color: ${isWeakness ? "#ffdd44" : "#ff3333"};
+            text-shadow: 0 0 10px ${isWeakness ? "#ff6600" : "#ff0000"}, 0 0 20px #000, 2px 2px 0 #000;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 3100;
+            animation: damagePopupFloat 0.85s ease-out forwards;
+        `;
+        popup.innerText = `${isWeakness ? '弱点！ ' : ''}${prefix}${damageValue}`;
+        damageLayer.appendChild(popup);
+
+        setTimeout(() => popup.remove(), 850);
+    };
+
+    // 閃光エフェクト（黄色い傘用）
+    const triggerScreenFlash = (color = "rgba(255, 255, 140, 0.85)") => {
+        const flash = document.createElement("div");
+        flash.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: ${color}; z-index: 3900; pointer-events: none; animation: yellowUmbrellaFlash 0.6s ease-out forwards;`;
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 600);
+    };
 
     const appendLog = (htmlText) => {
         log.innerHTML += (log.innerHTML ? "\n" : "") + htmlText;
@@ -417,7 +494,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         playerHpText.style.color = "#ff0000";
         appendLog("\n<span style='color:red; font-weight:bold;'>【敗北】主人公は力尽きて倒れた……！</span>");
 
-        // ★ 死亡時SE
         sound.playSE("assets/audio/se/zero.mp3");
 
         setTimeout(() => {
@@ -445,6 +521,16 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         log.innerHTML = initialMessage;
 
         setTimeout(() => {
+            // ★ スタン残り判定：スタン中なら攻撃を完全にスキップしてプレイヤーへ手番を返す！
+            if (enemyStunTurns > 0) {
+                enemyStunTurns--;
+                appendLog(`\n<span style="color:#ffdd66; font-weight:bold;">【行動不能】${enemy.name} は目を押さえて悶絶しており、攻撃できない！（チャンス！）</span>`);
+                attackBtn.disabled = false;
+                itemBtn.disabled = false;
+                escapeBtn.disabled = false;
+                return;
+            }
+
             const currentFloor = gameState.currentFloor || 1;
             let actionType = "normal";
             let damageMultiplier = 1.0;
@@ -532,7 +618,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             }
 
             if (catAction === "shield") {
-                sound.playSE("assets/audio/se/cat.mp3"); // ★ 黒猫ガードSE
+                sound.playSE("assets/audio/se/cat.mp3");
                 baseDamage = Math.max(1, Math.floor(baseDamage * 0.5));
                 appendLog(`\n<span style="color: #E0B0FF; font-weight: bold;">【使い魔の身代わり】黒猫が前に割り込み、主人公を庇った！（ダメージ半減！）</span>`);
             }
@@ -547,10 +633,11 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             appendLog(dmgNotice);
 
             if (catAction === "claw") {
-                sound.playSE("assets/audio/se/cat.mp3"); // ★ 黒猫攻撃SE
+                sound.playSE("assets/audio/se/cat.mp3");
                 const catDmg = Math.max(8, Math.floor((gameState.player.level || 1) * 3.5));
                 enemyHp = Math.max(0, enemyHp - catDmg);
                 enemyHpText.innerText = `敵HP: ${enemyHp}`;
+                showEnemyDamagePopup(catDmg, false, "🐾 -");
                 appendLog(`<span style="color: #E0B0FF; font-weight: bold;">【使い魔の爪攻撃】黒猫が影から飛び出し、敵の顔面を切り裂いた！ 敵に ${catDmg} ダメージ！</span>`);
             }
 
@@ -563,7 +650,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     ui.remove();
                     sound.playBGM("assets/audio/bgm/field.mp3");
 
-                    // ★ 報酬計算（個別設定優先・ボスの場合は最低でも経験値/お金2倍）
                     const baseExp = enemy.rewardExp || (enemy.isBoss ? 100 : 50);
                     const baseMoney = enemy.rewardMoney || (enemy.isBoss ? 300 : 150);
                     const reward = gameState.calculateRewards ? gameState.calculateRewards(baseExp, baseMoney) : { exp: baseExp, money: baseMoney };
@@ -571,7 +657,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     gameState.player.money += reward.money;
                     const isLvUp = gameState.gainExp(reward.exp);
                     
-                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3"); // ★ レベルアップSE
+                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3");
 
                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
                     showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
@@ -633,6 +719,8 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
             enemyHp = Math.max(0, enemyHp - netDamage);
             
+            showEnemyDamagePopup(netDamage, isWeaknessHit);
+
             let shotMsg = `Vox Sacraの射撃！${isWeaknessHit ? '【弱点特効2倍！】' : ''} 悪魔に ${netDamage} ダメージ！`;
             if (isRedApplied) {
                 shotMsg = `【渾身の一撃】赤い傘の反動で威力が3倍に爆発！\n${shotMsg}`;
@@ -646,7 +734,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     ui.remove();
                     sound.playBGM("assets/audio/bgm/field.mp3");
 
-                    // ★ 報酬計算（個別設定優先・ボスの場合は最低でも経験値/お金2倍）
                     const baseExp = enemy.rewardExp || (enemy.isBoss ? 100 : 50);
                     const baseMoney = enemy.rewardMoney || (enemy.isBoss ? 300 : 150);
                     const reward = gameState.calculateRewards ? gameState.calculateRewards(baseExp, baseMoney) : { exp: baseExp, money: baseMoney };
@@ -654,7 +741,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     gameState.player.money += reward.money;
                     const isLvUp = gameState.gainExp(reward.exp);
                     
-                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3"); // ★ レベルアップSE
+                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3");
                     
                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
                     showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
@@ -711,31 +798,46 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 itemBtn.disabled = true;
                 escapeBtn.disabled = true;
 
-                // ★ 回復アイテムの処理を動的に強化（healAmountプロパティ優先）
-                if (usedItem.healAmount || usedItem.id === "energy_drink" || usedItem.id === "bento" || usedItem.id === "first_aid") {
-                    const heal = usedItem.healAmount ? usedItem.healAmount : (usedItem.id === "first_aid" ? 50 : 15);
+                const itemId = (usedItem.id || "").toLowerCase();
+                const itemName = usedItem.name || "";
+
+                // 回復アイテム
+                if (usedItem.healAmount || itemId === "energy_drink" || itemId === "bento" || itemId === "first_aid" || itemId === "mystery_supplement") {
+                    const heal = usedItem.healAmount ? usedItem.healAmount : (itemId === "first_aid" ? 50 : 15);
                     gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + heal);
                     updateHpDisplay();
                     enemyTurn(`【道具使用】${usedItem.name} を使った！\n主人公のHPが ${heal} 回復した！（現在HP: ${gameState.player.hp}）`);
                 } 
-                else if (usedItem.id === "blue_umbrella" || usedItem.id === "umbrella_blue" || usedItem.guardEffect || (usedItem.name && usedItem.name.includes("青"))) {
+                // 青い傘（ガード）
+                else if (itemId === "blue_umbrella" || itemId === "umbrella_blue" || usedItem.guardEffect || itemName.includes("青") || itemName.includes("ブルー")) {
                     isGuarding = true;
                     enemyTurn(`【道具使用】${usedItem.name} を素早く開いた！\n次の敵の攻撃ダメージを 70% 軽減する！`);
                 } 
-                else if (usedItem.id === "red_umbrella" || usedItem.id === "umbrella_red" || (usedItem.name && usedItem.name.includes("赤"))) {
+                // 赤い傘（攻撃3倍）
+                else if (itemId === "red_umbrella" || itemId === "umbrella_red" || itemName.includes("赤") || itemName.includes("レッド")) {
                     isRedUmbrellaActive = true;
                     enemyTurn(`【道具使用】${usedItem.name} を開いて構えた！\n力を限界まで蓄積した！ 次の銃撃威力が【3倍】に激増する！`);
-                }
-                else if (usedItem.id === "yellow_umbrella" || (usedItem.name && usedItem.name.includes("黄"))) {
-                    log.innerHTML = `【道具使用】${usedItem.name} を突き出した！\n強烈な光で敵の目を眩ませた！`;
+                } 
+                // ★ 黄色い傘（目くらまし・敵ターンスキップ＋次攻撃後もスタン継続＝2回連続攻撃）
+                else if (itemId === "yellow_umbrella" || itemId === "umbrella_yellow" || itemName.includes("黄") || itemName.includes("イエロー")) {
+                    triggerScreenFlash("rgba(255, 255, 140, 0.85)");
+                    if (enemyImg) {
+                        enemyImg.style.filter = "brightness(2.5) contrast(1.5)";
+                        setTimeout(() => { applyChromaKey(enemyImg); }, 800);
+                    }
+                    // ★ 敵の次の攻撃手番を1回ストップ（＝傘を開いた直後の攻撃と合わせて2回連続攻撃が可能）
+                    enemyStunTurns = 1;
+
+                    log.innerHTML = `【道具使用】${usedItem.name} を勢いよく開いた！\n強烈な閃光が炸裂し、敵の目を完全に眩ませた！`;
                     setTimeout(() => {
-                        appendLog(`\n敵は目を押さえて動けない！`);
+                        appendLog(`\n<span style="color:#ffdd66; font-weight:bold;">敵は目を押さえて悶絶している！ 隙だらけだ！（2回連続で攻撃可能！）</span>`);
                         attackBtn.disabled = false;
                         itemBtn.disabled = false;
                         escapeBtn.disabled = false;
-                    }, 1400);
+                    }, 1200);
                 } 
-                else if (usedItem.id === "clear_umbrella" || (usedItem.name && usedItem.name.includes("透明"))) {
+                // 透明な傘（回避率上昇）
+                else if (itemId === "clear_umbrella" || itemId === "umbrella_clear" || itemName.includes("透明") || itemName.includes("クリア")) {
                     extraAgi += 5;
                     enemyTurn(`【道具使用】${usedItem.name} を纏った！\n身のこなしが軽くなり、回避率と逃走率が上昇した！`);
                 } 
@@ -787,7 +889,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
 // 査問UI制御（初回チュートリアル付き 完全版）
 export function openInquisitionUI(entity, gameState, onResult, context) {
-    // ★ 初回チュートリアルガイド表示処理
     const showTutorialIfNeeded = (callback) => {
         if (!gameState.flags) gameState.flags = {};
         if (!gameState.flags.seenInqTutorial) {
@@ -934,7 +1035,7 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
                     gameState.player.money += reward.money;
                     const isLvUp = gameState.gainExp(reward.exp);
                     
-                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3"); // ★ レベルアップSE
+                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3");
                     
                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
                     showMessageDialog(`【完全見破り成功！】\n悪魔の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
@@ -976,7 +1077,6 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         };
     };
 
-    // チュートリアルを表示してからUIを展開
     showTutorialIfNeeded(initUI);
 }
 
