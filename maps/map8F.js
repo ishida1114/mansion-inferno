@@ -28,11 +28,11 @@ export function handleEvent8F(targetCell, gameState, context) {
     const frontX = px + dx[dir];
     const frontY = py + dy[dir];
 
-    // ★ 4: 7Fへの階段（main.jsと連動して7Fの大階段前に着地させる）
+    // ★ 4: 7Fへの階段
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
-                gameState.lastTransitMethod = 'stair_down'; // 下り判定
+                gameState.lastTransitMethod = 'stair_down';
                 playFloorTransition(7, () => {
                     context.changeFloor(7);
                     onComplete();
@@ -64,7 +64,6 @@ function handleCerberusRoom(gameState, context, onComplete) {
         return;
     }
 
-    // ケルベロスのセリフ ＆ 黒猫が怯える心理描写
     showConversationDialog(
         "assets/images/demon/Cerberus.jpg",
         "【地獄の番犬・ケルベロス】\n「ワレヲ喚ビ出シタノハ誰ダ…貴様カッ、頭ガ高イィッ！」\n\n（使い魔が怯えている……相手が地獄の猛犬のせいか、この戦闘で使い魔の助けは期待できないかもしれない！）",
@@ -72,32 +71,32 @@ function handleCerberusRoom(gameState, context, onComplete) {
             const cerberusBoss = {
                 name: "地獄の番犬・ケルベロス",
                 image: "assets/images/demon/Cerberus.jpg",
-                hp: 1000, // ★ 強化 (260 -> 1000)
-                atk: 90,  // ★ 強化 (24 -> 90)
-                def: 10,  // ★ 強化 (3 -> 10)
+                hp: 1000,
+                atk: 90,
+                def: 10,
                 weakness: [1, 6],
                 actions: [
-                    "の３つの顎が同時に噛みついてきた！",
+                    "の２つの顎が同時に噛みついてきた！",
                     "は口から猛烈な『業火ブレス』を吐き散らした！",
                     "が地獄の咆哮を上げ、威圧で身動きを封じてくる！"
                 ]
             };
 
-            // ケルベロス戦のみ黒猫サポートを一時停止
             const prevCatState = gameState.flags.isCatTrapped;
             gameState.flags.isCatTrapped = true;
 
             openCombatUI(cerberusBoss, gameState, (res) => {
-                // 戦闘終了後に黒猫フラグを復元
                 gameState.flags.isCatTrapped = prevCatState;
 
                 if (res === "win") {
                     gameState.flags.clearedCerberus = true;
                     gameState.player.money += 3000;
 
-                    // 主人公と黒猫のアフタートーク
+                    // ★ チェックポイントセーブ（ケルベロス討伐を保存）
+                    if (gameState.saveGame) gameState.saveGame();
+
                     showMessageDialog(
-                        "【ケルベロス 討滅！】\n３つの首を討ち果たし、巨獣は黒煙を上げて崩れ落ちた！\n\n主人公「大丈夫か、いけるか、相棒」\n黒猫はすまなそうに主人公を見上げると、（ニヤッ）と短く鳴き、強い瞳で前を向きなおした。\n\n部屋の隅に、踏みにじられた父親のペンとノートの切れ端が落ちている……！",
+                        "【ケルベロス 討滅！】\n２つの首を討ち果たし、巨獣は黒煙を上げて崩れ落ちた！\n\n主人公「大丈夫か、いけるか、相棒」\n黒猫はすまなそうに主人公を見上げると、（ニヤッ）と短く鳴き、強い瞳で前を向きなおした。\n\n部屋の隅に、踏みにじられた父親のペンとノートの切れ端が落ちている……！",
                         () => {
                             showMessageDialog(
                                 "【父親の取材手帳・前編】\n『……御堂が隠し持っていたオカルト古文書の写しだ。\n悪魔王の不死の核を貫くには、神聖なる三つの印を魔方陣に捧げねばならぬ。\n\n◆ 中央の座：罪を清め、闇を焼き尽くす【Ⅵ 聖炎】を据えよ。\n◆ 右の座：悪魔を貫き逃走を阻む【Ⅸ 銀杭】を置け。』\n\n（※魔方陣パズルの手がかりを手に入れた！）",
@@ -122,7 +121,6 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
         return;
     }
 
-    // 牛頭と馬頭のセリフ
     showConversationDialog(
         "assets/images/demon/gozumezu.png",
         "【地獄の獄卒・牛頭＆馬頭】\n牛頭「ここはどこだ？？ お前は罪人か？ ならば己の罪を数えよ」\n\n馬頭「いや、数える必要もあるまい、ここは地獄、判決は、死刑よ！」",
@@ -130,9 +128,9 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
             const gozuMezuBoss = {
                 name: "地獄の獄卒・牛頭＆馬頭",
                 image: "assets/images/demon/gozumezu.png",
-                hp: 1100, // ★ 強化 (300 -> 1100)
-                atk: 95,  // ★ 強化 (26 -> 95)
-                def: 12,  // ★ 強化 (4 -> 12)
+                hp: 1100,
+                atk: 95,
+                def: 12,
                 weakness: [2, 7],
                 actions: [
                     "の牛頭が巨大な金棒を狂乱しながら振り下ろした！",
@@ -145,6 +143,9 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
                 if (res === "win") {
                     gameState.flags.clearedGozuMezu = true;
                     gameState.player.money += 3500;
+
+                    // ★ チェックポイントセーブ（牛頭馬頭討伐を保存）
+                    if (gameState.saveGame) gameState.saveGame();
 
                     showMessageDialog(
                         "【牛頭＆馬頭 討滅！】\n二体の獄卒を撃破した！ 鉄格子が砕け散り、二体は泥となって溶け去った！\n\nその足元に、千切れた父親の取材メモの続きが落ちている……！",
@@ -177,9 +178,22 @@ function handleMidoChamber(gameState, context, onComplete) {
         return;
     }
 
+    // ★ リトライ時の短縮（すでに演説を聞いて敗北した場合）
+    if (gameState.flags.seenMidoIntro) {
+        showConversationDialog(
+            "assets/images/demon/midou.png",
+            "【悪魔王・御堂】\n「しぶといクソガキめ……何度来ようがこの悪魔王の生贄にしてミンチにしてやるわッ！！」",
+            () => {
+                startMidoPuzzleAndBattle(gameState, context, onComplete);
+            }
+        );
+        return;
+    }
+
+    // 初回イベント
     showConversationDialog(
         "assets/images/demon/midou.png", 
-        "【御堂の演説（街の市民への放送）】\n「おい、聞こえてるな市民諸君！ 男・御堂だ！\nよくも……よくもあの選挙で、この俺を落選させてくれたなぁッ！？\n誰が一番この街を愛してた！？ 誰が泥をかぶって街のために動いてたと思ってんだ！\n老人ホーム建設の募金の着服？ ふざけんじゃねえぞ！ あんなもん俺が市長になって、もっとデカい予算で倍にして建て替えてやるつもりだったんだよ！ 俺の男気と大義を何一つ理解できねえで、あのマスゴミのデマを鵜呑みにしやがって！\n恩知らずの愚民どもがぁぁッ！！」",
+        "【御堂の演説（街の市民への生放送）】\n「おい、聞こえてるな市民諸君！ 男・御堂だ！\nよくも……よくもあの選挙で、この俺を落選させてくれたなぁッ！？\n誰が一番この街を愛してた！？ 誰が泥をかぶって街のために動いてたと思ってんだ！\n老人ホーム建設の募金の着服？ ふざけんじゃねえぞ！ あんなもん俺が市長になって、もっとデカい予算で倍にして建て替えてやるつもりだったんだよ！ 俺の男気と大義を何一つ理解できねえで、あのマスゴミのデマを鵜呑みにしやがって！\n恩知らずの愚民どもがぁぁッ！！」",
         () => {
             showConversationDialog(
                 "assets/images/demon/midou.png",
@@ -187,10 +201,12 @@ function handleMidoChamber(gameState, context, onComplete) {
                 () => {
                     showConversationDialog(
                         "assets/images/demon/midou.png",
-                        "【御堂（主人公を睨みつけ）】\n「……あぁん！？ なんだテメェは！\nどこの家庭教師だか何だか知らねえが、大人の神聖な大義名分に、ガキが土足で踏み込んでんじゃねえぞ！\nテメェの名前なんぞ知るか！ 覚える価値もねえ！\nこっちはこれからこの街の百万人を背負って立つんだ！ てめえみたいな名もねえ雑魚に構ってる暇はねえんだよ！\n邪魔すんなら容赦しねえぞ、俺の偉大なる戴冠式の生贄にしてミンチにしてやるわッ！！」",
+                        "【御堂（主人公を睨みつけ）】\n「……あぁん！？ なんだテメェは！\nどこの小僧だか何だか知らねえが、大人の神聖な大義名分に、ガキが土足で踏み込んでんじゃねえぞ！\nテメェの名前なんぞ知るか！ 覚える価値もねえ！\nこっちはこれからこの街の百万人を背負って立つんだ！ てめえみたいな名もねえ雑魚に構ってる暇はねえんだよ！\n邪魔すんなら容赦しねえぞ、俺の偉大なる戴冠式の生贄にしてミンチにしてやるわッ！！」",
                         () => {
                             playVideo("assets/images/demon/midou.mp4", () => {
-                                startMidoBattleSequence(gameState, context, onComplete);
+                                gameState.flags.seenMidoIntro = true;
+                                if (gameState.saveGame) gameState.saveGame();
+                                startMidoPuzzleAndBattle(gameState, context, onComplete);
                             });
                         }
                     );
@@ -200,81 +216,108 @@ function handleMidoChamber(gameState, context, onComplete) {
     );
 }
 
-// 御堂バトル ➔ 不死身復活 ➔ 魔方陣パズル ➔ エンディング分岐
-function startMidoBattleSequence(gameState, context, onComplete) {
-    const midoBoss = {
-        name: "悪魔王・御堂（自己顕示の化身）",
-        image: "assets/images/demon/midouakuma.png",
-        hp: 2800, // ★ 強化 (420 -> 2800)
-        atk: 120, // ★ 強化 (30 -> 120)
-        def: 18,  // ★ 強化 (4 -> 18)
-        weakness: [4, 9],
-        actions: [
-            "は『俺の大義が分からんか！』と逆上し、血の業火を放った！",
-            "は『感謝しろ！ 畏れ敬え！』と腕を振り回し叩きつけてくる！",
-            "の背中から無数の黒い触手が伸び、暴風のような魔気を撒き散らす！",
-            "は狂気に満ちた目でがなり立て、精神を削り取る咆哮を上げた！"
-        ]
-    };
+// ★ 魔方陣パズル ➔ 弱体化 ➔ 最終決戦バトル ➔ エンディング
+function startMidoPuzzleAndBattle(gameState, context, onComplete) {
+    showMessageDialog(
+        "【主人公の直感】\n（床一面に禍々しい魔方陣が脈打っている……！\n父親の手帳にあった通り、まずはこの神聖陣を解呪して奴の不死結界を破らなければ、攻撃が通じない！）",
+        () => {
+            const puzzleConfig = {
+                title: "【魔方陣術式】悪魔王・御堂（不死の核）",
+                subTitle: "父親の手帳に従い、神聖なる三つの印を魔方陣に捧げよ",
+                bossName: "御堂",
+                slots: [
+                    { id: "slot_1", label: "① 中央", gridPos: "grid-area: 1 / 2;" },
+                    { id: "slot_3", label: "② 左", gridPos: "grid-area: 2 / 1;" },
+                    { id: "slot_5", label: "③ 右", gridPos: "grid-area: 2 / 3;" }
+                ]
+            };
 
-    openCombatUI(midoBoss, gameState, (res) => {
-        if (res === "win") {
-            showConversationDialog(
-                "assets/images/demon/midouakuma.png",
-                "【悪魔王・御堂】\n「グハハハ……痛ぇじゃねえか、クソガキが……！\nだが無駄だ！ 言ったはずだろ、俺は人間をやめた『悪魔王』だとな！\n貴様ごときがどれだけ小細工しようが、この不死の肉体は滅びん！\n街中を地獄に変える儀式はもう止まらんぞ！ 死ねぇッ！！」",
-                () => {
-                    showMessageDialog(
-                        "【主人公の直感】\n（父親の取材手帳にあった通りだ……！ 物理的な攻撃じゃ倒せない。\nエクソシストから受け継いだ神聖カードを、床の魔方陣に正しくセットして【神の裁き（Vox Sacra）】を発動させるしかない！）",
-                        () => {
-                            const puzzleConfig = {
-                                bossName: "悪魔王・御堂（不死の核）",
-                                slots: [
-                                    { id: "slot_3", label: "② 左", gridPos: "grid-area: 2 / 1;" },
-                                    { id: "slot_1", label: "① 中央", gridPos: "grid-area: 1 / 2;" },
-                                    { id: "slot_5", label: "③ 右", gridPos: "grid-area: 2 / 3;" }
-                                ]
-                            };
+            openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
+                // 左: 2(鏡)、中央: 6(聖炎)、右: 9(銀杭)
+                const isCorrect = (Number(slots["slot_3"]) === 2 && Number(slots["slot_1"]) === 6 && Number(slots["slot_5"]) === 9);
 
-                            openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
-                                // ★ 左: 2(鏡)、中央: 6(聖炎)、右: 9(銀杭) の完全一致判定
-                                const isCorrect = (Number(slots["slot_3"]) === 2 && Number(slots["slot_1"]) === 6 && Number(slots["slot_5"]) === 9);
+                const targetLevel = 35; // 8F適正Lv
+                const playerLevel = gameState.player.level || 1;
+                const baseHp = 2800;
 
-                                if (isCorrect) {
-                                    showConversationDialog(
-                                        "assets/images/demon/midouakuma.png",
-                                        "【悪魔王・御堂 討滅！】\n「なっ……魔方陣が……逆流している……！？\n馬鹿な……俺の大義が……俺の男気が……こんな、名も無きガキに……！\n認めん、認めんぞぉぉぉッ！！ 俺が……俺こそが、王だぁぁぁぁっ……！！」",
-                                        () => {
-                                            gameState.flags.cleared8F = true;
-                                            sound.playBGM("assets/audio/bgm/ending.mp3");
-                                            triggerEndingSequence(gameState, onComplete);
-                                        }
-                                    );
-                                } else {
-                                    gameState.player.hp = Math.max(1, gameState.player.hp - 50);
-                                    showMessageDialog("【神聖陣の暴走！】\n印の波長が合わず、魔方陣が激しく反発した！（50ダメージ！）\n\n御堂「ガハハ！ 無駄だと言っただろうが！ 愚民にこの神聖なる儀式は止められん！」\n\n（※もう一度魔方陣を調べて正しいカードをセットしよう！）", onComplete);
-                                }
-                            });
-                        }
-                    );
+                let hpRatio = 1.0;
+                let resultMsg = "";
+
+                if (isCorrect) {
+                    if (playerLevel >= targetLevel) {
+                        hpRatio = 0.2; // 8割削減（開始HP: 560）
+                        resultMsg = `【神聖陣完全発動！】適正レベル(Lv.${targetLevel})到達！\n三位一体の神聖光が悪魔王の核を撃ち抜いた！\n不死結界が崩壊し、体力を 8割削減 した！`;
+                    } else {
+                        hpRatio = 0.5; // 半減（開始HP: 1400）
+                        resultMsg = `【神聖陣発動！】魔方陣が共鳴し、悪魔王の結界を一時的に弱体化！\n体力を 半減 させた！`;
+                    }
+                } else {
+                    hpRatio = 1.0;
+                    resultMsg = `【術式発動失敗……！】\n印の波長が合わず魔方陣が激しく暴走した！\n完全体となった悪魔王・御堂が襲いかかってくる！`;
                 }
-            );
-        } else {
-            onComplete();
+
+                const startHp = Math.max(1, Math.floor(baseHp * hpRatio));
+
+                const midoBoss = {
+                    name: "悪魔王・御堂（自己顕示の化身）",
+                    image: "assets/images/demon/midouakuma.png",
+                    hp: startHp,
+                    maxHp: baseHp,
+                    atk: isCorrect ? 95 : 120,
+                    def: isCorrect ? 10 : 18,
+                    weakness: [4, 9],
+                    rewardExp: 1500,
+                    rewardMoney: 10000,
+                    isBoss: true,
+                    actions: [
+                        "は『俺の大義が分からんか！』と逆上し、血の業火を放った！",
+                        "は『感謝しろ！ 畏れ敬え！』と腕を振り回し叩きつけてくる！",
+                        "の背中から無数の黒い触手が伸び、暴風のような魔気を撒き散らす！",
+                        "は狂気に満ちた目でがなり立て、精神を削り取る咆哮を上げた！"
+                    ]
+                };
+
+                const startBossBattle = () => {
+                    openCombatUI(midoBoss, gameState, (res) => {
+                        if (res === "win") {
+                            gameState.flags.cleared8F = true;
+                            if (gameState.saveGame) gameState.saveGame();
+                            sound.playBGM("assets/audio/bgm/ending.mp3");
+
+                            showConversationDialog(
+                                "assets/images/demon/midouakuma.png",
+                                "【悪魔王・御堂 討滅！】\n「なっ……魔方陣が……逆流している……！？\n馬鹿な……俺の大義が……俺の男気が……こんな、名も無きガキに……！\n認めん、認めんぞぉぉぉッ！！ 俺が……俺こそが、王だぁぁぁぁっ……！！」",
+                                () => {
+                                    triggerEndingSequence(gameState, onComplete);
+                                }
+                            );
+                        } else {
+                            onComplete();
+                        }
+                    }, context);
+                };
+
+                if (isCorrect) {
+                    showMessageDialog(resultMsg, () => {
+                        playVideo("assets/videos/magic-circle.mp4", startBossBattle);
+                    });
+                } else {
+                    showMessageDialog(resultMsg, startBossBattle);
+                }
+            });
         }
-    }, context);
+    );
 }
 
 // 罪(Sin)によるマルチエンディング分岐
 function triggerEndingSequence(gameState, onComplete) {
     const currentSin = gameState.player.sin || 0;
 
-    // タイトルへ戻る処理（少し余韻を残してリロードする）
     const returnToTitle = () => {
         const overlay = document.createElement("div");
         overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; opacity: 0; transition: opacity 2s ease;";
         document.body.appendChild(overlay);
         
-        // 10ミリ秒後にフェードアウトを開始し、3秒後に完全にリロードしてタイトルに戻る
         setTimeout(() => { overlay.style.opacity = "1"; }, 10);
         setTimeout(() => { location.reload(); }, 3000);
     };
@@ -323,9 +366,9 @@ export function check8FRandomEncounter(gameState, context, onComplete) {
     const enemy = {
         name: "御堂の後援会狂信者",
         image: "assets/images/demon/demon18.png",
-        hp: 350, // ★ 強化 (75 -> 350)
-        atk: 75,  // ★ 強化 (22 -> 75)
-        def: 5,   // ★ 強化 (2 -> 5)
+        hp: 350,
+        atk: 75,
+        def: 5,
         weakness: [3, 5],
         actions: [
             "は『御堂先生こそ真の市長だ！』と叫び襲いかかってきた！",

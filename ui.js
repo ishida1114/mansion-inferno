@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・戦闘ダメージ演出＆黄色い傘2回攻撃対応 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -8,7 +8,13 @@ const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
 window.lastDialogCloseTime = 0;
 
-// ★ 戦闘用アニメーションスタイルの自動注入
+// ★ 現在のフロアに応じたフィールドBGMを取得するヘルパー関数
+function getFieldBGM(state) {
+    const floor = state ? state.currentFloor : (gameState ? gameState.currentFloor : 1);
+    return floor === 7 ? "assets/audio/bgm/7thfloor.mp3" : "assets/audio/bgm/field.mp3";
+}
+
+// ★ 戦闘用アニメーションスタイル（filterを触らずクロマキー透過を永久維持）
 function ensureCombatStyles() {
     if (document.getElementById("combat-dynamic-style")) return;
     const style = document.createElement("style");
@@ -22,11 +28,11 @@ function ensureCombatStyles() {
         }
         @keyframes enemyHurtShake {
             0% { transform: translate(0, 0); }
-            20% { transform: translate(-8px, 4px) scale(0.98); filter: brightness(2) contrast(1.4); }
+            20% { transform: translate(-8px, 4px) scale(0.98); }
             40% { transform: translate(8px, -4px) scale(1.02); }
             60% { transform: translate(-6px, 2px); }
             80% { transform: translate(6px, -2px); }
-            100% { transform: translate(0, 0); filter: none; }
+            100% { transform: translate(0, 0); }
         }
         @keyframes yellowUmbrellaFlash {
             0% { opacity: 0.9; }
@@ -110,7 +116,7 @@ export function showOpeningUI(onClosed) {
         </div>
     `;
     createGuardedDialogContainer(html, () => {
-        sound.playBGM("assets/audio/bgm/field.mp3");
+        sound.playBGM(getFieldBGM(gameState));
         if (onClosed) onClosed();
     });
 }
@@ -376,12 +382,11 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（2連続攻撃・スタン管理対応 完全版）
+// 戦闘UI制御（クロマキー保護＆7F-BGM対応 完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
     ensureCombatStyles();
 
-    // ★ 戦闘開始SE と BGM再生
     sound.playSE("assets/audio/se/sentoukaisi.mp3");
     sound.playBGM("assets/audio/bgm/battle.mp3");
 
@@ -397,7 +402,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     let isRedUmbrellaActive = false;
     let extraAgi = 0;
     let isEnemyCharging = false;
-    let enemyStunTurns = 0; // ★ 黄色い傘のスタン残りターン管理
+    let enemyStunTurns = 0;
 
     const visualHTML = `
         <div style="position: relative; display: inline-block; margin-bottom: 10px;">
@@ -437,7 +442,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const itemBtn = document.getElementById("btn-item");
     const escapeBtn = document.getElementById("btn-escape");
 
-    // 敵画像の上にダメージ数値をポップアップ表示
+    // 敵画像の上にダメージ数値をポップアップ表示（クロマキーに影響を与えない）
     const showEnemyDamagePopup = (damageValue, isWeakness = false, prefix = "-") => {
         if (!damageLayer) return;
 
@@ -469,7 +474,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         setTimeout(() => popup.remove(), 850);
     };
 
-    // 閃光エフェクト（黄色い傘用）
     const triggerScreenFlash = (color = "rgba(255, 255, 140, 0.85)") => {
         const flash = document.createElement("div");
         flash.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: ${color}; z-index: 3900; pointer-events: none; animation: yellowUmbrellaFlash 0.6s ease-out forwards;`;
@@ -498,7 +502,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
         setTimeout(() => {
             ui.remove();
-            sound.playBGM("assets/audio/bgm/field.mp3");
+            sound.playBGM(getFieldBGM(gameState));
 
             const respawnMsg = gameState.handlePlayerDeath();
             if (context && context.changeFloor) {
@@ -521,7 +525,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         log.innerHTML = initialMessage;
 
         setTimeout(() => {
-            // ★ スタン残り判定：スタン中なら攻撃を完全にスキップしてプレイヤーへ手番を返す！
             if (enemyStunTurns > 0) {
                 enemyStunTurns--;
                 appendLog(`\n<span style="color:#ffdd66; font-weight:bold;">【行動不能】${enemy.name} は目を押さえて悶絶しており、攻撃できない！（チャンス！）</span>`);
@@ -648,7 +651,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 appendLog(`\n【討滅】黒猫の追撃が決定打となり、悪魔は霧散した！`);
                 setTimeout(() => {
                     ui.remove();
-                    sound.playBGM("assets/audio/bgm/field.mp3");
+                    sound.playBGM(getFieldBGM(gameState));
 
                     const baseExp = enemy.rewardExp || (enemy.isBoss ? 100 : 50);
                     const baseMoney = enemy.rewardMoney || (enemy.isBoss ? 300 : 150);
@@ -732,7 +735,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 
                 setTimeout(() => {
                     ui.remove();
-                    sound.playBGM("assets/audio/bgm/field.mp3");
+                    sound.playBGM(getFieldBGM(gameState));
 
                     const baseExp = enemy.rewardExp || (enemy.isBoss ? 100 : 50);
                     const baseMoney = enemy.rewardMoney || (enemy.isBoss ? 300 : 150);
@@ -818,14 +821,14 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     isRedUmbrellaActive = true;
                     enemyTurn(`【道具使用】${usedItem.name} を開いて構えた！\n力を限界まで蓄積した！ 次の銃撃威力が【3倍】に激増する！`);
                 } 
-                // ★ 黄色い傘（目くらまし・敵ターンスキップ＋次攻撃後もスタン継続＝2回連続攻撃）
+                // 黄色い傘（目くらまし・敵ターンスキップ＋次攻撃後もスタン継続）
                 else if (itemId === "yellow_umbrella" || itemId === "umbrella_yellow" || itemName.includes("黄") || itemName.includes("イエロー")) {
                     triggerScreenFlash("rgba(255, 255, 140, 0.85)");
+                    // クロマキーを維持するため filter ではなく opacity で演出
                     if (enemyImg) {
-                        enemyImg.style.filter = "brightness(2.5) contrast(1.5)";
-                        setTimeout(() => { applyChromaKey(enemyImg); }, 800);
+                        enemyImg.style.opacity = "0.5";
+                        setTimeout(() => { if (enemyImg) enemyImg.style.opacity = "1"; }, 800);
                     }
-                    // ★ 敵の次の攻撃手番を1回ストップ（＝傘を開いた直後の攻撃と合わせて2回連続攻撃が可能）
                     enemyStunTurns = 1;
 
                     log.innerHTML = `【道具使用】${usedItem.name} を勢いよく開いた！\n強烈な閃光が炸裂し、敵の目を完全に眩ませた！`;
@@ -860,7 +863,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             const escapeRate = 0.55 + (((gameState.player.agi || 5) + extraAgi) * 0.04);
             if (Math.random() < escapeRate) {
                 ui.remove();
-                sound.playBGM("assets/audio/bgm/field.mp3");
+                sound.playBGM(getFieldBGM(gameState));
 
                 showMessageDialog("【逃走成功】\n暗闇の中、なんとか悪魔を振り切った！", () => {
                     if (onResult) onResult("escape");

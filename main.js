@@ -1,4 +1,4 @@
-// main.js - スマホ用デバッグボタン(左上配置)・3F初回セリフ・6F降下座標(y:1)・8F最上階連動 完全版
+// main.js - スマホ用デバッグボタン(左上配置)・3F初回セリフ・6F降下座標(y:1)・8F最上階連動・7F-BGM切り替え対応 完全版
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -19,6 +19,15 @@ let appUI;
 let renderer;
 let isRunning = false;
 let isProcessingEvent = false;
+
+// ★ フロアに応じたBGMを再生する関数
+function playFloorBGM(floor) {
+  if (floor === 7) {
+    sound.playBGM("assets/audio/bgm/7thfloor.mp3");
+  } else {
+    sound.playBGM("assets/audio/bgm/field.mp3");
+  }
+}
 
 function isActionBlocked() {
   if (window.lastDialogCloseTime && (Date.now() - window.lastDialogCloseTime < 400)) return true; 
@@ -150,7 +159,7 @@ function startNewGame() {
 }
 
 function resumeGame() {
-  sound.playBGM("assets/audio/bgm/field.mp3");
+  playFloorBGM(gameState.currentFloor);
   document.getElementById('app-ui-container')?.classList.add('hidden');
   document.getElementById('touch-controls')?.classList.remove('hidden');
   if (gameState.currentMap) gameState.markVisited(gameState.currentFloor, gameState.currentMap, gameState.player.x, gameState.player.y);
@@ -208,7 +217,7 @@ function interactFrontCell() {
 
 function changeFloor(floor) {
   gameState.currentFloor = floor;
-  sound.playBGM("assets/audio/bgm/field.mp3");
+  playFloorBGM(floor);
 
   if (floor === 8) {
     gameState.currentMap = map8F;
@@ -241,7 +250,7 @@ function changeFloor(floor) {
         showConversationDialog("assets/images/demon/7f-shiratori.png", "【館内放送・マダム白鳥】\n「あぁら、また小汚い庶民が迷い込んだの？ 庶民の匂いは本当に吐き気がするわね。\n……まさか、一階でくたばった『あの神父』の仇でも取りに来たつもり？\nアハハ！ 傑作ね！ あんな男、私がちょっと札束を積んで『私の専属になりなさい』って言ってやったら、偉そうに説教なんて始めて……\nだから御堂先生にお願いして、ちょっと『再教育』してもらったの。今頃、泥水の中で惨めな姿になってるでしょうね。\nいいこと？ このマンションの住人も、迷い込んだ愚か者も、ぜーんぶ私の『資産』よ。命の価値なんてね、通帳の残高で決まるの。\nあなたの残高いくらかしら？\n精々、私のペットたちの餌になって、少しでも私の利益に貢献しなさいな。失せな！」", () => redraw());
       });
     } else if (gameState.lastTransitMethod !== 'stair_down') {
-      showMessageDialog("【7階 VIPラウンジ】\n豪華なレッドカーペットと白大理石の廊下。静けさの中に不気味な気配が漂っている……", () => redraw());
+      showMessageDialog("【7階 VIPラウンジ】\n豪華なレッドカーペットと白大理石の廊下。すさまじく圧迫感があるおぞましい成金趣味だ……", () => redraw());
     }
   }
   else if (floor === 6) {
@@ -376,12 +385,11 @@ function toggleDebugUI() {
 
 function debugJumpToFloor(floor) {
   if (!gameState.flags) gameState.flags = {};
-  gameState.lastTransitMethod = 'stair'; // ★ デバッグワープ時は下り階段判定を解除
+  gameState.lastTransitMethod = 'stair';
   gameState.hasExorcistInherited = true;
   gameState.hasModelGun = true;
   gameState.player.hasModelGun = true;
   gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
-  sound.playBGM("assets/audio/bgm/field.mp3");
 
   if (floor === 1) { 
     gameState.player.level = 1; gameState.player.maxHp = 20; gameState.player.hp = 20; gameState.player.def = 0; gameState.player.agi = 5; gameState.player.money = 0; 
@@ -403,7 +411,7 @@ function debugJumpToFloor(floor) {
     gameState.player.maxExp = 3895; 
     gameState.lastTransitMethod = 'stair';
     changeFloor(6); 
-    gameState.player.x = 5; gameState.player.y = 8; gameState.player.dir = 0; // ★ 6F入口(5F階段前)に着地
+    gameState.player.x = 5; gameState.player.y = 8; gameState.player.dir = 0;
   } else if (floor === 7) { 
     gameState.player.level = 30; gameState.player.maxHp = 250; gameState.player.hp = 250; gameState.player.def = 15; gameState.player.money = 20000; gameState.flags.cleared6F = true; gameState.flags.hasCat = true; 
     gameState.player.maxExp = 4884; changeFloor(7); 
