@@ -365,7 +365,7 @@ function startRinaBossSequence(gameState, context, onComplete) {
 
                                     clearPinkMist();
 
-                                    showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「バカじゃないの、この悪魔！ 中学生の父親？ あの男はなびかないから5Fの蛭沼っちに渡したわ、蛭沼っち、改造できるおもちゃを欲しがってたから。ねぇ助けてよ……お願いだから見捨てないでぇぇっ…」", () => {
+                                    showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「バカじゃないの、この悪魔！ ひとでなし！　中学生の父親？ あの男はなびかないから5Fの蛭沼っちに渡したわ、蛭沼っち、改造できるおもちゃを欲しがってたから。ねぇ助けてよ……お願いだから見捨てないでぇぇっ…」", () => {
                                         showMessageDialog(`【4Fフロアボス討滅！】\nリナの怨霊を浄化し、甘い桃色の霧と蔦が消え去った！\n\n主人公「5Fの蛭沼、まだ上かよ、あぁクソ……無事だといいけど……！」\n※5階への非常階段が解禁されました！`, onComplete);
                                     });
                                 } else {
