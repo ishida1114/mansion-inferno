@@ -1,4 +1,4 @@
-// maps/map6F.js - 感情の導線修正・拡張子(.png)完全反映・ドッペルゲンガー決戦版
+// maps/map6F.js - 感情の導線修正・拡張子(.png)完全反映・チェックポイントセーブ対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -25,14 +25,14 @@ export const map6F = [
 export function check6FRandomEncounter(gameState, onEncounter) {
     if (gameState.currentFloor !== 6) return;
     
-    // ① 進入時の環境演出（感情の導線修正）
+    // ① 進入時の環境演出
     if (!gameState.flags) gameState.flags = {};
     if (!gameState.flags.seen6FIntro) {
         gameState.flags.seen6FIntro = true;
-        showMessageDialog("【6階：濃密な蜘蛛の巣】\n5階から駆け上がっていった黒猫を追い、6階へ足を踏み入れた。\nフロア全体に、異常なほど白く粘つく蜘蛛の糸が張り巡らされている……。\n（うわ、なんだこれ？蜘蛛？マジか、あらゆる生き物で蜘蛛が一番苦手なんだよなぁ）", () => {
-            showMessageDialog("糸をかき分けて進もうとすると、全身が泥に沈むような強烈な『無気力感』に襲われた。\n（え、気持ち悪い…吐き気がする…だるい…）\nどうやらこの糸自体が、精神を蝕む悪魔の毒を発しているようだ。", () => {
-                showMessageDialog("（目がかすむ……なんだ、これ。身体が、重い……）\n\n毒にあてられた脳内に、一番逃げ出したい過去の記憶が幻聴となってこびりつく。\n\n『――あなたの志望動機は？』\n『この会社で、何をしてみたいのですか？』", () => {
-                    showMessageDialog("無機質な面接官の声が響く。\n\n主人公（分からない……給与と安定以外に、正解があるのか。やりたいことなんて、何もやってもないのに分かるわけがないだろ……）\n\n（俺は……ここで何をしてるんだ？ 家庭教師の生徒とはいえ、他人の父親を助けるために悪魔と戦う？ ……馬鹿げてる）", () => {
+        showMessageDialog("【6階：濃密な蜘蛛の巣】\n5階から駆け上がっていった黒猫を追い、6階へ足を踏み入れた。\nフロア全体に、異常なほど白く粘つく蜘蛛の糸が張り巡らされている……。", () => {
+            showMessageDialog("糸をかき分けて進もうとすると、全身が泥に沈むような強烈な『無気力感』に襲われた。\nどうやらこの糸自体が、精神を蝕む悪魔の毒を発しているようだ。", () => {
+                showMessageDialog("（……なんだ、これ。身体が、重い……）\n\n毒にあてられた脳内に、一番逃げ出したい過去の記憶が幻聴となってこびりつく。\n\n『――あなたの志望動機は？』\n『この会社で、何をしてみたいのですか？』", () => {
+                    showMessageDialog("無機質な面接官の声が響く。\n\n主人公（分からない……給与と安定以外に、正解があるのか。やりたいことなんて、何もやってもないのに分かるわけがないだろ……）\n\n（俺は……ここで何をしてるんだ？ 家庭教師の生徒とはいえ、他人の中学生の父親を助けるために悪魔と戦う？ ……馬鹿げてる）", () => {
                         showMessageDialog("（ふと、1階で息絶えた神父の顔が浮かんだ）\n\n『8Fの御堂は私の想像を超えていた……頼む……』\n\n（神父も人選ミスだ。どうしてよりによって、何者にもなれない俺なんかに託した……？）\n憂鬱と自己嫌悪が渦巻く中、遠くから微かに猫の鳴き声が聞こえた。どうした、何か助けを求めてるのか？", () => {
                             if (onEncounter) onEncounter(null);
                         });
@@ -192,6 +192,10 @@ function handleSpiderMiniBoss(gameState, context, onComplete) {
         openCombatUI(miniBoss, gameState, (res) => {
             if (res === "win" || res === "combat_win") {
                 gameState.flags.hasSilverShears = true;
+                
+                // ★ チェックポイントセーブ（銀鋏入手を保存）
+                if (gameState.saveGame) gameState.saveGame();
+
                 showMessageDialog("蜘蛛の怪異を討ち滅ぼした！\n奴の巣の奥に、悪魔の糸をも断ち切る鋭利な刃物が突き刺さっているのを発見した。", () => {
                     showItemAcquiredModal("assets/images/knife.jpg", "断ち切りの銀鋏", "【キーアイテム】\n精神を蝕む悪魔の繭糸を切断できる聖銀の鋏。\nこれで奥の部屋に捕らわれているかもしれない『黒猫』を救出できる！", onComplete);
                 });
@@ -214,7 +218,6 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
 
     // ★ リトライ時のイベント短縮（すでに繭を切っている場合）
     if (gameState.flags.isCocoonCut) {
-        // ★ 黒猫は既に救出済みなので、ボス戦でも黒猫が戦ってくれるようにフラグを確実に維持
         gameState.flags.hasCat = true;
         gameState.flags.isCatTrapped = false;
         showMessageDialog("【最奥の部屋】\n自由を取り戻した黒猫が、部屋の奥で牙を剥いている。\n暗闇から再び、主人公と同じ姿をした影（ドッペルゲンガー）が嘲笑を浮かべて歩み出てきた！\n\n主人公「……もうお前の言葉には惑わされない。決着をつけるぞ！」", () => {
@@ -233,11 +236,13 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
                             showMessageDialog("（……！）\n主人公の中で、何かが弾けた。\n\n（神父が俺を選んだ理由なんて、ただの偶然でいい。）\n（俺の人生に価値があるかどうかも、今すぐ分からなくていい！）\n\n「――だが、今俺を信じて鳴いているこいつを見捨てるような……最低の逃げ方は、もうごめんだッ！！」", () => {
                                 showMessageDialog("主人公は力任せに足元の糸を引きちぎり、銀鋏で黒猫の繭を一気に切り裂いた！\n自由を取り戻した黒猫がしなやかに着地した。大きく深呼吸すると、覇気を取り戻したようだ。\n\n主人公「……行けるか？」\n\n黒猫は『当たり前だろ』とでも言うように軽く目配せし、低く唸って敵を睨みつける）", () => {
                                     
-                                    // ★ ここで「繭を斬った」フラグを保存（負けてもここから再開できる）
+                                    // ★ 繭切断フラグを保存
                                     gameState.flags.isCocoonCut = true;
-                                    // ★ 繭を切った時点で黒猫救出！ ボス戦中も黒猫が助太刀してくれる
                                     gameState.flags.hasCat = true;
                                     gameState.flags.isCatTrapped = false;
+                                    
+                                    // ★ チェックポイントセーブ（黒猫救出・ボス戦直前を保存）
+                                    if (gameState.saveGame) gameState.saveGame();
                                     
                                     startDoppelgangerPuzzle(gameState, context, onComplete);
                                 });
@@ -250,7 +255,7 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
     });
 }
 
-// ボス戦の魔方陣 ＆ 戦闘呼び出し（リトライ時にも共通で使うため分離）
+// ボス戦の魔方陣 ＆ 戦闘呼び出し
 function startDoppelgangerPuzzle(gameState, context, onComplete) {
     const puzzleConfig = {
         title: "【魔方陣術式】怠惰と停滞の影（ドッペルゲンガー）",
@@ -273,7 +278,6 @@ function startDoppelgangerPuzzle(gameState, context, onComplete) {
 
         let isPerfect = (getCardNum("slot-top") === 7 && getCardNum("slot-bottom") === 2 && getCardNum("slot-left") === 4 && sum === 25 && isUnique);
 
-        // ★ 他フロア共通のHP削減ルール（適正Lv.25以上なら80%削減、未満なら50%削減）
         const floor = 6;
         const targetLevel = (floor - 1) * 5; // Lv.25
         const playerLevel = gameState.player.level || 1;
@@ -310,7 +314,6 @@ function startDoppelgangerPuzzle(gameState, context, onComplete) {
             openCombatUI(doppelEnemy, gameState, (res) => {
                 if (res === "win" || res === "combat_win") {
                     gameState.flags.cleared6F = true;
-                    // ★ 猫の合流を確定
                     gameState.flags.hasCat = true;
                     gameState.flags.isCatTrapped = false;
                     if (gameState.saveGame) gameState.saveGame();
