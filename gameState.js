@@ -7,7 +7,7 @@ export const gameState = {
     dir: 0,
     level: 1,
     exp: 0,
-    maxExp: 100,
+    maxExp: 115,
     hp: 20,
     maxHp: 20,
     def: 0,
@@ -30,10 +30,13 @@ export const gameState = {
   hasModelGun: false,
   hasMetGrandma: false,
   hasTalkedStudentInCVS: false,
+  hasSeen5FIntro: false,
+  isHirunumaDefeated: false,
   cards: [],
 
   clearedRooms: {},
   bossHints: [], // ★ 悪魔手記に記録される討伐ヒント配列
+  justReachedLv15: false, // ★ Lv.15到達演出をUI側で検知するための通知フラグ
 
   inventory: {
     items: [],
@@ -46,9 +49,21 @@ export const gameState = {
     cleared5F: false,
     cleared6F: false,
     cleared7F: false,
-    postedArmorLetter: false,
+    cleared8F: false,
+    postedArmorLetter: false, // ★ 1Fポスト投函フラグ（防具解放キー）
     unlockedAdvancedArmor: false,
     hasCat: false,
+    isCatTrapped: false,
+    seenLv15CatHint: false,   // ★ Lv.15予兆メッセージ表示済みフラグ
+    hasSanadaRoomKey: false,
+    hasSanadaHint2: false,
+    seen3FIntro: false,
+    seen7FIntro: false,
+    seenInqTutorial: false,
+    hasBrandBag: false,
+    hasChampagne: false,
+    defeatedShineiA: false,
+    defeatedShineiB: false,
   },
 
   lastTransitMethod: 'stair',
@@ -56,15 +71,29 @@ export const gameState = {
 
   visitedMaps: {},
 
+  // ★ 防具解放ステージ（3Fクリアでは自動解放せず、1Fポスト投函[postedArmorLetter]で初めてStage 1に昇格）
+  _armorUnlockStage: 0,
+  get armorUnlockStage() {
+    if (this.flags) {
+      if (this.flags.cleared7F) return 3;
+      if (this.flags.cleared5F) return 2;
+      if (this.flags.postedArmorLetter) return 1; // ポスト投函が必須
+    }
+    return this._armorUnlockStage || 0;
+  },
+  set armorUnlockStage(val) {
+    this._armorUnlockStage = val;
+  },
+
   getFloorLevelCap(floor = this.currentFloor) {
     if (floor <= 1) return 999;
     return (floor - 1) * 5;
   },
 
-  // 報酬キャップ（お金の減衰を50%に緩和）
+  // ★ 報酬キャップ判定：適正レベル（Lv.15等）では減衰させず、それを超過（>）した時のみ減衰
   calculateRewards(baseExp, baseMoney, floor = this.currentFloor) {
     const capLevel = this.getFloorLevelCap(floor);
-    if (this.player.level >= capLevel) {
+    if (this.player.level > capLevel) {
       const cappedExp = Math.max(1, Math.floor(baseExp * 0.1));
       const cappedMoney = Math.max(1, Math.floor(baseMoney * 0.5));
       return { exp: cappedExp, money: cappedMoney, isCapped: true };
@@ -94,7 +123,7 @@ export const gameState = {
     return this.visitedMaps[floor][y][x];
   },
 
-  // ★ appUI.js と整合：Lv.5で2枠、Lv.15で3枠に統一 ＆ 手動装填の保護
+  // ★ appUI.js と整合：Lv.5で2枠、Lv.15で3枠に統一 ＆ 文字列/数値の両対応
   updateEquippedCards() {
     if (!this.player.hasModelGun && !this.hasModelGun) {
       this.equippedCards = [];
@@ -105,16 +134,17 @@ export const gameState = {
     if (this.player.level >= 15) slots = 3;
     else if (this.player.level >= 5) slots = 2;
 
-    // 手動で選んだカードがある場合は、レベル制限・スロット上限だけを安全にチェックして維持する
     if (this.equippedCards && this.equippedCards.length > 0) {
       this.equippedCards = this.equippedCards
-        .filter(c => c <= this.player.level)
+        .map(c => typeof c === 'number' ? c : parseInt(String(c).match(/\d+/)?.[0] || '0', 10))
+        .filter(c => c > 0 && c <= this.player.level)
         .slice(0, slots);
     } else {
-      // 未装填の場合（デバッグ等）のみ、使用可能なカードを自動装備
-      const availableNums = this.cards.map(cardStr => {
-        const num = parseInt(cardStr.replace("Card.png", ""), 10);
-        return isNaN(num) ? 0 : num;
+      const cardSource = (this.cards && this.cards.length > 0) ? this.cards : this.ownedCards;
+      const availableNums = cardSource.map(cardItem => {
+        if (typeof cardItem === 'number') return cardItem;
+        const match = String(cardItem).match(/\d+/);
+        return match ? parseInt(match[0], 10) : 0;
       }).filter(n => n > 0 && n <= this.player.level);
 
       availableNums.sort((a, b) => b - a);
@@ -122,16 +152,22 @@ export const gameState = {
     }
   },
 
-  // 敵5〜10体（平均約7体）で1レベル上がるように適正スケーリング
+  // ★ 経験値獲得：ザコ敵は平均7体でLvUP、ボス報酬（200EXP以上）は縮小せず満額付与
   gainExp(amount) {
-    const maxGain = Math.floor(this.player.maxExp * 0.18);
-    const minGain = Math.max(1, Math.floor(this.player.maxExp * 0.11));
-
     let scaledExp = amount;
-    if (amount > maxGain) {
-      scaledExp = Math.floor(this.player.maxExp * 0.14);
-    } else if (amount < minGain && amount > 0) {
-      scaledExp = Math.floor(this.player.maxExp * 0.12);
+    const isBossReward = amount >= 200;
+
+    if (isBossReward) {
+      scaledExp = Math.max(amount, Math.floor(this.player.maxExp * 0.35));
+    } else {
+      const maxGain = Math.floor(this.player.maxExp * 0.18);
+      const minGain = Math.max(1, Math.floor(this.player.maxExp * 0.11));
+
+      if (amount > maxGain) {
+        scaledExp = Math.floor(this.player.maxExp * 0.14);
+      } else if (amount < minGain && amount > 0) {
+        scaledExp = Math.floor(this.player.maxExp * 0.12);
+      }
     }
 
     this.player.exp += scaledExp;
@@ -145,24 +181,34 @@ export const gameState = {
   },
 
   levelUp(amount = 1) {
+    const prevLevel = this.player.level;
     this.player.level += amount;
     this.player.maxHp += 5 * amount;
     this.player.hp = this.player.maxHp;
     this.player.agi += 1 * amount;
 
-    // 必要経験値カーブの適正化
+    // 必要経験値カーブ
     this.player.maxExp = Math.floor(100 + (this.player.level - 1) * 80 + Math.pow(this.player.level, 1.5) * 15);
 
     if (this.player.level % 2 === 0) {
       this.player.def += 1;
     }
 
-    if (this.player.level >= 15) {
+    // ★ Lv.15 初回到達時：使い魔の覚醒予兆フラグをセット（黒猫の実体化は5Fストーリーイベントまで保留）
+    if (this.player.level >= 15 && prevLevel < 15) {
       if (!this.flags) this.flags = {};
-      this.flags.hasCat = true;
+      if (!this.flags.seenLv15CatHint) {
+        this.flags.seenLv15CatHint = true;
+        this.justReachedLv15 = true;
+      }
     }
 
     this.updateEquippedCards();
+  },
+
+  // ★ 使い魔の予兆演出用メッセージ取得ヘルパー
+  getLv15CatHintText() {
+    return "【使い魔の気配】\nLv.15に到達したことで、自身の影の中から確かな霊力の脈動を感じる……！\nしかし、まだ実体化には至らない。\n完全な実体化を果たすには、もっと濃厚な『生体エネルギー』が必要なようだ……。";
   },
 
   handlePlayerDeath() {
@@ -233,7 +279,7 @@ export const gameState = {
     this.player.dir = 0;
     this.player.level = 1;
     this.player.exp = 0;
-    this.player.maxExp = 100;
+    this.player.maxExp = 115;
     this.player.hp = 20;
     this.player.maxHp = 20;
     this.player.def = 0;
@@ -248,15 +294,18 @@ export const gameState = {
     this.hasModelGun = false;
     this.hasMetGrandma = false;
     this.hasTalkedStudentInCVS = false;
+    this.hasSeen5FIntro = false;
+    this.isHirunumaDefeated = false;
     this.equippedArmor = null;
+    this._armorUnlockStage = 0;
     this.cards = [];
     this.equippedCards = [];
     this.clearedRooms = {};
     this.bossHints = [];
-    this.inventory.items = [];
+    this.justReachedLv15 = false;
+    this.inventory = { items: [] };
     this.visitedMaps = {};
     
-    // 全フロアのフラグを完全リセット
     this.flags = {
       cleared2F: false,
       cleared3F: false,
@@ -264,9 +313,21 @@ export const gameState = {
       cleared5F: false,
       cleared6F: false,
       cleared7F: false,
+      cleared8F: false,
       postedArmorLetter: false,
       unlockedAdvancedArmor: false,
       hasCat: false,
+      isCatTrapped: false,
+      seenLv15CatHint: false,
+      hasSanadaRoomKey: false,
+      hasSanadaHint2: false,
+      seen3FIntro: false,
+      seen7FIntro: false,
+      seenInqTutorial: false,
+      hasBrandBag: false,
+      hasChampagne: false,
+      defeatedShineiA: false,
+      defeatedShineiB: false,
     };
 
     this.lastTransitMethod = 'stair';
@@ -288,8 +349,10 @@ export const gameState = {
       if (data) {
         Object.assign(this, JSON.parse(data));
         if (!this.visitedMaps) this.visitedMaps = {};
-        if (!this.bossHints) this.bossHints = []; // ★ セーブデータ復元時の保険
+        if (!this.bossHints) this.bossHints = [];
         if (!this.flags) this.flags = {};
+        if (!this.inventory) this.inventory = { items: [] };
+        if (!this.inventory.items) this.inventory.items = [];
         return true;
       }
       return false;

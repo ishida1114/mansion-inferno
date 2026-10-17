@@ -31,9 +31,9 @@ export function handleEvent1F(targetCell, gameState, context) {
             return { 
                 run: (onComplete) => {
                     const evModal = document.createElement("div");
-                    evModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; font-family: monospace;";
+                    evModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; font-family: monospace;";
                     
-                    // 7F解禁条件の判定（6Fクリア、7F到達済み、または7Fクリア済みのいずれか）
+                    // 7F解禁条件の判定
                     const canGo7F = gameState.flags && (
                         gameState.flags.cleared6F || 
                         gameState.flags.cleared7F || 
@@ -42,16 +42,21 @@ export function handleEvent1F(targetCell, gameState, context) {
                     );
 
                     let html = `<h2 style="color: #66ccff; margin-bottom: 20px;">【エレベーター】</h2>`;
-                    html += `<button class="ev-btn" data-floor="1" style="width: 220px; padding: 15px; margin: 5px; background: #004400; color: #00ff66; border: 1px solid #00ff66; font-size: 1.1em; cursor: pointer;">1F (現在地)</button>`;
-                    html += `<button class="ev-btn" data-floor="3" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">3F (汚染フロア)</button>`;
-                    html += `<button class="ev-btn" data-floor="5" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">5F (精神科病棟)</button>`;
                     
-                    // 7Fボタンの追加
+                    // ★ UI調整：上が7F、下が1Fになるように並べ替え
                     if (canGo7F) {
-                        html += `<button class="ev-btn" data-floor="7" style="width: 220px; padding: 15px; margin: 5px; background: linear-gradient(180deg, #664400, #221100); color: #ffdd66; border: 1px solid #ffcc00; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px rgba(255,200,0,0.4);">7F (VIPラウンジ)</button>`;
+                        html += `<button class="ev-btn" data-floor="7" style="width: 240px; padding: 15px; margin: 5px; background: linear-gradient(180deg, #664400, #221100); color: #ffdd66; border: 1px solid #ffcc00; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px rgba(255,200,0,0.4);">7F (VIPラウンジ)</button>`;
                     }
 
-                    html += `<button id="ev-cancel" style="width: 220px; padding: 15px; margin-top: 20px; background: #440000; color: #ff6666; border: 1px solid #ff3333; cursor: pointer;">閉じる</button>`;
+                    // 5Fの解禁状況
+                    const is5FUnlocked = gameState.flags && gameState.flags.cleared4F;
+                    html += `<button class="ev-btn" data-floor="5" style="width: 240px; padding: 15px; margin: 5px; background: ${is5FUnlocked ? '#222' : '#111'}; color: ${is5FUnlocked ? '#fff' : '#666'}; border: 1px solid ${is5FUnlocked ? '#666' : '#333'}; font-size: 1.1em; cursor: pointer;">5F (精神科病棟) ${is5FUnlocked ? '' : '🔒'}</button>`;
+                    
+                    html += `<button class="ev-btn" data-floor="3" style="width: 240px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">3F (汚染フロア)</button>`;
+                    html += `<button class="ev-btn" data-floor="1" style="width: 240px; padding: 15px; margin: 5px; background: #004400; color: #00ff66; border: 1px solid #00ff66; font-size: 1.1em; cursor: pointer;">1F (現在地)</button>`;
+
+                    html += `<button id="ev-cancel" style="width: 240px; padding: 15px; margin-top: 20px; background: #440000; color: #ff6666; border: 1px solid #ff3333; cursor: pointer;">閉じる</button>`;
+                    
                     evModal.innerHTML = html;
                     document.body.appendChild(evModal);
 
@@ -59,6 +64,13 @@ export function handleEvent1F(targetCell, gameState, context) {
                     evModal.querySelectorAll(".ev-btn").forEach(btn => {
                         btn.onclick = () => {
                             const f = parseInt(btn.getAttribute("data-floor"), 10);
+                            
+                            // ★ 5Fへのフライング防止制限
+                            if (f === 5 && (!gameState.flags || !gameState.flags.cleared4F)) {
+                                alert("【ロック中】4階の異変を解決するまで、5階へ昇ることはできない！");
+                                return;
+                            }
+
                             evModal.remove();
                             if (f === 1) {
                                 onComplete();
@@ -148,6 +160,7 @@ function startPostEvent(gameState, onComplete) {
     const executePostLogic = () => {
         if (canPost3F) {
             gameState.armorUnlockStage = 1;
+            gameState.flags.postedArmorLetter = true;
             showMessageDialog(
                 "【1階 集合ポスト】\n3階の怨霊を祓った報告と共に、『中層探索用防具の支給要請書』を投函口へ差し入れた。\n\nポストの奥から微かな聖水のはじける音がした……。\n\n【防具解放】\nコンビニに『お守りレザージャケット』と『儀式用タクティカルベスト』が入荷しました！",
                 onComplete
@@ -212,7 +225,6 @@ function startExorcistSequence(gameState, redraw, onComplete) {
                             gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
                             if (redraw) redraw(); 
 
-                            // ★ 追加：悪魔辞典アプリの解説メッセージ
                             showMessageDialog(
                                 "【悪魔辞典アプリ】\n悪魔辞典を使えるようになった。\n400年にわたる悪魔との戦いの知見を、何十冊もの辞典にまとめた『悪魔辞典』。\nこのアプリはとても持ち運びできない膨大な辞典をアプリに集約したもののようだ。\n\n右下の『悪魔辞典（ESC）』をクリックすると開く。\n進捗の保存もここから出来る。",
                                 onComplete

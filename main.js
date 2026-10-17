@@ -25,6 +25,16 @@ function isActionBlocked() {
   return false;
 }
 
+// ★ アイテム側（items.js や appUI.js）から呼び出せる 1F帰還用のグローバル関数を登録
+window.executeReturnTo1F = () => {
+  document.getElementById('app-ui-container')?.classList.add('hidden'); // スマホ画面が開いていたら閉じる
+  gameState.lastTransitMethod = 'elevator'; // 1Fのエレベーター前に着地させるため
+  changeFloor(1);
+  setTimeout(() => {
+    showMessageDialog("【帰還の札】\n不思議な光に包まれ、瞬時に 1階 のエレベーター前へ帰還した！", () => redraw());
+  }, 100);
+};
+
 function init() {
   appUI = new AppUI();
   renderer = new Renderer();
@@ -283,7 +293,7 @@ function changeFloor(floor) {
     } else {
       gameState.player.x = playerStart4F.x; gameState.player.y = playerStart4F.y; gameState.player.dir = playerStart4F.dir;
       if (!gameState.flags || !gameState.flags.cleared4F) {
-        showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「あら、私は『色欲』のリナ……私を助けて、強いひと」", () => redraw());
+        showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「あら、私はリナちゃん……私も悪魔に取り憑かれたの、苦しいの、つらいの、私を助けて、強いひと」\n主人公（なんだ、今のは…父親だ、父親を探さなくては…）", () => redraw());
       } else {
         showMessageDialog("【4階 非常階段前】\n4階へ到達した。桃色の霧は完全に消え去っている……", () => redraw());
       }
@@ -299,7 +309,6 @@ function changeFloor(floor) {
     } else {
       gameState.player.x = playerStart3F.x; gameState.player.y = playerStart3F.y; gameState.player.dir = playerStart3F.dir;
       
-      // ★ 3階初回到達時のみ表示
       if (!gameState.flags.seen3FIntro) {
         gameState.flags.seen3FIntro = true;
         showMessageDialog("【3階 エレベーター前】\n3階へ到着した。漂うヘドロと強烈な異臭が鼻をつく……\n\n「父親が、ここにいる、のか…？ なんだこの強烈な臭いは…」", () => redraw());

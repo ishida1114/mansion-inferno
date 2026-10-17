@@ -77,8 +77,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                                             context.openLoadoutApp();
                                         }
                                         
-                                        // ★ 修正：先生から避難の指示を出す会話を追加
-                                        showMessageDialog("【主人公】\n「（くそっ、やるしかないのか！？）ここは危険だ。今すぐ1階のコンビニに避難するんだ。あそこなら比較的安全なはず。\nお父さんのことは…なんとか、やってみる」", () => {
+                                        showMessageDialog("教え子が不安そうに見ている。\n【主人公】\n「（くそっ、やるしかないのか！？）ここは危険だ。今すぐ1階のコンビニに避難するんだ。あそこなら比較的安全なはず。\nお父さんのことは…なんとか、やってみる」", () => {
                                             showConversationDialog("assets/images/human1.png", "【教え子】\n「わかった……！ 先生もどうか気をつけてね！」\n\n（教え子は足早に部屋を飛び出し、1階へと向かった……）", () => {
                                                 onComplete();
                                             });
@@ -134,7 +133,8 @@ export function handleEvent2F(targetCell, gameState, context) {
                                     const kageyamaEnemy = { 
                                         name: "覗き魔・影山", 
                                         image: "assets/images/demon/2f-kageyama2.jpg", 
-                                        hp: 120, atk: 12, def: 2 
+                                        hp: 120, atk: 12, def: 2,
+                                        rewardExp: 200, rewardMoney: 500, isBoss: true
                                     };
 
                                     const applyDamageAndCombat = () => {
@@ -192,7 +192,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // ボス部屋以外の通常の部屋
+                // ボス部屋以外の通常の部屋（査問・心理戦）
                 if (!gameState.clearedRooms) gameState.clearedRooms = {};
 
                 if (gameState.clearedRooms[roomKey]) {
@@ -211,13 +211,19 @@ export function handleEvent2F(targetCell, gameState, context) {
                 const randDemon = demonList[Math.floor(Math.random() * demonList.length)];
 
                 const isDemon = Math.random() < 0.5;
+                
+                // ★ 修正箇所：悪魔の場合も、査問画面では「怯えるマンション住民」に偽装させる
+                // 本当の悪魔の名前は `trueName` としてこっそり持たせておく
                 const entity = isDemon ? {
-                    name: randDemon.name,
+                    name: "怯えるマンション住民", // ネタバレ防止
+                    trueName: randDemon.name,     // 戦闘時に表示する本来の名前
                     type: "demon",
                     faceImage: randFace,
                     realImage: randDemon.realImage,
                     image: randDemon.realImage,
-                    weakness: randDemon.weakness
+                    weakness: randDemon.weakness,
+                    rewardExp: 50,
+                    rewardMoney: 150
                 } : {
                     name: "怯えるマンション住民",
                     type: "human",
@@ -233,11 +239,14 @@ export function handleEvent2F(targetCell, gameState, context) {
                             onComplete();
                         } else if (result === "demon_ambush") {
                             gameState.player.hp = Math.max(1, gameState.player.hp - 10);
+                            
+                            // ★ 修正箇所：正体を現して戦闘に入る時は、本来の名前(trueName)を使う
                             const demonEnemy = {
-                                name: entity.name,
+                                name: entity.trueName || entity.name, 
                                 image: entity.realImage,
                                 hp: 30, atk: 10, def: 1,
-                                weakness: [entity.weakness]
+                                weakness: [entity.weakness],
+                                rewardExp: 50, rewardMoney: 150
                             };
                             openCombatUI(demonEnemy, gameState, (res) => {
                                 if (res === "win") gameState.clearedRooms[roomKey] = true;
@@ -267,9 +276,8 @@ function handleKageyamaWin(gameState, onComplete) {
     gameState.player.y = 4;
     gameState.player.dir = 3;
 
-    showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァ！！」\n影山は叫び声をあげて消滅した！\n（💰500 を獲得！ / 『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
-        gameState.player.money += 500;
-        gameState.gainExp(200);
+    showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァ！！」\n影山は叫び声をあげて消滅した！\n（『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
+        // ※お金とEXPは ui.js 側で加算されるため、ここでの二重加算は削除済み（報酬は kageyamaEnemy オブジェクトに設定）
         onComplete();
     });
 }

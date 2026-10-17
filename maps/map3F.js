@@ -35,25 +35,36 @@ export function check3FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent3F(targetCell, gameState, context) {
-    // 3: エレベーター（行き先選択メニュー）
+    // 3: エレベーター（行き先選択メニュー：上が5F、下が1Fに配置）
     if (targetCell === 3) {
         return { 
             run: (onComplete) => {
                 const evModal = document.createElement("div");
-                evModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; font-family: monospace;";
+                evModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; font-family: monospace;";
                 
                 let html = `<h2 style="color: #66ccff; margin-bottom: 20px;">【エレベーター】</h2>`;
-                html += `<button class="ev-btn" data-floor="1" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">1F (エントランス)</button>`;
-                html += `<button class="ev-btn" data-floor="3" style="width: 220px; padding: 15px; margin: 5px; background: #004400; color: #00ff66; border: 1px solid #00ff66; font-size: 1.1em; cursor: pointer;">3F (現在地)</button>`;
-                html += `<button class="ev-btn" data-floor="5" style="width: 220px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">5F (精神科病棟)</button>`;
-                html += `<button id="ev-cancel" style="width: 220px; padding: 15px; margin-top: 20px; background: #440000; color: #ff6666; border: 1px solid #ff3333; cursor: pointer;">閉じる</button>`;
+                
+                // ★ 上が上の階、下が1階（下の階）になるよう並び順を修正
+                const is5FUnlocked = gameState.flags && gameState.flags.cleared4F;
+                html += `<button class="ev-btn" data-floor="5" style="width: 240px; padding: 15px; margin: 5px; background: ${is5FUnlocked ? '#222' : '#111'}; color: ${is5FUnlocked ? '#fff' : '#666'}; border: 1px solid ${is5FUnlocked ? '#666' : '#333'}; font-size: 1.1em; cursor: pointer;">5F (精神科病棟) ${is5FUnlocked ? '' : '🔒'}</button>`;
+                html += `<button class="ev-btn" data-floor="3" style="width: 240px; padding: 15px; margin: 5px; background: #004400; color: #00ff66; border: 1px solid #00ff66; font-size: 1.1em; cursor: pointer;">3F (現在地)</button>`;
+                html += `<button class="ev-btn" data-floor="1" style="width: 240px; padding: 15px; margin: 5px; background: #222; color: #fff; border: 1px solid #666; font-size: 1.1em; cursor: pointer;">1F (エントランス)</button>`;
+                html += `<button id="ev-cancel" style="width: 240px; padding: 15px; margin-top: 20px; background: #440000; color: #ff6666; border: 1px solid #ff3333; cursor: pointer;">閉じる</button>`;
                 evModal.innerHTML = html;
                 document.body.appendChild(evModal);
 
                 document.getElementById("ev-cancel").onclick = () => { evModal.remove(); onComplete(); };
+                
                 evModal.querySelectorAll(".ev-btn").forEach(btn => {
                     btn.onclick = () => {
                         const f = parseInt(btn.getAttribute("data-floor"), 10);
+                        
+                        // ★ 5Fへのフライング防止制限
+                        if (f === 5 && (!gameState.flags || !gameState.flags.cleared4F)) {
+                            alert("【ロック中】4階の異変を解決するまで、5階へ昇ることはできない！");
+                            return;
+                        }
+
                         evModal.remove();
                         if (f === 3) {
                             onComplete();
@@ -96,7 +107,7 @@ export function handleEvent3F(targetCell, gameState, context) {
         };
     }
 
-    // 8: ボス部屋（真田）
+    // 8: ボス部屋（真田：ストッパー確認付き）
     if (targetCell === 8) {
         if (gameState.flags && gameState.flags.cleared3F) {
             return {
@@ -110,8 +121,33 @@ export function handleEvent3F(targetCell, gameState, context) {
             };
         }
         
+        // ★ ストッパー：突入前の確認ウィンドウ
         return {
-            run: (onComplete) => startSanadaBossSequence(gameState, context, onComplete)
+            run: (onComplete) => {
+                const confirmModal = document.createElement("div");
+                confirmModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3500; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: monospace; padding: 20px; box-sizing: border-box;";
+                confirmModal.innerHTML = `
+                    <div style="background: #110505; border: 2px solid #ff3333; padding: 25px; border-radius: 8px; max-width: 440px; text-align: center; color: #eee; box-shadow: 0 0 25px red;">
+                        <h3 style="color: #ff3333; margin-top: 0;">【最奥の部屋：真田の巣窟】</h3>
+                        <p style="font-size: 0.95em; line-height: 1.6; color: #ccc;">ドアの隙間から強烈な悪臭と毒気が漏れ出している……！<br>バールで粗大ゴミをこじ開けて中に入りますか？</p>
+                        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+                            <button id="btn-enter-sanada" style="background: #660000; color: #ffdd66; border: 1px solid #ff3333; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px;">▶ 突入する（ボス戦）</button>
+                            <button id="btn-cancel-sanada" style="background: #222; color: #aaa; border: 1px solid #555; padding: 10px 20px; cursor: pointer; border-radius: 4px;">引き返す（準備する）</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(confirmModal);
+
+                document.getElementById("btn-cancel-sanada").onclick = () => {
+                    confirmModal.remove();
+                    onComplete();
+                };
+
+                document.getElementById("btn-enter-sanada").onclick = () => {
+                    confirmModal.remove();
+                    startSanadaBossSequence(gameState, context, onComplete);
+                };
+            }
         };
     }
 
@@ -132,14 +168,19 @@ function start3FRoomInquisition(gameState, context, onComplete) {
         return;
     }
 
+    // ★ 部屋ごとに手に入るメモを差別化（2部屋とも探索する意味を持たせる）
     const grantSanadaItemAndHint = (messageTitle, callback) => {
         if (!gameState.flags) gameState.flags = {};
+        if (!gameState.bossHints) gameState.bossHints = [];
+
         if (!gameState.flags.hasSanadaRoomKey) {
             gameState.flags.hasSanadaRoomKey = true;
-            if (!gameState.bossHints) gameState.bossHints = [];
-            gameState.bossHints.push("【3F攻略メモ】真田の魔方陣は4マスの合計を「18」にする。左右の腕には小さい数字から順にカードを配置する。");
-
-            showMessageDialog(`${messageTitle}\n『鉄のバール』と『真田攻略メモ』を手に入れた！\nこれで真田の部屋を塞ぐ粗大ゴミを撤去できる！`, callback);
+            gameState.bossHints.push("【3Fメモ①】真田の魔方陣は4マスの合計を「18」にする。");
+            showMessageDialog(`${messageTitle}\n『鉄のバール』と『真田攻略メモ①』を手に入れた！\n（※真田の魔方陣は4マスの合計を「18」にする！）\nこれで真田の部屋を塞ぐ粗大ゴミを撤去できる！`, callback);
+        } else if (!gameState.flags.hasSanadaHint2) {
+            gameState.flags.hasSanadaHint2 = true;
+            gameState.bossHints.push("【3Fメモ②】真田の腕は左から小さい順に配置する。毒気の口には聖炎(6)や聖香(8)が有効。");
+            showMessageDialog(`${messageTitle}\n『真田攻略メモ②』を手に入れた！\n（※左右の腕には小さい数字から順にカードを配置する！ 口の弱点は【聖炎(6)】と【聖香(8)】だ！）`, callback);
         } else {
             callback();
         }
@@ -150,7 +191,7 @@ function start3FRoomInquisition(gameState, context, onComplete) {
     if (isRealHuman) {
         const entity = {
             type: "human",
-            name: "マンションの住人",
+            name: "怯えるマンション住民", // ネタバレ防止に統一
             faceImage: "assets/images/human1.png"
         };
         openInquisitionUI(entity, gameState, (res) => {
@@ -164,10 +205,13 @@ function start3FRoomInquisition(gameState, context, onComplete) {
     } else {
         const entity = {
             type: "demon",
-            name: "マンションの住人",
+            name: "怯えるマンション住民", // ネタバレ防止に統一
+            trueName: "ゴミに潜む悪魔",   // 戦闘時に使用
             faceImage: "assets/images/human1.png",
             realImage: "assets/images/demon/demon4.png",
-            weakness: 8
+            weakness: 8,
+            rewardExp: 80,
+            rewardMoney: 200
         };
         openInquisitionUI(entity, gameState, (res) => {
             if (res === "combat_win" || res === "kill_human") {
@@ -176,10 +220,11 @@ function start3FRoomInquisition(gameState, context, onComplete) {
             } else if (res === "demon_ambush") {
                 gameState.player.hp = Math.max(1, gameState.player.hp - 10);
                 const demonEnemy = {
-                    name: entity.name,
+                    name: entity.trueName || "ゴミに潜む悪魔",
                     image: entity.realImage,
                     hp: 30, atk: 10, def: 1,
-                    weakness: [entity.weakness]
+                    weakness: [entity.weakness],
+                    rewardExp: 80, rewardMoney: 200
                 };
                 openCombatUI(demonEnemy, gameState, (cRes) => {
                     if (cRes === "win") {
@@ -201,7 +246,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
         playVideo("assets/images/demon/3f-sanada.mp4", () => {
             const puzzleConfig = {
                 title: "【3Fボス解読】ゴミ屋敷の狂人・真田",
-                subTitle: "毒ガスを放つ口と足元の腐敗ゴミを浄化せよ",
+                subTitle: "毒ガスを放つ口と足元の腐敗ゴミを浄化せよ（合計18）",
                 bossName: "真田",
                 slots: [
                     { id: '1', label: '上：毒ガス口', gridPos: 'grid-area: 1 / 2;' },
@@ -233,6 +278,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                     } else if (evalResult.result === 'PARTIAL') {
                         const reductionRate = Math.min(evalResult.correctCount * 0.1, 0.3);
                         hpRatio = 1.0 - reductionRate;
+                        // ★ 構文エラー修復済み箇所
                         resultMsg = `【部分正解】${evalResult.correctCount}箇所の弱点が合致！\n真田の体力を ${Math.round(reductionRate * 100)}% 削減した！`;
                     } else {
                         hpRatio = 1.0;
@@ -249,7 +295,10 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                             hp: startHp, maxHp: baseHp,
                             atk: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.atk : 18,
                             def: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.def : 3,
-                            weakness: [8, 6]
+                            weakness: [8, 6],
+                            rewardExp: 200,
+                            rewardMoney: 800,
+                            isBoss: true
                         };
 
                         openCombatUI(sanadaEnemy, gameState, (combatRes) => {
@@ -262,12 +311,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                                 gameState.player.y = 1;
                                 gameState.player.dir = 1;
 
-                                const reward = gameState.calculateRewards ? gameState.calculateRewards(200, 800) : { exp: 200, money: 800 };
-                                gameState.player.money += reward.money;
-                                const isLvUp = gameState.gainExp(reward.exp);
-                                
-                                const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-                                showMessageDialog(`【3Fフロアボス討滅！】\n真田の怨霊を浄化し、3階の悪臭が消え去った！\n（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, onComplete);
+                                showMessageDialog(`【3Fフロアボス討滅！】\n真田の怨霊を浄化した！だがここには父親の姿がない……。\n主人公「マジか、まだ上に行かないとダメなのか……」\n※非常階段の障害物が消え、4階へ進めるようになりました！`, onComplete);
                             } else {
                                 onComplete();
                             }

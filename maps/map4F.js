@@ -1,4 +1,4 @@
-// maps/map4F.js - 全ドア(セル2)統一・エレベーター/エントランス誤描画完全解消版
+// maps/map4F.js - ピンク霧エフェクト追加・証言矛盾修正・名前偽装統一版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -8,10 +8,9 @@ import { ENEMIES, evaluateRinaPuzzle } from '../enemies.js';
 
 export const playerStart4F = { x: 5, y: 8, dir: 0 };
 
-// ★ 修正：すべての部屋の扉を「2」（通常のドア）で統一
-// 5: 5Fへの上り階段 / 4: 3Fへの下り階段
+// 5: 5Fへの上り階段 / 4: 3Fへの下り階段 / 2: 全ての部屋の扉
 export const map4F = [
-    [1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1], // 5: 5F上り階段
+    [1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1], 
     [1, 2, 1, 0, 0, 0, 0, 0, 1, 2, 1], // (1,1)リナ部屋 / (9,1)親衛隊A
     [1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
     [1, 0, 0, 0, 1, 2, 1, 0, 0, 0, 1], // (5,3)査問部屋1
@@ -20,28 +19,61 @@ export const map4F = [
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
     [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
     [1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1],
-    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], // 4: 3F下り階段
+    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], 
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  
 ];
 
+// ★ 4F専用 ピンクの霧エフェクト制御
+function togglePinkMist(enable) {
+    let mist = document.getElementById('pink-mist-overlay');
+    if (enable) {
+        if (!mist) {
+            mist = document.createElement('div');
+            mist.id = 'pink-mist-overlay';
+            mist.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(255,100,150,0.15) 0%, rgba(150,0,50,0.4) 100%); pointer-events: none; z-index: 1000; mix-blend-mode: screen; transition: opacity 2s ease;";
+            document.body.appendChild(mist);
+        }
+        mist.style.opacity = '1';
+    } else {
+        if (mist) {
+            mist.style.opacity = '0';
+            setTimeout(() => mist.remove(), 2000);
+        }
+    }
+}
+
 export function check4FRandomEncounter(gameState, onEncounter) {
-    if (gameState.currentFloor !== 4) return;
+    if (gameState.currentFloor !== 4) {
+        togglePinkMist(false);
+        return;
+    }
+
+    // 4Fにいる間は、ボス未討伐ならピンクの霧をオン
+    if (!gameState.flags || !gameState.flags.cleared4F) {
+        togglePinkMist(true);
+    } else {
+        togglePinkMist(false);
+    }
+
     if (Math.random() < 0.15) {
         const demonKeys = ['DEVIL7_4F', 'DEVIL8_4F', 'DEVIL9_4F'];
         const chosenKey = demonKeys[Math.floor(Math.random() * demonKeys.length)];
         const demonData = ENEMIES[chosenKey] || ENEMIES['DEVIL7_4F'];
-        onEncounter({ ...demonData });
+        
+        // ★ ザコ敵の報酬を3Fより明確に高く設定
+        const scaledEnemy = { ...demonData, rewardExp: 80, rewardMoney: 250 };
+        onEncounter(scaledEnemy);
     }
 }
 
 export function handleEvent4F(targetCell, gameState, context) {
-    // 4: 3階への非常階段（降りる）
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
                 showMessageDialog("【非常階段】\n3階へ降りますか？", () => {
                     gameState.lastTransitMethod = 'stair_down';
                     playFloorTransition(3, () => {
+                        togglePinkMist(false); // 階層移動時に霧を消す
                         context.changeFloor(3);
                         onComplete();
                     });
@@ -50,7 +82,6 @@ export function handleEvent4F(targetCell, gameState, context) {
         };
     }
 
-    // 5: 5階への非常階段（昇る）
     if (targetCell === 5) {
         if (!gameState.flags || !gameState.flags.cleared4F) {
             return {
@@ -61,6 +92,7 @@ export function handleEvent4F(targetCell, gameState, context) {
                 run: (onComplete) => {
                     gameState.lastTransitMethod = 'stair';
                     playFloorTransition(5, () => {
+                        togglePinkMist(false);
                         context.changeFloor(5);
                         onComplete();
                     });
@@ -69,7 +101,6 @@ export function handleEvent4F(targetCell, gameState, context) {
         }
     }
 
-    // ★ 2: 通常の扉（目の前のマスの座標で部屋を分岐）
     if (targetCell === 2) {
         const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
         const vec = dirVectors[gameState.player.dir];
@@ -80,7 +111,7 @@ export function handleEvent4F(targetCell, gameState, context) {
         if (frontX === 1 && frontY === 1) {
             if (gameState.flags && gameState.flags.cleared4F) {
                 return {
-                    run: (onComplete) => showMessageDialog("【最奥の部屋】\nリナの悪霊は浄化され、甘ったるい香気は静まり返っている……。", onComplete)
+                    run: (onComplete) => showMessageDialog("【最奥の部屋】\nリナの悪霊は浄化され、甘ったるい香気は完全に静まり返っている……。", onComplete)
                 };
             }
 
@@ -106,12 +137,12 @@ export function handleEvent4F(targetCell, gameState, context) {
             return { run: (onComplete) => startShineiBEvent(gameState, context, onComplete) };
         }
 
-        // X:5, Y:3 -> 査問部屋1（ヒント1：上と右）
+        // X:5, Y:3 -> 査問部屋1（ヒント1）
         if (frontX === 5 && frontY === 3) {
             return { run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete, 8) };
         }
 
-        // X:9, Y:5 -> 査問部屋2（ヒント2：下と左）
+        // X:9, Y:5 -> 査問部屋2（ヒント2）
         if (frontX === 9 && frontY === 5) {
             return { run: (onComplete) => start4FRoomInquisition(gameState, context, onComplete, 9) };
         }
@@ -120,7 +151,7 @@ export function handleEvent4F(targetCell, gameState, context) {
     return null;
 }
 
-// 査問部屋（部屋8と部屋9で異なるヒントを付与）
+// 査問部屋（ヒント付与と名前の偽装）
 function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
     const vec = dirVectors[gameState.player.dir];
@@ -142,8 +173,9 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
         hintDialogue = "「リナの魔方陣は、上（瞳）に『真実の鏡(2)』、右（腕）に『聖書(5)』を配置して誘惑を打ち破るんだ！」";
         hintLogText = "【4F住人の証言①】リナの魔方陣は、上（瞳）に『真実の鏡(2)』、右（腕）に『聖書(5)』を配置して誘惑を打ち破るんだ！";
     } else {
-        hintDialogue = "「あいつの残る急所は……下（足）に『聖水(1)』を流し、左（腕）に『聖香(8)』を焚いて甘い香気を打ち消せ！」";
-        hintLogText = "【4F住人の証言②】リナの魔方陣は、下（足）に『聖水(1)』、左（腕）に『聖香(8)』を配置するんだ！";
+        // ★ パズル正解（下:3、左:1）に合わせて証言内容を完全に修正！
+        hintDialogue = "「あいつの残る急所は……下（足）に『浄化塩(3)』を撒き、左（腕）に『聖水(1)』をかけて甘い香気を打ち消せ！」";
+        hintLogText = "【4F住人の証言②】リナの魔方陣は、下（足）に『浄化塩(3)』、左（腕）に『聖水(1)』を配置するんだ！";
     }
 
     const grantRinaHint = (messageTitle, callback) => {
@@ -159,13 +191,13 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
     if (isRealHuman) {
         const entity = {
             type: "human",
-            name: "マンションの住人",
+            name: "怯えるマンション住民", // ★ ネタバレ防止
             faceImage: "assets/images/human1.png",
             dialogue: hintDialogue,
             message: hintDialogue
         };
         openInquisitionUI(entity, gameState, (res) => {
-            if (res === "finish" || res === "combat_win" || res === "kill_human" || res === "win" || res === "success" || res === "exorcised") {
+            if (res === "finish" || res === "combat_win" || res === "kill_human") {
                 gameState.clearedRooms[roomKey] = true;
                 grantRinaHint("【住人を保護した】", onComplete);
             } else {
@@ -175,24 +207,28 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
     } else {
         const entity = {
             type: "demon",
-            name: "マンションの住人",
+            name: "怯えるマンション住民", // ★ ネタバレ防止
+            trueName: "桃色の悪魔",       // ★ 戦闘時に使用
             faceImage: "assets/images/human1.png",
             realImage: "assets/images/demon/demon7.png",
             dialogue: hintDialogue,
             message: hintDialogue,
-            weakness: 2
+            weakness: 2,
+            rewardExp: 80,
+            rewardMoney: 250
         };
         openInquisitionUI(entity, gameState, (res) => {
-            if (res === "combat_win" || res === "kill_human" || res === "win" || res === "success" || res === "exorcised" || res === "finish") {
+            if (res === "combat_win" || res === "kill_human") {
                 gameState.clearedRooms[roomKey] = true;
                 grantRinaHint("【悪魔を討滅した】\n悪魔の残骸から手記を発見した！", onComplete);
             } else if (res === "demon_ambush") {
                 gameState.player.hp = Math.max(1, gameState.player.hp - 10);
                 const demonEnemy = {
-                    name: entity.name,
+                    name: entity.trueName,
                     image: entity.realImage,
                     hp: 40, atk: 14, def: 2,
-                    weakness: [entity.weakness]
+                    weakness: [entity.weakness],
+                    rewardExp: 80, rewardMoney: 250
                 };
                 openCombatUI(demonEnemy, gameState, (cRes) => {
                     if (cRes === "win") {
@@ -223,7 +259,9 @@ function startShineiAEvent(gameState, context, onComplete) {
             maxHp: ENEMIES.SHINEI_A_4F.hp,
             atk: ENEMIES.SHINEI_A_4F.atk,
             def: ENEMIES.SHINEI_A_4F.def,
-            weakness: [2]
+            weakness: [2],
+            rewardExp: 100,
+            rewardMoney: 350
         };
 
         openCombatUI(enemyA, gameState, (res) => {
@@ -256,7 +294,9 @@ function startShineiBEvent(gameState, context, onComplete) {
             maxHp: ENEMIES.SHINEI_B_4F.hp,
             atk: ENEMIES.SHINEI_B_4F.atk,
             def: ENEMIES.SHINEI_B_4F.def,
-            weakness: [5]
+            weakness: [5],
+            rewardExp: 100,
+            rewardMoney: 350
         };
 
         openCombatUI(enemyB, gameState, (res) => {
@@ -296,7 +336,7 @@ function startRinaBossSequence(gameState, context, onComplete) {
 
                     const applyDamageAndCombat = () => {
                         const floor = 4;
-                        const targetLevel = (floor - 1) * 5;
+                        const targetLevel = (floor - 1) * 5; // Lv.15
                         const playerLevel = gameState.player.level || 1;
 
                         let hpRatio = 1.0;
@@ -313,13 +353,14 @@ function startRinaBossSequence(gameState, context, onComplete) {
                         } else if (evalResult.result === 'PARTIAL') {
                             const reductionRate = Math.min(evalResult.correctCount * 0.1, 0.3);
                             hpRatio = 1.0 - reductionRate;
+                            // ★ 構文エラー修復済み
                             resultMsg = `【部分正解】${evalResult.correctCount}箇所の弱点が合致！\nリナの体力を ${Math.round(reductionRate * 100)}% 削減した！`;
                         } else {
                             hpRatio = 1.0;
                             resultMsg = `【解読失敗】不完全な陣だ！ ダメージを与えられなかった！`;
                         }
 
-                        const baseHp = ENEMIES.RINA_4F ? ENEMIES.RINA_4F.hp : 500;
+                        const baseHp = ENEMIES.RINA_4F ? ENEMIES.RINA_4F.hp : 480;
                         const startHp = Math.max(1, Math.floor(baseHp * hpRatio));
 
                         showMessageDialog(`${resultMsg}\nリナとの決戦に入る！`, () => {
@@ -329,7 +370,10 @@ function startRinaBossSequence(gameState, context, onComplete) {
                                 hp: startHp, maxHp: baseHp,
                                 atk: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.atk : 60,
                                 def: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.def : 8,
-                                weakness: [2, 5]
+                                weakness: [2, 5],
+                                rewardExp: 400,
+                                rewardMoney: 1500,
+                                isBoss: true
                             };
 
                             openCombatUI(rinaEnemy, gameState, (combatRes) => {
@@ -342,14 +386,10 @@ function startRinaBossSequence(gameState, context, onComplete) {
                                     gameState.player.y = 1;
                                     gameState.player.dir = 2;
 
-                                    const reward = gameState.calculateRewards ? gameState.calculateRewards(300, 1200) : { exp: 300, money: 1200 };
-                                    gameState.player.money += reward.money;
-                                    const isLvUp = gameState.gainExp(reward.exp);
-                                    
-                                    const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
+                                    togglePinkMist(false); // ★ ボス撃破で霧を消す
 
                                     showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「バカじゃないの、この悪魔！ 中学生の父親？ あの男はなびかないから5Fの蛭沼に渡したわ、蛭沼、改造できるおもちゃを欲しがってたから。ねぇ助けてよ……お願いだから捨てないでぇぇっ…」", () => {
-                                        showMessageDialog(`【4Fフロアボス討滅！】\nリナの怨霊を浄化し、甘い桃色の霧と蔦が消え去った！\n（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}\n※5階への非常階段が解禁されました！`, onComplete);
+                                        showMessageDialog(`【4Fフロアボス討滅！】\nリナの怨霊を浄化し、甘い桃色の霧と蔦が消え去った！\n\n主人公「5Fの蛭沼か……あの男、生きていてくれ……！」\n※5階への非常階段が解禁されました！`, onComplete);
                                     });
                                 } else {
                                     onComplete();

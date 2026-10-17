@@ -2,7 +2,7 @@
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
-import { sound } from './sound.js'; // ★ サウンドマネージャー連携
+import { sound } from './sound.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
 
@@ -17,7 +17,7 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
     let isClosing = false;
 
     const overlay = document.createElement("div");
-    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 3000; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5%; box-sizing: border-box; background: rgba(0,0,0,0.3);";
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 4000; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5%; box-sizing: border-box; background: rgba(0,0,0,0.3);";
     overlay.innerHTML = contentHTML;
 
     document.body.appendChild(overlay);
@@ -82,7 +82,6 @@ export function showOpeningUI(onClosed) {
         </div>
     `;
     createGuardedDialogContainer(html, () => {
-        // オープニング画面を閉じたらフィールド探索BGMを開始
         sound.playBGM("assets/audio/bgm/field.mp3");
         if (onClosed) onClosed();
     });
@@ -98,7 +97,6 @@ export function showMessageDialog(text, onClosed) {
     createGuardedDialogContainer(html, onClosed);
 }
 
-// ★ ノベルゲーム風会話ウィンドウ（立ち絵が大きく見え、メッセージが手前下に重なる）
 export function showConversationDialog(imageSrc, text, onClosed) {
     const html = `
         <div style="width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; pointer-events: auto;">
@@ -127,12 +125,12 @@ export function showItemAcquiredModal(imagePath, itemTitle, detailText, onClosed
 
 export function playFloorTransition(targetFloor, onComplete) {
     const fadeDiv = document.createElement("div");
-    fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 4000; transition: opacity 0.5s ease; opacity: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em; gap: 15px;`;
+    fadeDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 5000; transition: opacity 0.5s ease; opacity: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #ff3333; font-family: ${HORROR_FONT}; font-size: 1.6em; gap: 15px;`;
     document.body.appendChild(fadeDiv);
 
     setTimeout(() => { 
         fadeDiv.style.opacity = "1"; 
-        fadeDiv.innerHTML = `<div>ザッ…… ザッ……</div><div style="font-size: 0.8em; color: #aaa;">${targetFloor}階へ移動中...</div>`; 
+        fadeDiv.innerHTML = `<div>ザッ…… ザッ……</div><div style="font-size: 0.8em; color: #aaa;">${targetFloor}へ移動中...</div>`; 
     }, 10);
 
     setTimeout(() => { 
@@ -200,7 +198,6 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
     video.onended = finish;
 
     video.onerror = (e) => {
-        console.error("Video load error for:", src, e);
         errorMsg.style.display = "block";
         errorMsg.innerText = `【動画のロード失敗】\nファイルパス: ${src}\n※ファイルが存在するか確認してください。`;
         playBtn.innerText = "▶ 再度再生を試みる";
@@ -222,7 +219,6 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
         video.play().then(() => {
             playBtn.style.display = "none";
         }).catch(err => {
-            console.warn("Manual play error:", err);
             errorMsg.style.display = "block";
             errorMsg.innerText = "ブラウザの権限により再生できませんでした。";
         });
@@ -233,7 +229,6 @@ export function playVideo(src, onEnded, buttonLabel = "▶ 映像を再生する
         promise.then(() => {
             playBtn.style.display = "none";
         }).catch(err => {
-            console.warn("Autoplay blocked:", err);
             playBtn.style.display = "block";
         });
     }
@@ -353,10 +348,11 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（BGM/SE・Lv攻撃力反映・赤い傘3倍・黒猫完全版）
+// 戦闘UI制御（音響対応・個別報酬対応 完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
-    // ★ 戦闘開始：戦闘BGM再生
+    // ★ 戦闘開始SE と BGM再生
+    sound.playSE("assets/audio/se/sentoukaisi.mp3");
     sound.playBGM("assets/audio/bgm/battle.mp3");
 
     const ui = document.createElement("div");
@@ -421,9 +417,11 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         playerHpText.style.color = "#ff0000";
         appendLog("\n<span style='color:red; font-weight:bold;'>【敗北】主人公は力尽きて倒れた……！</span>");
 
+        // ★ 死亡時SE
+        sound.playSE("assets/audio/se/zero.mp3");
+
         setTimeout(() => {
             ui.remove();
-            // ★ 探索曲へ復帰
             sound.playBGM("assets/audio/bgm/field.mp3");
 
             const respawnMsg = gameState.handlePlayerDeath();
@@ -534,6 +532,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             }
 
             if (catAction === "shield") {
+                sound.playSE("assets/audio/se/cat.mp3"); // ★ 黒猫ガードSE
                 baseDamage = Math.max(1, Math.floor(baseDamage * 0.5));
                 appendLog(`\n<span style="color: #E0B0FF; font-weight: bold;">【使い魔の身代わり】黒猫が前に割り込み、主人公を庇った！（ダメージ半減！）</span>`);
             }
@@ -548,6 +547,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             appendLog(dmgNotice);
 
             if (catAction === "claw") {
+                sound.playSE("assets/audio/se/cat.mp3"); // ★ 黒猫攻撃SE
                 const catDmg = Math.max(8, Math.floor((gameState.player.level || 1) * 3.5));
                 enemyHp = Math.max(0, enemyHp - catDmg);
                 enemyHpText.innerText = `敵HP: ${enemyHp}`;
@@ -561,13 +561,20 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 appendLog(`\n【討滅】黒猫の追撃が決定打となり、悪魔は霧散した！`);
                 setTimeout(() => {
                     ui.remove();
-                    // ★ 探索曲へ復帰
                     sound.playBGM("assets/audio/bgm/field.mp3");
 
-                    const reward = gameState.calculateRewards ? gameState.calculateRewards(50, 150) : { exp: 50, money: 150 };
+                    // ★ 報酬計算（個別設定優先・ボスの場合は最低でも経験値/お金2倍）
+                    const baseExp = enemy.rewardExp || (enemy.isBoss ? 100 : 50);
+                    const baseMoney = enemy.rewardMoney || (enemy.isBoss ? 300 : 150);
+                    const reward = gameState.calculateRewards ? gameState.calculateRewards(baseExp, baseMoney) : { exp: baseExp, money: baseMoney };
+                    
                     gameState.player.money += reward.money;
                     const isLvUp = gameState.gainExp(reward.exp);
-                    showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}`, () => {
+                    
+                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3"); // ★ レベルアップSE
+
+                    const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
+                    showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
                         if (onResult) onResult("win");
                     });
                 }, 1400);
@@ -580,7 +587,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }, 1400);
     };
 
-    // ★ 攻撃ボタン（銃声SE再生を追加）
     attackBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -588,7 +594,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         const equippedCards = gameState.equippedCards || [];
 
         if (!hasGun) {
-            appendLog("【攻撃不能！】\nモデルガンを持っていない！ 素手では悪魔にダメージを与えられない！");
+            appendLog("【攻撃不能！】\n武器を持っていない！ 素手では悪魔にダメージを与えられない！");
             return;
         } 
         if (equippedCards.length === 0) {
@@ -596,7 +602,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             return;
         }
 
-        // ★ 銃撃SEを再生！
         sound.playSE("assets/audio/se/gun.mp3");
 
         attackBtn.disabled = true;
@@ -639,12 +644,17 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 
                 setTimeout(() => {
                     ui.remove();
-                    // ★ 探索曲へ復帰
                     sound.playBGM("assets/audio/bgm/field.mp3");
 
-                    const reward = gameState.calculateRewards ? gameState.calculateRewards(50, 150) : { exp: 50, money: 150 };
+                    // ★ 報酬計算（個別設定優先・ボスの場合は最低でも経験値/お金2倍）
+                    const baseExp = enemy.rewardExp || (enemy.isBoss ? 100 : 50);
+                    const baseMoney = enemy.rewardMoney || (enemy.isBoss ? 300 : 150);
+                    const reward = gameState.calculateRewards ? gameState.calculateRewards(baseExp, baseMoney) : { exp: baseExp, money: baseMoney };
+                    
                     gameState.player.money += reward.money;
                     const isLvUp = gameState.gainExp(reward.exp);
+                    
+                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3"); // ★ レベルアップSE
                     
                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
                     showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
@@ -659,7 +669,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }, 900);
     };
 
-    // 道具ボタン
     itemBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -702,8 +711,9 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 itemBtn.disabled = true;
                 escapeBtn.disabled = true;
 
-                if (usedItem.id === "energy_drink" || usedItem.id === "bento" || usedItem.id === "first_aid" || usedItem.healAmount) {
-                    const heal = usedItem.healAmount || 15;
+                // ★ 回復アイテムの処理を動的に強化（healAmountプロパティ優先）
+                if (usedItem.healAmount || usedItem.id === "energy_drink" || usedItem.id === "bento" || usedItem.id === "first_aid") {
+                    const heal = usedItem.healAmount ? usedItem.healAmount : (usedItem.id === "first_aid" ? 50 : 15);
                     gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + heal);
                     updateHpDisplay();
                     enemyTurn(`【道具使用】${usedItem.name} を使った！\n主人公のHPが ${heal} 回復した！（現在HP: ${gameState.player.hp}）`);
@@ -736,7 +746,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         });
     };
 
-    // 逃走ボタン
     escapeBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -749,7 +758,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             const escapeRate = 0.55 + (((gameState.player.agi || 5) + extraAgi) * 0.04);
             if (Math.random() < escapeRate) {
                 ui.remove();
-                // ★ 探索曲へ復帰
                 sound.playBGM("assets/audio/bgm/field.mp3");
 
                 showMessageDialog("【逃走成功】\n暗闇の中、なんとか悪魔を振り切った！", () => {
@@ -777,174 +785,199 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     };
 }
 
-// 査問UI制御
+// 査問UI制御（初回チュートリアル付き 完全版）
 export function openInquisitionUI(entity, gameState, onResult, context) {
-    const ui = document.createElement("div");
-    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
-    
-    let visualHTML = `<img id="inq-entity-img" src="${entity.faceImage || entity.image}" style="max-height: 180px; border-radius: 8px;" onerror="this.style.display='none'">`;
+    // ★ 初回チュートリアルガイド表示処理
+    const showTutorialIfNeeded = (callback) => {
+        if (!gameState.flags) gameState.flags = {};
+        if (!gameState.flags.seenInqTutorial) {
+            gameState.flags.seenInqTutorial = true;
+            showMessageDialog(
+                "【査問（さもん）のルール】\n\n部屋の中に人間が隠れていることがあるが、悪魔が人間に擬態していることもある。\n\n『ラミナカード』を提示して相手の反応を伺い、悪魔か人間かを見極めて「撃つ」か「保護する」かを決定してください。\n\n※人間を誤って撃った場合、深い『罪(Sin)』を背負います。罪はエンディングに影響しますが、1Fコンビニでお金を支払うことで浄化可能です。", 
+                callback
+            );
+        } else {
+            callback();
+        }
+    };
 
-    ui.innerHTML = `
-        <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 8px red;">【査問】住人との対面</h2>
-        ${visualHTML}
-        <div style="color: #ddd; font-size: 1.1em; margin-top: 5px; font-weight: bold;">${entity.name}</div>
+    const initUI = () => {
+        const ui = document.createElement("div");
+        ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
         
-        <div id="inq-log" style="width: 100%; max-width: 500px; height: 110px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin: 12px 0; color: #ccc; font-size: 0.9em; line-height: 1.5; overflow-y: auto; white-space: pre-wrap;">（住人と対面した。ラミナカードを提示して相手の表情や仕草を伺おう……）</div>
+        let visualHTML = `<img id="inq-entity-img" src="${entity.faceImage || entity.image}" style="max-height: 180px; border-radius: 8px;" onerror="this.style.display='none'">`;
 
-        <div style="display: flex; gap: 15px; margin-bottom: 10px;">
-            <div id="slot1" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #888; font-size: 0.75em; background: #111;">1枚目</div>
-            <div id="slot2" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #888; font-size: 0.75em; background: #111;">2枚目</div>
-        </div>
+        ui.innerHTML = `
+            <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 8px red;">【査問】住人との対面</h2>
+            ${visualHTML}
+            <div style="color: #ddd; font-size: 1.1em; margin-top: 5px; font-weight: bold;">${entity.name}</div>
+            
+            <div id="inq-log" style="width: 100%; max-width: 500px; height: 110px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin: 12px 0; color: #ccc; font-size: 0.9em; line-height: 1.5; overflow-y: auto; white-space: pre-wrap;">（住人と対面した。ラミナカードを提示して相手の表情や仕草を伺おう……）</div>
 
-        <div style="width: 100%; max-width: 500px; display: flex; gap: 5px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid #333;" id="inq-cards"></div>
+            <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                <div id="slot1" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #888; font-size: 0.75em; background: #111;">1枚目</div>
+                <div id="slot2" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #888; font-size: 0.75em; background: #111;">2枚目</div>
+            </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 12px; width: 100%; max-width: 500px;">
-            <button id="btn-show" style="flex: 1; background: #220000; color: #ffdd66; border: 1px solid #ff3333; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">1枚目を提示する</button>
-            <button id="btn-shoot" style="display: none; flex: 1; background: #440000; color: #fff; border: 1px solid #ff0000; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">【銃で撃つ】</button>
-            <button id="btn-protect" style="display: none; flex: 1; background: #004400; color: #00ff66; border: 1px solid #00ff66; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">【保護する】</button>
-        </div>
-    `;
-    document.body.appendChild(ui);
+            <div style="width: 100%; max-width: 500px; display: flex; gap: 5px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid #333;" id="inq-cards"></div>
 
-    const entityImg = document.getElementById("inq-entity-img");
-    applyChromaKey(entityImg);
+            <div style="display: flex; gap: 10px; margin-top: 12px; width: 100%; max-width: 500px;">
+                <button id="btn-show" style="flex: 1; background: #220000; color: #ffdd66; border: 1px solid #ff3333; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">1枚目を提示する</button>
+                <button id="btn-shoot" style="display: none; flex: 1; background: #440000; color: #fff; border: 1px solid #ff0000; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">【銃で撃つ】</button>
+                <button id="btn-protect" style="display: none; flex: 1; background: #004400; color: #00ff66; border: 1px solid #00ff66; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">【保護する】</button>
+            </div>
+        `;
+        document.body.appendChild(ui);
 
-    let step = 1;
-    let selected = [];
-    const cardsDiv = document.getElementById("inq-cards");
-    const cardsList = gameState.cards || ["1Card.png"];
-    
-    cardsList.forEach(card => {
-        const numMatch = card.match(/\d+/);
-        const num = numMatch ? numMatch[0] : "1";
-        const cDiv = document.createElement("div");
-        cDiv.style.cssText = "min-width: 45px; height: 60px; border: 1px solid #555; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold;";
-        cDiv.innerHTML = `<img src="assets/images/cards/${num}card.png" style="max-width:100%; max-height:100%;" onerror="this.src='assets/images/cards/${num}Card.png';"><div style="display:none; font-size:1.2em;">${num}</div>`;
+        const entityImg = document.getElementById("inq-entity-img");
+        applyChromaKey(entityImg);
+
+        let step = 1;
+        let selected = [];
+        const cardsDiv = document.getElementById("inq-cards");
+        const cardsList = gameState.cards || ["1Card.png"];
         
-        cDiv.onclick = () => {
-            if (step === 1) {
-                selected = [num];
-                updateSlots();
-            } else if (step === 2) {
-                if (selected.length < 2 && selected[0] !== num) {
-                    selected[1] = num;
+        cardsList.forEach(card => {
+            const numMatch = card.match(/\d+/);
+            const num = numMatch ? numMatch[0] : "1";
+            const cDiv = document.createElement("div");
+            cDiv.style.cssText = "min-width: 45px; height: 60px; border: 1px solid #555; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold;";
+            cDiv.innerHTML = `<img src="assets/images/cards/${num}card.png" style="max-width:100%; max-height:100%;" onerror="this.src='assets/images/cards/${num}Card.png';"><div style="display:none; font-size:1.2em;">${num}</div>`;
+            
+            cDiv.onclick = () => {
+                if (step === 1) {
+                    selected = [num];
                     updateSlots();
+                } else if (step === 2) {
+                    if (selected.length < 2 && selected[0] !== num) {
+                        selected[1] = num;
+                        updateSlots();
+                    }
+                }
+            };
+            cardsDiv.appendChild(cDiv);
+        });
+
+        function updateSlots() {
+            document.getElementById("slot1").innerHTML = selected[0] ? `<div style="font-size:1.6em; color:#ffdd66;">${selected[0]}</div>` : "1枚目";
+            document.getElementById("slot2").innerHTML = selected[1] ? `<div style="font-size:1.6em; color:#ffdd66;">${selected[1]}</div>` : "2枚目";
+        }
+
+        const showBtn = document.getElementById("btn-show");
+        const shootBtn = document.getElementById("btn-shoot");
+        const protectBtn = document.getElementById("btn-protect");
+        const log = document.getElementById("inq-log");
+
+        function getReactionMessage(cardNum, ent) {
+            if (ent.type === "human") {
+                const humanMsg = [
+                    "「え…？ なんですかその紙切れは？ 宗教の勧誘ですか？」",
+                    "「気味が悪いカードですね……近付けないでください！」",
+                    "「何がしたいんですか？ 警察を呼びますよ！」",
+                    "「やめてください！ 意味がわかりません！」"
+                ];
+                return humanMsg[Math.floor(Math.random() * humanMsg.length)];
+            } else {
+                const targetWeakness = ent.weakness || 3;
+                const diff = Math.abs(parseInt(cardNum, 10) - targetWeakness);
+
+                if (diff === 0) {
+                    return "「ぐぐっ……！？ ぐあああっ！！」\n相手の瞳が一瞬赤くうごめき、肌から不気味な煙が立ち上った！";
+                } else if (diff <= 2) {
+                    return "「……くっ……！？」\n平然を装おうとしているが、不自然に口元を引きつらせて身体を硬直させた……。";
+                } else {
+                    const isDisguising = Math.random() < 0.6;
+                    if (isDisguising) {
+                        const bluffMsg = [
+                            "「え…？ なんですかその紙切れは？ 宗教の勧誘ですか？」",
+                            "「気味が悪いカードですね……近付けないでください！」",
+                            "「何がしたいんですか？ 警察を呼びますよ！」"
+                        ];
+                        return bluffMsg[Math.floor(Math.random() * bluffMsg.length)] + "\n（怯えているようにも見えるが……どこか視線が蠢いている気もする）";
+                    } else {
+                        return "「……ハッ、何ですかそれ？ 馬鹿馬鹿しい。」\n不気味なほど余裕の笑みを浮かべて、せせら笑っている。";
+                    }
+                }
+            }
+        }
+
+        showBtn.onclick = () => {
+            if (step === 1) {
+                if (!selected[0]) { alert("1枚目のカードを選択してください。"); return; }
+                log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[0], entity);
+                step = 2;
+                showBtn.innerText = "2枚目を提示する";
+            } else if (step === 2) {
+                if (!selected[1]) { alert("2枚目のカードを選択してください。"); return; }
+                log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[1], entity);
+                step = 3;
+                showBtn.style.display = "none";
+                shootBtn.style.display = "block";
+                protectBtn.style.display = "block";
+            }
+        };
+
+        shootBtn.onclick = () => {
+            ui.remove();
+            if (entity.type === "human") {
+                gameState.player.sin += 30;
+                showMessageDialog(`【人間誤射！】\n怯えていた無抵抗の人間を撃ち抜いてしまった……！\n（罪(SIN)が 30 増加した！ 現在の罪:${gameState.player.sin}）`, () => {
+                    onResult("kill_human");
+                });
+            } else {
+                const isWeaknessHit = selected.some(num => parseInt(num, 10) === entity.weakness);
+
+                if (isWeaknessHit) {
+                    const baseExp = entity.rewardExp || 100;
+                    const baseMoney = entity.rewardMoney || 250;
+                    const reward = gameState.calculateRewards ? gameState.calculateRewards(baseExp, baseMoney) : { exp: baseExp, money: baseMoney };
+                    gameState.player.money += reward.money;
+                    const isLvUp = gameState.gainExp(reward.exp);
+                    
+                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3"); // ★ レベルアップSE
+                    
+                    const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
+                    showMessageDialog(`【完全見破り成功！】\n悪魔の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
+                        onResult("combat_win");
+                    });
+                } else {
+                    showMessageDialog(`【見破り成功！ しかし弱点不一致】\n悪魔の正体を暴いたが、弱点属性を打ち抜けなかった！\n先制ダメージを与え、敵HP50%状態で戦闘に入る！`, () => {
+                        const demonEnemy = {
+                            name: entity.name,
+                            image: entity.realImage,
+                            hp: 15,
+                            atk: 10,
+                            def: 1,
+                            weakness: [entity.weakness],
+                            rewardExp: entity.rewardExp || 50,
+                            rewardMoney: entity.rewardMoney || 150
+                        };
+                        openCombatUI(demonEnemy, gameState, (res) => onResult(res === "win" ? "combat_win" : res), context);
+                    });
                 }
             }
         };
-        cardsDiv.appendChild(cDiv);
-    });
 
-    function updateSlots() {
-        document.getElementById("slot1").innerHTML = selected[0] ? `<div style="font-size:1.6em; color:#ffdd66;">${selected[0]}</div>` : "1枚目";
-        document.getElementById("slot2").innerHTML = selected[1] ? `<div style="font-size:1.6em; color:#ffdd66;">${selected[1]}</div>` : "2枚目";
-    }
-
-    const showBtn = document.getElementById("btn-show");
-    const shootBtn = document.getElementById("btn-shoot");
-    const protectBtn = document.getElementById("btn-protect");
-    const log = document.getElementById("inq-log");
-
-    function getReactionMessage(cardNum, ent) {
-        if (ent.type === "human") {
-            const humanMsg = [
-                "「え…？ なんですかその紙切れは？ 宗教の勧誘ですか？」",
-                "「気味が悪いカードですね……近付けないでください！」",
-                "「何がしたいんですか？ 警察を呼びますよ！」",
-                "「やめてください！ 意味がわかりません！」"
-            ];
-            return humanMsg[Math.floor(Math.random() * humanMsg.length)];
-        } else {
-            const targetWeakness = ent.weakness || 3;
-            const diff = Math.abs(parseInt(cardNum, 10) - targetWeakness);
-
-            if (diff === 0) {
-                return "「ぐぐっ……！？ ぐあああっ！！」\n相手の瞳が一瞬赤くうごめき、肌から不気味な煙が立ち上った！";
-            } else if (diff <= 2) {
-                return "「……くっ……！？」\n平然を装おうとしているが、不自然に口元を引きつらせて身体を硬直させた……。";
-            } else {
-                const isDisguising = Math.random() < 0.6;
-                if (isDisguising) {
-                    const bluffMsg = [
-                        "「え…？ なんですかその紙切れは？ 宗教の勧誘ですか？」",
-                        "「気味が悪いカードですね……近付けないでください！」",
-                        "「何がしたいんですか？ 警察を呼びますよ！」"
-                    ];
-                    return bluffMsg[Math.floor(Math.random() * bluffMsg.length)] + "\n（怯えているようにも見えるが……どこか視線が蠢いている気もする）";
-                } else {
-                    return "「……ハッ、何ですかそれ？ 馬鹿馬鹿しい。」\n不気味なほど余裕の笑みを浮かべて、せせら笑っている。";
-                }
-            }
-        }
-    }
-
-    showBtn.onclick = () => {
-        if (step === 1) {
-            if (!selected[0]) { alert("1枚目のカードを選択してください。"); return; }
-            log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[0], entity);
-            step = 2;
-            showBtn.innerText = "2枚目を提示する";
-        } else if (step === 2) {
-            if (!selected[1]) { alert("2枚目のカードを選択してください。"); return; }
-            log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[1], entity);
-            step = 3;
-            showBtn.style.display = "none";
-            shootBtn.style.display = "block";
-            protectBtn.style.display = "block";
-        }
-    };
-
-    shootBtn.onclick = () => {
-        ui.remove();
-        if (entity.type === "human") {
-            gameState.player.sin += 30;
-            showMessageDialog(`【人間誤射！】\n怯えていた無抵抗の人間を撃ち抜いてしまった……！\n（罪(SIN)が 30 増加した！ 現在の罪:${gameState.player.sin}）`, () => {
-                onResult("kill_human");
-            });
-        } else {
-            const isWeaknessHit = selected.some(num => parseInt(num, 10) === entity.weakness);
-
-            if (isWeaknessHit) {
-                const reward = gameState.calculateRewards ? gameState.calculateRewards(100, 250) : { exp: 100, money: 250 };
+        protectBtn.onclick = () => {
+            ui.remove();
+            if (entity.type === "human") {
+                const reward = gameState.calculateRewards ? gameState.calculateRewards(0, 300) : { exp: 0, money: 300 };
                 gameState.player.money += reward.money;
-                const isLvUp = gameState.gainExp(reward.exp);
-                
+                const hintText = entity.dialogue || entity.message || "「助けてくれてありがとうございます……！ これはお礼です！」";
                 const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-                showMessageDialog(`【完全見破り成功！】\n悪魔の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
-                    onResult("combat_win");
+                showMessageDialog(`【人間を保護した】\n${hintText}\n（💰${reward.money} を獲得！）${capNotice}`, () => {
+                    onResult("finish");
                 });
             } else {
-                showMessageDialog(`【見破り成功！ しかし弱点不一致】\n悪魔の正体を暴いたが、弱点属性を打ち抜けなかった！\n先制ダメージを与え、敵HP50%状態で戦闘に入る！`, () => {
-                    const demonEnemy = {
-                        name: entity.name,
-                        image: entity.realImage,
-                        hp: 15,
-                        atk: 10,
-                        def: 1,
-                        weakness: [entity.weakness]
-                    };
-                    openCombatUI(demonEnemy, gameState, (res) => onResult(res === "win" ? "combat_win" : res), context);
+                showMessageDialog(`【痛恨の判断ミス！】\n悪魔を「保護」しようとして不用意に近づいてしまった！\n悪魔から確定の先制攻撃を受ける！`, () => {
+                    onResult("demon_ambush");
                 });
             }
-        }
+        };
     };
 
-    protectBtn.onclick = () => {
-        ui.remove();
-        if (entity.type === "human") {
-            const reward = gameState.calculateRewards ? gameState.calculateRewards(0, 300) : { exp: 0, money: 300 };
-            gameState.player.money += reward.money;
-            const hintText = entity.dialogue || entity.message || "「助けてくれてありがとうございます……！ これはお礼です！」";
-            const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-            showMessageDialog(`【人間を保護した】\n${hintText}\n（💰${reward.money} を獲得！）${capNotice}`, () => {
-                onResult("finish");
-            });
-        } else {
-            showMessageDialog(`【痛恨の判断ミス！】\n悪魔を「保護」しようとして不用意に近づいてしまった！\n悪魔から確定の先制攻撃を受ける！`, () => {
-                onResult("demon_ambush");
-            });
-        }
-    };
+    // チュートリアルを表示してからUIを展開
+    showTutorialIfNeeded(initUI);
 }
 
 // ボス魔方陣パズルUI制御
