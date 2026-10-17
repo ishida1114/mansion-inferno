@@ -293,7 +293,7 @@ function changeFloor(floor) {
     } else {
       gameState.player.x = playerStart4F.x; gameState.player.y = playerStart4F.y; gameState.player.dir = playerStart4F.dir;
       if (!gameState.flags || !gameState.flags.cleared4F) {
-        showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「あら、私はリナちゃん……私も悪魔に取り憑かれたの、苦しいの、つらいの、私を助けて、強いひと」\n主人公（なんだ、今のは…父親だ、父親を探さなくては…）", () => redraw());
+        showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「あら、私はリナちゃん……私も悪魔に取り憑かれたの、苦しいの、つらいの、私を助けて、強いひと」\n主人公（なんだ、今のは…いや、そんなことより父親だ、まずは父親を探さなくては…）", () => redraw());
       } else {
         showMessageDialog("【4階 非常階段前】\n4階へ到達した。桃色の霧は完全に消え去っている……", () => redraw());
       }

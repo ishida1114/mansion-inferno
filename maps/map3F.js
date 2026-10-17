@@ -167,7 +167,7 @@ export function handleEvent3F(targetCell, gameState, context) {
 }
 
 // ----------------------------------------------------
-// ★ 新規追加：ゴミの山の探索ギミック
+// ★ 新規追加：ゴミの山の探索ギミック (reizouko.png使用)
 // ----------------------------------------------------
 function startGarbagePileEvent(gameState, context, onComplete) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
@@ -178,11 +178,11 @@ function startGarbagePileEvent(gameState, context, onComplete) {
 
     if (!gameState.clearedRooms) gameState.clearedRooms = {};
     if (gameState.clearedRooms[key]) {
-        showMessageDialog("【ゴミの山】\n酷い悪臭を放っている。もうめぼしい物は残っていない……。", onComplete);
+        showConversationDialog("assets/images/reizouko.png", "【ゴミの山】\n酷い悪臭を放っている。もうめぼしい物は残っていない……。", onComplete);
         return;
     }
 
-    showMessageDialog("【ゴミの山】\n悪臭を放つ粗大ゴミが山積みになっている。\n奥に何か光るものが見える……手を伸ばして探してみるか？", () => {
+    showConversationDialog("assets/images/reizouko.png", "【ゴミの山】\n悪臭を放つ粗大ゴミが山積みになっている。\n奥に何か光るものが見える……手を伸ばして探してみるか？", () => {
         const roll = Math.random();
 
         if (roll < 0.45) {
@@ -202,7 +202,7 @@ function startGarbagePileEvent(gameState, context, onComplete) {
             // 【ハズレ】毒ガスでダメージ
             gameState.clearedRooms[key] = true;
             const damage = Math.floor(gameState.player.maxHp * 0.15) + 5;
-            gameState.player.hp = Math.max(1, gameState.player.hp - damage); // 死にはしない
+            gameState.player.hp = Math.max(1, gameState.player.hp - damage);
             
             showMessageDialog(`【探索失敗！】\n手を伸ばした瞬間、腐敗したゴミの袋が破裂し、強烈な毒ガスが噴き出した！\n主人公は ${damage} のダメージを受けた！（現在HP: ${gameState.player.hp}）`, () => {
                 if (context && context.redraw) context.redraw();
@@ -225,16 +225,16 @@ function startGarbagePileEvent(gameState, context, onComplete) {
 }
 
 // ----------------------------------------------------
-// ★ 新規追加：巨大冷蔵庫の部屋（管理人救出）
+// ★ 新規追加：巨大冷蔵庫の部屋（管理人救出） (reizouko.png使用)
 // ----------------------------------------------------
 function startRefrigeratorEvent(gameState, context, onComplete) {
     if (!gameState.flags) gameState.flags = {};
     if (gameState.flags.rescuedManager) {
-        showMessageDialog("【巨大冷蔵庫の部屋】\n分厚い扉の開いた業務用冷蔵庫がある。強烈な腐敗臭が漂っている……。", onComplete);
+        showConversationDialog("assets/images/reizouko.png", "【巨大冷蔵庫の部屋】\n分厚い扉の開いた業務用冷蔵庫がある。強烈な腐敗臭が漂っている……。", onComplete);
         return;
     }
 
-    showMessageDialog("【巨大冷蔵庫の部屋】\n部屋の中央に、鎖でぐるぐる巻きにされた業務用冷蔵庫が置かれている。\n中から「ドン……ドン……」と、かすかに叩くような音が聞こえる……！", () => {
+    showConversationDialog("assets/images/reizouko.png", "【巨大冷蔵庫の部屋】\n部屋の中央に、鎖でぐるぐる巻きにされた業務用冷蔵庫が置かれている。\n中から「ドン……ドン……」と、かすかに叩くような音が聞こえる……！", () => {
         showConversationDialog("assets/images/human6.png", "【管理人（清掃員）】\n「ぶはあっ……！！ うう……助かった……！\n3Fの悪臭について苦情を言いに来たら、急にあのゴミまみれの男（真田）に殴り倒されて……気付いたらこんな冷蔵庫に放り込まれていて……。」", () => {
             showConversationDialog("assets/images/human6.png", "【管理人（清掃員）】\n「……そういえば、気を失う直前、非常階段を駆け上がっていく男の人を見ました。\nたしか、2階に住んでいる中学生の息子さんがいるお父さんです。\n必死な形相で上へ向かっていましたが……あの人も無事だといいんですが……」", () => {
                 showMessageDialog("【主人公の心情】\n（あの教え子の父親か……！ 生きて上へ向かったんだな。急いで後を追わなくては！）", () => {

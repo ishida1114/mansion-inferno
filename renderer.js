@@ -216,20 +216,24 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
 
             // 正面
-            if (currentMap[fY] && currentMap[fY][fX] !== 0) {
-                const cellType = currentMap[fY][fX], b = frontBounds[depth];
-                let targetImg = images.wall;
-                let is7FCustom = false;
-                
-                if ((cellType === 4 || cellType === 5) && isImageReady(images.stairDoor)) {
-                    targetImg = images.stairDoor;
-                } else if (cellType === 6 && isImageReady(images.entrance)) {
-                    targetImg = images.entrance;
-                } else if ((cellType === 3 || cellType === 7) && isImageReady(images.elevator)) {
-                    targetImg = images.elevator;
-                } else if ([2, 8, 9].includes(cellType) && isImageReady(images.door)) {
-                    targetImg = images.door;
-                }
+                if (currentMap[fY] && currentMap[fY][fX] !== 0) {
+                    const cellType = currentMap[fY][fX], b = frontBounds[depth];
+                    let targetImg = images.wall;
+                    let is7FCustom = false;
+                    
+                    if ((cellType === 4 || cellType === 5) && isImageReady(images.stairDoor)) {
+                        targetImg = images.stairDoor;
+                    } else if (cellType === 6 && isImageReady(images.entrance)) {
+                        targetImg = images.entrance;
+                    } else if (cellType === 3 && isImageReady(images.elevator)) { // ★ 7 を除外
+                        targetImg = images.elevator;
+                    // ★ 追加：7(ゴミ山) と 9(冷蔵庫部屋) を reizouko.png で描画
+                    } else if ((cellType === 7 || cellType === 9) && isImageReady(images.reizouko)) {
+                        targetImg = images.reizouko;
+                    // ★ 9 を除外
+                    } else if ([2, 8].includes(cellType) && isImageReady(images.door)) {
+                        targetImg = images.door;
+                    }
 
                 // ★ 4階専用の壁・扉テクスチャ切り替え
                 if (currentFloor === 4) {
