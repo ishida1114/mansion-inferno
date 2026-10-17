@@ -1,4 +1,4 @@
-// maps/map3F.js - エレベーター(3)統一・真田部屋(8)・ゴミ山(7)・冷蔵庫(9) 追加版
+// maps/map3F.js - エレベーター(3)統一・真田部屋(8)・ゴミ山(7)・冷蔵庫(9) 完全修正版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -13,12 +13,12 @@ export const playerStart3F = { x: 5, y: 8, dir: 0 };
 // 7: ゴミの山(探索ポイント) / 9: 巨大冷蔵庫の部屋
 export const map3F = [
     [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], 
-    [1, 8, 1, 0, 0, 0, 0, 0, 1, 2, 1], 
-    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    [1, 0, 2, 0, 1, 0, 1, 0, 0, 9, 1], // ★ 9: 巨大冷蔵庫の部屋(x:9, y:3)
-    [1, 0, 1, 7, 1, 0, 1, 7, 1, 0, 1], // ★ 7: ゴミの山(x:3, y:4) と (x:7, y:4)
+    [1, 8, 1, 0, 0, 0, 0, 0, 1, 2, 1], // (9,1) 住人の部屋2
+    [1, 0, 1, 0, 1, 0, 1, 0, 9, 0, 1], // ★ 9: 巨大冷蔵庫(x:8, y:2) ※通路を塞がない壁位置へ移動
+    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1], // ★ (9,3)を通路(0)に開放！(9,1)へ進めるように修正
+    [1, 0, 1, 7, 1, 0, 1, 7, 1, 0, 1], // 7: ゴミの山(x:3, y:4) と (x:7, y:4)
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 7, 1, 0, 1, 1, 1, 0, 1, 7, 1], // ★ 7: ゴミの山(x:1, y:6) と (x:9, y:6)
+    [1, 7, 1, 0, 1, 1, 1, 0, 1, 7, 1], // 7: ゴミの山(x:1, y:6) と (x:9, y:6)
     [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
     [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
     [1, 0, 1, 1, 1, 3, 1, 1, 1, 0, 1], 
@@ -106,7 +106,7 @@ export function handleEvent3F(targetCell, gameState, context) {
         };
     }
 
-    // ★ 7: ゴミの山（探索ギミック）
+    // ★ 7: ゴミの山（探索ギミック・YES/NO選択対応）
     if (targetCell === 7) {
         return {
             run: (onComplete) => startGarbagePileEvent(gameState, context, onComplete)
@@ -167,7 +167,7 @@ export function handleEvent3F(targetCell, gameState, context) {
 }
 
 // ----------------------------------------------------
-// ★ 新規追加：ゴミの山の探索ギミック (reizouko.png使用)
+// ★ ゴミの山の探索ギミック（YES / NO 選択肢付き）
 // ----------------------------------------------------
 function startGarbagePileEvent(gameState, context, onComplete) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
@@ -178,11 +178,33 @@ function startGarbagePileEvent(gameState, context, onComplete) {
 
     if (!gameState.clearedRooms) gameState.clearedRooms = {};
     if (gameState.clearedRooms[key]) {
-        showConversationDialog("assets/images/reizouko.png", "【ゴミの山】\n酷い悪臭を放っている。もうめぼしい物は残っていない……。", onComplete);
+        showMessageDialog("【ゴミの山】\n酷い悪臭を放っている。もうめぼしい物は残っていない……。", onComplete);
         return;
     }
 
-    showConversationDialog("assets/images/reizouko.png", "【ゴミの山】\n悪臭を放つ粗大ゴミが山積みになっている。\n奥に何か光るものが見える……手を伸ばして探してみるか？", () => {
+    // ★ 選択モーダルUI（勝手に進まないようYES/NOボタンを配置）
+    const searchModal = document.createElement("div");
+    searchModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3500; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: 'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif; padding: 20px; box-sizing: border-box;";
+    searchModal.innerHTML = `
+        <div style="background: #110505; border: 2px solid #550000; padding: 20px; border-radius: 8px; max-width: 440px; text-align: center; color: #eee; box-shadow: 0 0 20px rgba(0,0,0,0.8);">
+            <img src="assets/images/reizouko.png" style="max-height: 140px; margin-bottom: 12px; border-radius: 4px;" onerror="this.style.display='none'">
+            <h3 style="color: #ffdd66; margin: 0 0 10px 0;">【ゴミの山】</h3>
+            <p style="font-size: 0.95em; line-height: 1.6; color: #ccc; margin: 0 0 15px 0;">悪臭を放つ粗大ゴミが山積みになっている。<br>奥に何か光るものが見える……手を伸ばして探してみますか？<br><span style="font-size: 0.8em; color: #ff8888;">（※危険が潜んでいる可能性もあります）</span></p>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="btn-search-yes" style="background: #004400; color: #00ff66; border: 1px solid #00ff66; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: inherit;">探してみる</button>
+                <button id="btn-search-no" style="background: #333; color: #ccc; border: 1px solid #666; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-family: inherit;">やめておく</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(searchModal);
+
+    document.getElementById("btn-search-no").onclick = () => {
+        searchModal.remove();
+        onComplete();
+    };
+
+    document.getElementById("btn-search-yes").onclick = () => {
+        searchModal.remove();
         const roll = Math.random();
 
         if (roll < 0.45) {
@@ -213,7 +235,7 @@ function startGarbagePileEvent(gameState, context, onComplete) {
             gameState.clearedRooms[key] = true;
             showMessageDialog(`【奇襲！！】\nガシッ……！！\nゴミの奥から無数の「黒い手」が飛び出し、主人公の腕を掴んだ！\nゴミに擬態していた悪魔が襲いかかってきた！！`, () => {
                 gameState.player.hp = Math.max(1, gameState.player.hp - 12);
-                const demonEnemy = { ...ENEMIES['DEVIL5_3F'] }; // 徘徊する腐肉
+                const demonEnemy = { ...ENEMIES['DEVIL5_3F'] };
                 demonEnemy.name = "ゴミに潜む悪魔";
                 
                 openCombatUI(demonEnemy, gameState, (res) => {
@@ -221,11 +243,11 @@ function startGarbagePileEvent(gameState, context, onComplete) {
                 }, context);
             });
         }
-    });
+    };
 }
 
 // ----------------------------------------------------
-// ★ 新規追加：巨大冷蔵庫の部屋（管理人救出） (reizouko.png使用)
+// ★ 巨大冷蔵庫の部屋（管理人救出）
 // ----------------------------------------------------
 function startRefrigeratorEvent(gameState, context, onComplete) {
     if (!gameState.flags) gameState.flags = {};
@@ -411,7 +433,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                                 gameState.player.y = 1;
                                 gameState.player.dir = 1;
 
-                                showMessageDialog(`【3Fフロアボス討滅！】\n真田の怨霊を浄化した！だがここには父親の姿がない……。\n主人公「マジか、まだ上に行かないとダメなのか……」\n※非常階段の障害物が消え、4階へ進めるようになりました！`, onComplete);
+                                showMessageDialog(`【3Fフロアボス討滅！】\n真田の怨霊を浄化した！\n主人公「ハァハァ…4Fに追うか…きついな、これ」\n※非常階段の障害物が消え、4階へ進めるようになりました！`, onComplete);
                             } else {
                                 onComplete();
                             }
