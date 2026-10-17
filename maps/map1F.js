@@ -43,12 +43,10 @@ export function handleEvent1F(targetCell, gameState, context) {
 
                     let html = `<h2 style="color: #66ccff; margin-bottom: 20px;">【エレベーター】</h2>`;
                     
-                    // ★ UI調整：上が7F、下が1Fになるように並べ替え
                     if (canGo7F) {
                         html += `<button class="ev-btn" data-floor="7" style="width: 240px; padding: 15px; margin: 5px; background: linear-gradient(180deg, #664400, #221100); color: #ffdd66; border: 1px solid #ffcc00; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px rgba(255,200,0,0.4);">7F (VIPラウンジ)</button>`;
                     }
 
-                    // 5Fの解禁状況
                     const is5FUnlocked = gameState.flags && gameState.flags.cleared4F;
                     html += `<button class="ev-btn" data-floor="5" style="width: 240px; padding: 15px; margin: 5px; background: ${is5FUnlocked ? '#222' : '#111'}; color: ${is5FUnlocked ? '#fff' : '#666'}; border: 1px solid ${is5FUnlocked ? '#666' : '#333'}; font-size: 1.1em; cursor: pointer;">5F (精神科病棟) ${is5FUnlocked ? '' : '🔒'}</button>`;
                     
@@ -65,7 +63,6 @@ export function handleEvent1F(targetCell, gameState, context) {
                         btn.onclick = () => {
                             const f = parseInt(btn.getAttribute("data-floor"), 10);
                             
-                            // ★ 5Fへのフライング防止制限
                             if (f === 5 && (!gameState.flags || !gameState.flags.cleared4F)) {
                                 alert("【ロック中】4階の異変を解決するまで、5階へ昇ることはできない！");
                                 return;
@@ -97,7 +94,6 @@ export function handleEvent1F(targetCell, gameState, context) {
         } else {
             return { 
                 run: (onComplete) => {
-                    // ★ 修正：階段移動アニメーション演出を挟んで遷移
                     gameState.lastTransitMethod = 'stair';
                     playFloorTransition(2, () => {
                         context.changeFloor(2);
@@ -188,10 +184,18 @@ function startPostEvent(gameState, onComplete) {
             if (stage >= 3) {
                 showMessageDialog("【1階 集合ポスト】\n全ての防具要請書は投函済みだ。これ以上の装備は存在しない。\n残るは8階……最上階の決戦のみだ。", onComplete);
             } else {
-                showMessageDialog(
-                    "【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。\n（※各階のフロアボスを撃破すると、防具支給要請書を投函できます）",
-                    onComplete
-                );
+                // ★ 修正：おばあさんと遭遇しているかどうかでセリフを分岐
+                if (gameState.hasMetGrandma) {
+                    showMessageDialog(
+                        "【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。\n（※各階のフロアボスを撃破すると、防具支給要請書を投函できます）",
+                        onComplete
+                    );
+                } else {
+                    showMessageDialog(
+                        "【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n投函口は固く閉ざされており、今は投函できるものもなさそうだ。\n（※西側のコンビニから物音が聞こえる……調べてみよう）",
+                        onComplete
+                    );
+                }
             }
         }
     };
