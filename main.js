@@ -260,29 +260,33 @@ function changeFloor(floor) {
   }
   else if (floor === 5) {
     gameState.currentMap = map5F;
-    if (gameState.lastTransitMethod === 'stair_down' || gameState.lastTransitMethod === 'stair') {
-      gameState.player.x = 7; gameState.player.y = 1; gameState.player.dir = 2;
+    // ★ 修正：6Fから降りてきた時は南側階段前(7,7)、4Fから上がってきた時は北側階段前(7,1)に着地
+    if (gameState.lastTransitMethod === 'stair_down') {
+      gameState.player.x = 7; gameState.player.y = 7; gameState.player.dir = 0;
+      showMessageDialog("【5階 非常階段前】\n6階から5階へ降りてきた……。", () => redraw());
     } else if (gameState.lastTransitMethod === 'elevator') {
       gameState.player.x = 6; gameState.player.y = 1; gameState.player.dir = 2;
     } else {
       gameState.player.x = playerStart5F.x; gameState.player.y = playerStart5F.y; gameState.player.dir = playerStart5F.dir;
     }
 
-    if (!gameState.hasSeen5FIntro) {
-      gameState.hasSeen5FIntro = true;
-      showMessageDialog("【館内放送・ドクター蛭沼の声】\n「失敗だな、リナからもらった実験体、とても進化とは言えない、醜い、廃棄しなくては……」", () => {
-        showMessageDialog("【使い魔の気配が強まった！！急速に存在が実体化する兆しを感じる】", () => {
-          const prevBg = document.body.style.backgroundColor; document.body.style.backgroundColor = "#141418";
-          playVideo("assets/videos/blackcat.mp4", () => {
-            document.body.style.backgroundColor = prevBg;
-            if (!gameState.flags) gameState.flags = {};
-            gameState.flags.hasCat = true; gameState.flags.isCatTrapped = false;
-            showMessageDialog("【使い魔の実体化】\n5階に充満する濃厚な生体エネルギーに反応し、主人公の影からすっと黒猫が実体化して現れた！\n（※足元に寄り添い、戦闘中に身を挺して庇ってくれたり、追撃してくれたりするようになった！）", () => redraw());
+    if (gameState.lastTransitMethod !== 'stair_down') {
+      if (!gameState.hasSeen5FIntro) {
+        gameState.hasSeen5FIntro = true;
+        showMessageDialog("【館内放送・ドクター蛭沼の声】\n「失敗だな、リナからもらった実験体、とても進化とは言えない、醜い、廃棄しなくては……」", () => {
+          showMessageDialog("【使い魔の気配が強まった！！急速に存在が実体化する兆しを感じる】", () => {
+            const prevBg = document.body.style.backgroundColor; document.body.style.backgroundColor = "#141418";
+            playVideo("assets/videos/blackcat.mp4", () => {
+              document.body.style.backgroundColor = prevBg;
+              if (!gameState.flags) gameState.flags = {};
+              gameState.flags.hasCat = true; gameState.flags.isCatTrapped = false;
+              showMessageDialog("【使い魔の実体化】\n5階に充満する濃厚な生体エネルギーに反応し、主人公の影からすっと黒猫が実体化して現れた！\n（※足元に寄り添い、戦闘中に身を挺して庇ってくれたり、追撃してくれたりするようになった！）", () => redraw());
+            });
           });
         });
-      });
-    } else {
-      showMessageDialog(gameState.isHirunumaDefeated ? "【5階 精神科病棟】\nドクター蛭沼は討滅され、異様な悪臭は静まり返っている……" : "【5階 精神科病棟】\n消毒液と腐敗臭が混ざり合うフロア。異様な唸り声が響いている……", () => redraw());
+      } else {
+        showMessageDialog(gameState.isHirunumaDefeated ? "【5階 精神科病棟】\nドクター蛭沼は討滅され、異様な悪臭は静まり返っている……" : "【5階 精神科病棟】\n消毒液と腐敗臭が混ざり合うフロア。異様な唸り声が響いている……", () => redraw());
+      }
     }
   } 
   else if (floor === 4) {
@@ -372,6 +376,7 @@ function toggleDebugUI() {
 
 function debugJumpToFloor(floor) {
   if (!gameState.flags) gameState.flags = {};
+  gameState.lastTransitMethod = 'stair'; // ★ デバッグワープ時は下り階段判定を解除
   gameState.hasExorcistInherited = true;
   gameState.hasModelGun = true;
   gameState.player.hasModelGun = true;
@@ -395,7 +400,10 @@ function debugJumpToFloor(floor) {
     gameState.player.maxExp = 2961; changeFloor(5); 
   } else if (floor === 6) { 
     gameState.player.level = 25; gameState.player.maxHp = 200; gameState.player.hp = 200; gameState.player.def = 10; gameState.player.money = 12000; gameState.flags.cleared5F = true; gameState.flags.hasCat = false; 
-    gameState.player.maxExp = 3895; changeFloor(6); 
+    gameState.player.maxExp = 3895; 
+    gameState.lastTransitMethod = 'stair';
+    changeFloor(6); 
+    gameState.player.x = 5; gameState.player.y = 8; gameState.player.dir = 0; // ★ 6F入口(5F階段前)に着地
   } else if (floor === 7) { 
     gameState.player.level = 30; gameState.player.maxHp = 250; gameState.player.hp = 250; gameState.player.def = 15; gameState.player.money = 20000; gameState.flags.cleared6F = true; gameState.flags.hasCat = true; 
     gameState.player.maxExp = 4884; changeFloor(7); 

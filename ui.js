@@ -158,7 +158,7 @@ export function playFloorTransition(targetFloor, onComplete) {
 
     setTimeout(() => { 
         fadeDiv.style.opacity = "1"; 
-        fadeDiv.innerHTML = `<div>ザッ…… ザッ……</div><div style="font-size: 0.8em; color: #aaa;">${targetFloor}へ移動中...</div>`; 
+        fadeDiv.innerHTML = `<div>ザッ…… ザッ……</div><div style="font-size: 0.8em; color: #aaa;">${targetFloor}Fへ移動中...</div>`; 
     }, 10);
 
     setTimeout(() => { 

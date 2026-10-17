@@ -96,7 +96,14 @@ export function handleEvent1F(targetCell, gameState, context) {
             };
         } else {
             return { 
-                run: (onComplete) => { context.changeFloor(2); onComplete(); } 
+                run: (onComplete) => {
+                    // ★ 修正：階段移動アニメーション演出を挟んで遷移
+                    gameState.lastTransitMethod = 'stair';
+                    playFloorTransition(2, () => {
+                        context.changeFloor(2);
+                        onComplete();
+                    });
+                } 
             };
         }
     }

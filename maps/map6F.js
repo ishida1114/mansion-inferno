@@ -45,9 +45,9 @@ export function check6FRandomEncounter(gameState, onEncounter) {
 
     if (Math.random() < 0.15) {
         const demonTypes = [
-            { id: 'DEVIL13_6F', name: '停滞の糸紡ぎ', image: 'assets/images/demon/demon14.png', hp: 260, atk: 45, def: 8, weakness: [6], agi: 14 },
-            { id: 'DEVIL14_6F', name: '神父の悪夢', image: 'assets/images/demon/demon15.png', hp: 220, atk: 58, def: 5, weakness: [7], agi: 18 },
-            { id: 'DEVIL15_6F', name: '可能性のひとつだった幻の未来', image: 'assets/images/demon/demon13.png', hp: 320, atk: 48, def: 12, weakness: [2, 4], agi: 10 }
+            { id: 'DEVIL13_6F', name: '停滞の糸紡ぎ', image: 'assets/images/demon/demon14.png', hp: 260, atk: 45, def: 8, weakness: [6], agi: 14, rewardExp: 220, rewardMoney: 750 },
+            { id: 'DEVIL14_6F', name: '神父の悪夢', image: 'assets/images/demon/demon15.png', hp: 220, atk: 58, def: 5, weakness: [7], agi: 18, rewardExp: 240, rewardMoney: 800 },
+            { id: 'DEVIL15_6F', name: '可能性のひとつだった幻の未来', image: 'assets/images/demon/demon13.png', hp: 320, atk: 48, def: 12, weakness: [2, 4], agi: 10, rewardExp: 260, rewardMoney: 850 }
         ];
         const chosenEnemy = demonTypes[Math.floor(Math.random() * demonTypes.length)];
         if (onEncounter) onEncounter({ ...chosenEnemy });
@@ -142,7 +142,8 @@ function handleRoom602(gameState, context, onComplete) {
         () => {
             const entity = {
                 type: "demon", name: "甘言を弄する美女", faceImage: "assets/images/human2.png",
-                realImage: "assets/images/demon/demon14.png", weakness: 4 
+                realImage: "assets/images/demon/demon14.png", weakness: 4,
+                rewardExp: 220, rewardMoney: 750
             };
             openInquisitionUI(entity, gameState, (res) => {
                 if (res === "combat_win" || res === "kill_human") {
@@ -156,7 +157,11 @@ function handleRoom602(gameState, context, onComplete) {
                     });
                 } else if (res === "demon_ambush") {
                     gameState.player.hp = Math.max(1, gameState.player.hp - 15);
-                    const demonEnemy = { name: "擬態した蜘蛛悪魔", image: "assets/images/demon/demon14.png", hp: 200, atk: 45, def: 5, weakness: [4] };
+                    const demonEnemy = { 
+                        name: "擬態した蜘蛛悪魔", image: "assets/images/demon/demon14.png", 
+                        hp: 200, atk: 45, def: 5, weakness: [4],
+                        rewardExp: 220, rewardMoney: 750 
+                    };
                     openCombatUI(demonEnemy, gameState, (cRes) => {
                         if (cRes === "win") {
                             gameState.flags.cleared602 = true;
@@ -179,7 +184,11 @@ function handleSpiderMiniBoss(gameState, context, onComplete) {
     }
 
     showMessageDialog("【廃棄物保管室】\n扉を開けた瞬間、天井から粘着性の糸が降り注ぐ！\n先行していた黒猫を襲った元凶、「蜘蛛の怪異」が這いずり出てきた！", () => {
-        const miniBoss = { name: "蜘蛛の怪異", image: "assets/images/demon/demon14.png", hp: 450, atk: 52, def: 10, weakness: [6], agi: 13 };
+        const miniBoss = { 
+            name: "蜘蛛の怪異", image: "assets/images/demon/demon14.png", 
+            hp: 450, atk: 52, def: 10, weakness: [6], agi: 13,
+            rewardExp: 400, rewardMoney: 1500
+        };
         openCombatUI(miniBoss, gameState, (res) => {
             if (res === "win" || res === "combat_win") {
                 gameState.flags.hasSilverShears = true;
@@ -205,6 +214,9 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
 
     // ★ リトライ時のイベント短縮（すでに繭を切っている場合）
     if (gameState.flags.isCocoonCut) {
+        // ★ 黒猫は既に救出済みなので、ボス戦でも黒猫が戦ってくれるようにフラグを確実に維持
+        gameState.flags.hasCat = true;
+        gameState.flags.isCatTrapped = false;
         showMessageDialog("【最奥の部屋】\n自由を取り戻した黒猫が、部屋の奥で牙を剥いている。\n暗闇から再び、主人公と同じ姿をした影（ドッペルゲンガー）が嘲笑を浮かべて歩み出てきた！\n\n主人公「……もうお前の言葉には惑わされない。決着をつけるぞ！」", () => {
             startDoppelgangerPuzzle(gameState, context, onComplete);
         });
@@ -223,6 +235,9 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
                                     
                                     // ★ ここで「繭を斬った」フラグを保存（負けてもここから再開できる）
                                     gameState.flags.isCocoonCut = true;
+                                    // ★ 繭を切った時点で黒猫救出！ ボス戦中も黒猫が助太刀してくれる
+                                    gameState.flags.hasCat = true;
+                                    gameState.flags.isCatTrapped = false;
                                     
                                     startDoppelgangerPuzzle(gameState, context, onComplete);
                                 });
@@ -258,9 +273,37 @@ function startDoppelgangerPuzzle(gameState, context, onComplete) {
 
         let isPerfect = (getCardNum("slot-top") === 7 && getCardNum("slot-bottom") === 2 && getCardNum("slot-left") === 4 && sum === 25 && isUnique);
 
+        // ★ 他フロア共通のHP削減ルール（適正Lv.25以上なら80%削減、未満なら50%削減）
+        const floor = 6;
+        const targetLevel = (floor - 1) * 5; // Lv.25
+        const playerLevel = gameState.player.level || 1;
+        const baseHp = 1000;
+
+        let hpRatio = 1.0;
+        let resultMsg = "";
+
+        if (isPerfect) {
+            if (playerLevel >= targetLevel) {
+                hpRatio = 0.2; // 8割削減（開始HP: 200）
+                resultMsg = `【完全正解！】適正レベル(Lv.${targetLevel})到達！\n魔方陣が激しく共鳴！ 過去の迷いと停滞を打ち砕き、影の体力を 8割削減 した！`;
+            } else {
+                hpRatio = 0.5; // 半減（開始HP: 500）
+                resultMsg = `【完全正解！】魔方陣の解読に成功！\n聖なる光が吹き荒れ、影の体力を 半減 させた！`;
+            }
+        } else {
+            hpRatio = 1.0;
+            resultMsg = `【術式解呪失敗……（合計: ${sum}）】\n迷いを断ち切れず、完全体となったドッペルゲンガーが襲いかかってくる！`;
+        }
+
+        const startHp = Math.max(1, Math.floor(baseHp * hpRatio));
+
         const doppelEnemy = {
             name: "ドッペルゲンガー", image: "assets/images/demon/6f-doppelganger.png", 
-            hp: isPerfect ? 400 : 1000, maxHp: 1000, atk: isPerfect ? 50 : 70, def: isPerfect ? 10 : 20, weakness: [4, 7], agi: 15
+            hp: startHp, maxHp: baseHp, 
+            atk: isPerfect ? 50 : 70, 
+            def: isPerfect ? 10 : 20, 
+            weakness: [4, 7], agi: 15,
+            rewardExp: 800, rewardMoney: 3500, isBoss: true
         };
 
         const startBossBattle = () => {
@@ -270,6 +313,7 @@ function startDoppelgangerPuzzle(gameState, context, onComplete) {
                     // ★ 猫の合流を確定
                     gameState.flags.hasCat = true;
                     gameState.flags.isCatTrapped = false;
+                    if (gameState.saveGame) gameState.saveGame();
                     
                     showMessageDialog("【ドッペルゲンガー討滅】\n砕け散った自らの影は、黒い霧となって消え去った。\n胸の中にあった鉛のような倦怠感は消え、確かな熱が宿っている。", () => {
                         showMessageDialog("足元に寄ってきた黒猫が、主人公を見上げて一声短く鳴いた。\n\n主人公「さて、相棒……8Fの『御堂』を倒しに行くか」\n\n（※黒猫が真の相棒として合流！ 7階への非常階段が開通した！）", onComplete);
@@ -279,11 +323,11 @@ function startDoppelgangerPuzzle(gameState, context, onComplete) {
         };
 
         if (isPerfect) {
-            showMessageDialog("【完全解呪成功！】\n魔方陣が激しく共鳴！ 過去の迷いと停滞が打ち砕かれ、影の体力を大幅削減した！", () => {
+            showMessageDialog(resultMsg, () => {
                 playVideo("assets/videos/magic-circle.mp4", startBossBattle);
             });
         } else {
-            showMessageDialog(`【術式解呪失敗……（合計: ${sum}）】\n迷いを断ち切れず、完全体となったドッペルゲンガーが襲いかかってくる！`, startBossBattle);
+            showMessageDialog(resultMsg, startBossBattle);
         }
     });
 }
