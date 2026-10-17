@@ -1,4 +1,4 @@
-// maps/map3F.js - エレベーター(3)統一・真田部屋(8)修正・構文エラー修正版
+// maps/map3F.js - エレベーター(3)統一・真田部屋(8)・ゴミ山(7)・冷蔵庫(9) 追加版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -10,14 +10,15 @@ export const playerStart3F = { x: 5, y: 8, dir: 0 };
 
 // 1: 壁 / 0: 通路 
 // 4: 4Fへの上り階段 / 8: 真田の部屋 / 2: 住人の部屋 / 3: エレベーター
+// 7: ゴミの山(探索ポイント) / 9: 巨大冷蔵庫の部屋
 export const map3F = [
     [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], 
     [1, 8, 1, 0, 0, 0, 0, 0, 1, 2, 1], 
     [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1], 
-    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
+    [1, 0, 2, 0, 1, 0, 1, 0, 0, 9, 1], // ★ 9: 巨大冷蔵庫の部屋(x:9, y:3)
+    [1, 0, 1, 7, 1, 0, 1, 7, 1, 0, 1], // ★ 7: ゴミの山(x:3, y:4) と (x:7, y:4)
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1],
+    [1, 7, 1, 0, 1, 1, 1, 0, 1, 7, 1], // ★ 7: ゴミの山(x:1, y:6) と (x:9, y:6)
     [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
     [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
     [1, 0, 1, 1, 1, 3, 1, 1, 1, 0, 1], 
@@ -35,7 +36,7 @@ export function check3FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent3F(targetCell, gameState, context) {
-    // 3: エレベーター（行き先選択メニュー：上が5F、下が1Fに配置）
+    // 3: エレベーター
     if (targetCell === 3) {
         return { 
             run: (onComplete) => {
@@ -44,7 +45,6 @@ export function handleEvent3F(targetCell, gameState, context) {
                 
                 let html = `<h2 style="color: #66ccff; margin-bottom: 20px;">【エレベーター】</h2>`;
                 
-                // ★ 上が上の階、下が1階（下の階）になるよう並び順を修正
                 const is5FUnlocked = gameState.flags && gameState.flags.cleared4F;
                 html += `<button class="ev-btn" data-floor="5" style="width: 240px; padding: 15px; margin: 5px; background: ${is5FUnlocked ? '#222' : '#111'}; color: ${is5FUnlocked ? '#fff' : '#666'}; border: 1px solid ${is5FUnlocked ? '#666' : '#333'}; font-size: 1.1em; cursor: pointer;">5F (精神科病棟) ${is5FUnlocked ? '' : '🔒'}</button>`;
                 html += `<button class="ev-btn" data-floor="3" style="width: 240px; padding: 15px; margin: 5px; background: #004400; color: #00ff66; border: 1px solid #00ff66; font-size: 1.1em; cursor: pointer;">3F (現在地)</button>`;
@@ -59,7 +59,6 @@ export function handleEvent3F(targetCell, gameState, context) {
                     btn.onclick = () => {
                         const f = parseInt(btn.getAttribute("data-floor"), 10);
                         
-                        // ★ 5Fへのフライング防止制限
                         if (f === 5 && (!gameState.flags || !gameState.flags.cleared4F)) {
                             alert("【ロック中】4階の異変を解決するまで、5階へ昇ることはできない！");
                             return;
@@ -107,6 +106,20 @@ export function handleEvent3F(targetCell, gameState, context) {
         };
     }
 
+    // ★ 7: ゴミの山（探索ギミック）
+    if (targetCell === 7) {
+        return {
+            run: (onComplete) => startGarbagePileEvent(gameState, context, onComplete)
+        };
+    }
+
+    // ★ 9: 巨大冷蔵庫の部屋（管理人救出イベント）
+    if (targetCell === 9) {
+        return {
+            run: (onComplete) => startRefrigeratorEvent(gameState, context, onComplete)
+        };
+    }
+
     // 8: ボス部屋（真田：ストッパー確認付き）
     if (targetCell === 8) {
         if (gameState.flags && gameState.flags.cleared3F) {
@@ -121,7 +134,6 @@ export function handleEvent3F(targetCell, gameState, context) {
             };
         }
         
-        // ★ ストッパー：突入前の確認ウィンドウ
         return {
             run: (onComplete) => {
                 const confirmModal = document.createElement("div");
@@ -154,6 +166,96 @@ export function handleEvent3F(targetCell, gameState, context) {
     return null;
 }
 
+// ----------------------------------------------------
+// ★ 新規追加：ゴミの山の探索ギミック
+// ----------------------------------------------------
+function startGarbagePileEvent(gameState, context, onComplete) {
+    const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+    const vec = dirVectors[gameState.player.dir];
+    const frontX = gameState.player.x + vec.x;
+    const frontY = gameState.player.y + vec.y;
+    const key = `3F_garbage_${frontX}_${frontY}`;
+
+    if (!gameState.clearedRooms) gameState.clearedRooms = {};
+    if (gameState.clearedRooms[key]) {
+        showMessageDialog("【ゴミの山】\n酷い悪臭を放っている。もうめぼしい物は残っていない……。", onComplete);
+        return;
+    }
+
+    showMessageDialog("【ゴミの山】\n悪臭を放つ粗大ゴミが山積みになっている。\n奥に何か光るものが見える……手を伸ばして探してみるか？", () => {
+        const roll = Math.random();
+
+        if (roll < 0.45) {
+            // 【アタリ】アイテム発見
+            gameState.clearedRooms[key] = true;
+            const rewardMoney = Math.floor(Math.random() * 100) + 50;
+            gameState.player.money += rewardMoney;
+
+            let itemName = "エナジードリンク";
+            if (!gameState.inventory) gameState.inventory = { items: [] };
+            gameState.inventory.items.push({
+                id: 'energy_drink', name: 'エナジードリンク', type: 'consumable', healAmount: 15, description: 'HPを 15 回復する。戦闘中も使用可能。'
+            });
+
+            showMessageDialog(`【探索成功！】\nゴミの隙間から『${itemName}』と 💰${rewardMoney} を見つけた！\n（主人公の手にドロリとした謎の液体が付着したが、無事だ……）`, onComplete);
+        } else if (roll < 0.70) {
+            // 【ハズレ】毒ガスでダメージ
+            gameState.clearedRooms[key] = true;
+            const damage = Math.floor(gameState.player.maxHp * 0.15) + 5;
+            gameState.player.hp = Math.max(1, gameState.player.hp - damage); // 死にはしない
+            
+            showMessageDialog(`【探索失敗！】\n手を伸ばした瞬間、腐敗したゴミの袋が破裂し、強烈な毒ガスが噴き出した！\n主人公は ${damage} のダメージを受けた！（現在HP: ${gameState.player.hp}）`, () => {
+                if (context && context.redraw) context.redraw();
+                onComplete();
+            });
+        } else {
+            // 【大ハズレ】悪魔の奇襲（先制攻撃扱い）
+            gameState.clearedRooms[key] = true;
+            showMessageDialog(`【奇襲！！】\nガシッ……！！\nゴミの奥から無数の「黒い手」が飛び出し、主人公の腕を掴んだ！\nゴミに擬態していた悪魔が襲いかかってきた！！`, () => {
+                gameState.player.hp = Math.max(1, gameState.player.hp - 12);
+                const demonEnemy = { ...ENEMIES['DEVIL5_3F'] }; // 徘徊する腐肉
+                demonEnemy.name = "ゴミに潜む悪魔";
+                
+                openCombatUI(demonEnemy, gameState, (res) => {
+                    onComplete();
+                }, context);
+            });
+        }
+    });
+}
+
+// ----------------------------------------------------
+// ★ 新規追加：巨大冷蔵庫の部屋（管理人救出）
+// ----------------------------------------------------
+function startRefrigeratorEvent(gameState, context, onComplete) {
+    if (!gameState.flags) gameState.flags = {};
+    if (gameState.flags.rescuedManager) {
+        showMessageDialog("【巨大冷蔵庫の部屋】\n分厚い扉の開いた業務用冷蔵庫がある。強烈な腐敗臭が漂っている……。", onComplete);
+        return;
+    }
+
+    showMessageDialog("【巨大冷蔵庫の部屋】\n部屋の中央に、鎖でぐるぐる巻きにされた業務用冷蔵庫が置かれている。\n中から「ドン……ドン……」と、かすかに叩くような音が聞こえる……！", () => {
+        showConversationDialog("assets/images/human6.png", "【管理人（清掃員）】\n「ぶはあっ……！！ うう……助かった……！\n3Fの悪臭について苦情を言いに来たら、急にあのゴミまみれの男（真田）に殴り倒されて……気付いたらこんな冷蔵庫に放り込まれていて……。」", () => {
+            showConversationDialog("assets/images/human6.png", "【管理人（清掃員）】\n「……そういえば、気を失う直前、非常階段を駆け上がっていく男の人を見ました。\nたしか、2階に住んでいる中学生の息子さんがいるお父さんです。\n必死な形相で上へ向かっていましたが……あの人も無事だといいんですが……」", () => {
+                showMessageDialog("【主人公の心情】\n（あの教え子の父親か……！ 生きて上へ向かったんだな。急いで後を追わなくては！）", () => {
+                    gameState.flags.rescuedManager = true;
+
+                    if (!gameState.inventory) gameState.inventory = { items: [] };
+                    gameState.inventory.items.push({
+                        id: 'mystery_supplement', name: '謎のサプリメント', type: 'consumable', healAmount: 100, description: 'HPを 100 回復する。怪しいが効果は絶大。'
+                    });
+
+                    showItemAcquiredModal("assets/images/present.png", "謎のサプリメント", "【管理人からのお礼】\n「これ、拾い物ですが……よかったら使ってください。私は1階のコンビニに逃げ込みます！」\n\nHPを100回復する『謎のサプリメント』を手に入れた！", () => {
+                        onComplete();
+                    });
+                });
+            });
+        });
+    });
+}
+
+// ----------------------------------------------------
+
 function start3FRoomInquisition(gameState, context, onComplete) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
     const vec = dirVectors[gameState.player.dir];
@@ -168,7 +270,6 @@ function start3FRoomInquisition(gameState, context, onComplete) {
         return;
     }
 
-    // ★ 部屋ごとに手に入るメモを差別化（2部屋とも探索する意味を持たせる）
     const grantSanadaItemAndHint = (messageTitle, callback) => {
         if (!gameState.flags) gameState.flags = {};
         if (!gameState.bossHints) gameState.bossHints = [];
@@ -191,7 +292,7 @@ function start3FRoomInquisition(gameState, context, onComplete) {
     if (isRealHuman) {
         const entity = {
             type: "human",
-            name: "怯えるマンション住民", // ネタバレ防止に統一
+            name: "怯えるマンション住民",
             faceImage: "assets/images/human1.png"
         };
         openInquisitionUI(entity, gameState, (res) => {
@@ -205,8 +306,8 @@ function start3FRoomInquisition(gameState, context, onComplete) {
     } else {
         const entity = {
             type: "demon",
-            name: "怯えるマンション住民", // ネタバレ防止に統一
-            trueName: "ゴミに潜む悪魔",   // 戦闘時に使用
+            name: "怯えるマンション住民",
+            trueName: "ゴミに潜む悪魔", 
             faceImage: "assets/images/human1.png",
             realImage: "assets/images/demon/demon4.png",
             weakness: 8,
@@ -278,7 +379,6 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                     } else if (evalResult.result === 'PARTIAL') {
                         const reductionRate = Math.min(evalResult.correctCount * 0.1, 0.3);
                         hpRatio = 1.0 - reductionRate;
-                        // ★ 構文エラー修復済み箇所
                         resultMsg = `【部分正解】${evalResult.correctCount}箇所の弱点が合致！\n真田の体力を ${Math.round(reductionRate * 100)}% 削減した！`;
                     } else {
                         hpRatio = 1.0;

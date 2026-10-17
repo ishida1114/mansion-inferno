@@ -1,4 +1,4 @@
-// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示 完全版
+// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示＆4F/7F専用テクスチャ対応 完全版
 
 import { gameState } from './gameState.js';
 
@@ -26,6 +26,22 @@ const baseImages = {
     carpet: "assets/images/carpet.png"
 };
 
+// ★ 4F用テクスチャ画像（拡張子の揺れに対応）
+const candidates4F = {
+    wall4fWall: [
+        "assets/images/4fwall.png", "assets/images/4fwall.jpg"
+    ],
+    wall4fDoor: [
+        "assets/images/4fdoor.png", "assets/images/4fdoor.jpg"
+    ],
+    wall4fLeft: [
+        "assets/images/4fleft.jpg", "assets/images/4fleft.png"
+    ],
+    wall4fRight: [
+        "assets/images/4fright.png", "assets/images/4fright.jpg"
+    ]
+};
+
 // 7F用画像（名前の揺れを全自動で探索）
 const candidates7F = {
     wall7fLeft: [
@@ -49,7 +65,7 @@ function isImageReady(img) {
 }
 
 export function initRenderer(onReady) {
-    let toLoad = Object.keys(baseImages).length + Object.keys(candidates7F).length;
+    let toLoad = Object.keys(baseImages).length + Object.keys(candidates7F).length + Object.keys(candidates4F).length;
     let loaded = 0;
 
     const checkDone = () => {
@@ -63,6 +79,23 @@ export function initRenderer(onReady) {
         images[key].onload = checkDone;
         images[key].onerror = checkDone;
         images[key].src = baseImages[key];
+    }
+
+    // 4F用画像の自動探索ロード
+    for (let key in candidates4F) {
+        const list = candidates4F[key];
+        images[key] = new Image();
+        let idx = 0;
+        const tryNext = () => {
+            if (idx < list.length) {
+                images[key].src = list[idx++];
+            } else {
+                checkDone();
+            }
+        };
+        images[key].onload = checkDone;
+        images[key].onerror = tryNext;
+        tryNext();
     }
 
     // 7F用画像の自動探索ロード
@@ -140,6 +173,8 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 let targetImg = images.wall;
                 if (currentFloor === 7 && isImageReady(images.wall7fLeft)) {
                     targetImg = images.wall7fLeft;
+                } else if (currentFloor === 4 && isImageReady(images.wall4fLeft)) {
+                    targetImg = images.wall4fLeft; // ★ 4F左壁テクスチャ
                 } else if (isImageReady(images[imgKey])) {
                     targetImg = images[imgKey];
                 }
@@ -162,6 +197,8 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                 let targetImg = images.wall;
                 if (currentFloor === 7 && isImageReady(images.wall7fRight)) {
                     targetImg = images.wall7fRight;
+                } else if (currentFloor === 4 && isImageReady(images.wall4fRight)) {
+                    targetImg = images.wall4fRight; // ★ 4F右壁テクスチャ
                 } else if (isImageReady(images[imgKey])) {
                     targetImg = images[imgKey];
                 }
@@ -194,6 +231,15 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     targetImg = images.door;
                 }
 
+                // ★ 4階専用の壁・扉テクスチャ切り替え
+                if (currentFloor === 4) {
+                    if ([2, 8, 9].includes(cellType) && isImageReady(images.wall4fDoor)) {
+                        targetImg = images.wall4fDoor;
+                    } else if (cellType === 1 && isImageReady(images.wall4fWall)) {
+                        targetImg = images.wall4fWall;
+                    }
+                }
+
                 // 7階専用の壁・扉
                 if (currentFloor === 7) {
                     if ([2, 8, 9].includes(cellType) && isImageReady(images.wall7fDoor)) {
@@ -217,10 +263,8 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                         ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
                     }
 
-                    if (currentFloor === 4) {
-                        ctx.fillStyle = "rgba(255, 20, 147, 0.15)";
-                        ctx.fillRect(b.x, b.y, b.w, b.h);
-                    }
+                    // ※以前の不自然なピンク色被せ（fillRect）は完全に撤去済み
+
                     const shadowAlpha = (depth - 1) * 0.22;
                     if (shadowAlpha > 0) {
                         ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`; 
@@ -230,7 +274,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
         }
 
-        // ★ 最初から常時表示されるミニマップ
+        // ミニマップ常時表示
         drawMiniMap(ctx, player, currentMap, currentFloor);
         drawCompass(ctx, canvas, player, currentFloor);
         drawActionHint(ctx, canvas, player, currentMap);
@@ -294,6 +338,8 @@ function drawEnvironment(ctx, canvas, currentFloor) {
 
     if (currentFloor === 7) {
         ctx.fillStyle = "#0c0a08"; 
+    } else if (currentFloor === 4) {
+        ctx.fillStyle = "#160a12"; // 4F用の落ち着いたダークピンク天井
     } else {
         ctx.fillStyle = "#0a0a0c"; 
     }
@@ -353,6 +399,16 @@ function drawEnvironment(ctx, canvas, currentFloor) {
 
             ctx.restore();
         }
+    } else if (currentFloor === 4) {
+        ctx.fillStyle = "#220e1a"; // 4F用のダークピンクフロア
+        ctx.fillRect(0, cy, canvas.width, cy);
+
+        ctx.strokeStyle = "rgba(255, 182, 193, 0.08)"; 
+        ctx.lineWidth = 1;
+        [0, 100, 150, 225, 262].forEach(x => {
+            ctx.beginPath(); ctx.moveTo(cx - x, cy); ctx.lineTo(0 - x * 2, canvas.height); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx + x, cy); ctx.lineTo(canvas.width + x * 2, canvas.height); ctx.stroke();
+        });
     } else {
         ctx.fillStyle = "#140f0c"; 
         ctx.fillRect(0, cy, canvas.width, cy);
@@ -388,7 +444,6 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }
 
-// ★ 最初から常時ミニマップを表示
 function drawMiniMap(ctx, player, currentMap, currentFloor) {
     const size = 10, margin = 10;
     const mapW = currentMap[0].length * size, mapH = currentMap.length * size;

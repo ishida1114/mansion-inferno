@@ -1,4 +1,4 @@
-// maps/map4F.js - ピンク霧エフェクト追加・証言矛盾修正・名前偽装統一版
+// maps/map4F.js - 全機能・セリフ完全維持・ピンクもや撤去・構文エラー修正版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -23,57 +23,36 @@ export const map4F = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  
 ];
 
-// ★ 4F専用 ピンクの霧エフェクト制御
-function togglePinkMist(enable) {
-    let mist = document.getElementById('pink-mist-overlay');
-    if (enable) {
-        if (!mist) {
-            mist = document.createElement('div');
-            mist.id = 'pink-mist-overlay';
-            mist.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(255,100,150,0.15) 0%, rgba(150,0,50,0.4) 100%); pointer-events: none; z-index: 1000; mix-blend-mode: screen; transition: opacity 2s ease;";
-            document.body.appendChild(mist);
-        }
-        mist.style.opacity = '1';
-    } else {
-        if (mist) {
-            mist.style.opacity = '0';
-            setTimeout(() => mist.remove(), 2000);
-        }
-    }
+// 残留しているピンクのもやを画面から消去
+function clearPinkMist() {
+    const mist = document.getElementById('pink-mist-overlay');
+    if (mist) mist.remove();
 }
 
 export function check4FRandomEncounter(gameState, onEncounter) {
-    if (gameState.currentFloor !== 4) {
-        togglePinkMist(false);
-        return;
-    }
-
-    // 4Fにいる間は、ボス未討伐ならピンクの霧をオン
-    if (!gameState.flags || !gameState.flags.cleared4F) {
-        togglePinkMist(true);
-    } else {
-        togglePinkMist(false);
-    }
+    clearPinkMist();
+    if (gameState.currentFloor !== 4) return;
 
     if (Math.random() < 0.15) {
         const demonKeys = ['DEVIL7_4F', 'DEVIL8_4F', 'DEVIL9_4F'];
         const chosenKey = demonKeys[Math.floor(Math.random() * demonKeys.length)];
         const demonData = ENEMIES[chosenKey] || ENEMIES['DEVIL7_4F'];
         
-        // ★ ザコ敵の報酬を3Fより明確に高く設定
         const scaledEnemy = { ...demonData, rewardExp: 80, rewardMoney: 250 };
         onEncounter(scaledEnemy);
     }
 }
 
 export function handleEvent4F(targetCell, gameState, context) {
+    clearPinkMist();
+
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
                 showMessageDialog("【非常階段】\n3階へ降りますか？", () => {
                     gameState.lastTransitMethod = 'stair_down';
                     playFloorTransition(3, () => {
-                        togglePinkMist(false); // 階層移動時に霧を消す
+                        clearPinkMist();
                         context.changeFloor(3);
                         onComplete();
                     });
@@ -92,7 +71,7 @@ export function handleEvent4F(targetCell, gameState, context) {
                 run: (onComplete) => {
                     gameState.lastTransitMethod = 'stair';
                     playFloorTransition(5, () => {
-                        togglePinkMist(false);
+                        clearPinkMist();
                         context.changeFloor(5);
                         onComplete();
                     });
@@ -173,7 +152,6 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
         hintDialogue = "「リナの魔方陣は、上（瞳）に『真実の鏡(2)』、右（腕）に『聖書(5)』を配置して誘惑を打ち破るんだ！」";
         hintLogText = "【4F住人の証言①】リナの魔方陣は、上（瞳）に『真実の鏡(2)』、右（腕）に『聖書(5)』を配置して誘惑を打ち破るんだ！";
     } else {
-        // ★ パズル正解（下:3、左:1）に合わせて証言内容を完全に修正！
         hintDialogue = "「あいつの残る急所は……下（足）に『浄化塩(3)』を撒き、左（腕）に『聖水(1)』をかけて甘い香気を打ち消せ！」";
         hintLogText = "【4F住人の証言②】リナの魔方陣は、下（足）に『浄化塩(3)』、左（腕）に『聖水(1)』を配置するんだ！";
     }
@@ -191,7 +169,7 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
     if (isRealHuman) {
         const entity = {
             type: "human",
-            name: "怯えるマンション住民", // ★ ネタバレ防止
+            name: "怯えるマンション住民",
             faceImage: "assets/images/human1.png",
             dialogue: hintDialogue,
             message: hintDialogue
@@ -207,8 +185,8 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
     } else {
         const entity = {
             type: "demon",
-            name: "怯えるマンション住民", // ★ ネタバレ防止
-            trueName: "桃色の悪魔",       // ★ 戦闘時に使用
+            name: "怯えるマンション住民",
+            trueName: "桃色の悪魔",
             faceImage: "assets/images/human1.png",
             realImage: "assets/images/demon/demon7.png",
             dialogue: hintDialogue,
@@ -336,7 +314,7 @@ function startRinaBossSequence(gameState, context, onComplete) {
 
                     const applyDamageAndCombat = () => {
                         const floor = 4;
-                        const targetLevel = (floor - 1) * 5; // Lv.15
+                        const targetLevel = (floor - 1) * 5;
                         const playerLevel = gameState.player.level || 1;
 
                         let hpRatio = 1.0;
@@ -353,7 +331,6 @@ function startRinaBossSequence(gameState, context, onComplete) {
                         } else if (evalResult.result === 'PARTIAL') {
                             const reductionRate = Math.min(evalResult.correctCount * 0.1, 0.3);
                             hpRatio = 1.0 - reductionRate;
-                            // ★ 構文エラー修復済み
                             resultMsg = `【部分正解】${evalResult.correctCount}箇所の弱点が合致！\nリナの体力を ${Math.round(reductionRate * 100)}% 削減した！`;
                         } else {
                             hpRatio = 1.0;
@@ -386,7 +363,7 @@ function startRinaBossSequence(gameState, context, onComplete) {
                                     gameState.player.y = 1;
                                     gameState.player.dir = 2;
 
-                                    togglePinkMist(false); // ★ ボス撃破で霧を消す
+                                    clearPinkMist();
 
                                     showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「バカじゃないの、この悪魔！ 中学生の父親？ あの男はなびかないから5Fの蛭沼に渡したわ、蛭沼、改造できるおもちゃを欲しがってたから。ねぇ助けてよ……お願いだから捨てないでぇぇっ…」", () => {
                                         showMessageDialog(`【4Fフロアボス討滅！】\nリナの怨霊を浄化し、甘い桃色の霧と蔦が消え去った！\n\n主人公「5Fの蛭沼か……あの男、生きていてくれ……！」\n※5階への非常階段が解禁されました！`, onComplete);

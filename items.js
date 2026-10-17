@@ -41,6 +41,48 @@ export const CONSUMABLE_ITEMS = {
       return 'HPが50回復した！';
     }
   },
+  // ★ 追加：上位回復薬1
+  mystery_supplement: {
+    id: 'mystery_supplement',
+    name: '謎のサプリメント',
+    type: 'consumable',
+    price: 1000,
+    description: 'HPを 100 回復する。怪しいが効果は絶大。',
+    healAmount: 100,
+    battleUsable: true,
+    use: (state) => {
+      state.player.hp = Math.min(state.player.maxHp, state.player.hp + 100);
+      return 'HPが100回復した！';
+    }
+  },
+  // ★ 追加：上位回復薬2
+  crystal_potion: {
+    id: 'crystal_potion',
+    name: '青いクリスタルの瓶に入ったポーション',
+    type: 'consumable',
+    price: 2000,
+    description: 'HPを 200 回復する。完全なる霊薬。',
+    healAmount: 200,
+    battleUsable: true,
+    use: (state) => {
+      state.player.hp = Math.min(state.player.maxHp, state.player.hp + 200);
+      return 'HPが200回復した！';
+    }
+  },
+  // ★ 追加：1F帰還アイテム
+  return_talisman: {
+    id: 'return_talisman',
+    name: '悪霊の通り道',
+    type: 'consumable',
+    price: 300,
+    description: '使用すると、瞬時に 1F エレベーター前へ帰還する。（※戦闘中は使用不可）',
+    isReturnItem: true, // main.jsでフロア移動フラグとして判定
+    battleUsable: false,
+    use: (state) => {
+      // 実際のフロア移動処理は main.js のアイテム使用処理内で拾う
+      return '悪霊の通り道を使用した！ 1Fへ転移します……';
+    }
+  },
 
   // ビニール傘シリーズ（使い捨て戦闘用）
   blue_umbrella: {
@@ -142,7 +184,7 @@ export const ARMOR_ITEMS = {
     name: 'エクソシストの漆黒コート',
     type: 'armor',
     price: 22000,
-    def: 12, // ★仕様通り DEF +12 に設定
+    def: 12,
     unlockStage: 3,
     description: '初代神父の遺品。悪魔の攻撃を大幅に軽減する。(DEF +12)'
   }
