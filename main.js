@@ -1,4 +1,4 @@
-// main.js - スマホ用デバッグボタン(左上配置)・3F初回セリフ・6F降下座標(y:1)・8F最上階連動・7F-BGM切り替え対応 完全版
+// main.js - ゲーム本体コアコントローラー（デバッグ完全分離・7F-BGM対応・本編軽量版）
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -34,10 +34,10 @@ function isActionBlocked() {
   return false;
 }
 
-// ★ アイテム側（items.js や appUI.js）から呼び出せる 1F帰還用のグローバル関数を登録
+// 1F帰還用グローバル関数
 window.executeReturnTo1F = () => {
-  document.getElementById('app-ui-container')?.classList.add('hidden'); // スマホ画面が開いていたら閉じる
-  gameState.lastTransitMethod = 'elevator'; // 1Fのエレベーター前に着地させるため
+  document.getElementById('app-ui-container')?.classList.add('hidden');
+  gameState.lastTransitMethod = 'elevator';
   changeFloor(1);
   setTimeout(() => {
     showMessageDialog("【帰還の札】\n不思議な光に包まれ、瞬時に 1階 のエレベーター前へ帰還した！", () => redraw());
@@ -47,31 +47,6 @@ window.executeReturnTo1F = () => {
 function init() {
   appUI = new AppUI();
   renderer = new Renderer();
-
-  // ★ スマホ用デバッグ起動ボタン（音声ボタンと被らないよう「画面左上」に生成）
-  if (!document.getElementById('btn-mobile-debug')) {
-    const debugBtn = document.createElement('button');
-    debugBtn.id = 'btn-mobile-debug';
-    debugBtn.innerText = '🛠️';
-    debugBtn.title = 'デバッグメニュー';
-    debugBtn.style.cssText = `
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 2500;
-      background: rgba(15, 15, 20, 0.75);
-      border: 1px solid #774444;
-      color: #ffdd66;
-      font-size: 18px;
-      padding: 6px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-    `;
-    document.body.appendChild(debugBtn);
-  }
 
   document.addEventListener('click', (e) => {
     const target = e.target;
@@ -96,17 +71,6 @@ function init() {
       return;
     }
 
-    if (target.classList.contains('debug-warp-btn')) {
-      const floor = parseInt(target.getAttribute('data-floor'));
-      if (!isNaN(floor)) debugJumpToFloor(floor);
-      return;
-    }
-
-    if (target.id === 'btn-mobile-debug' || target.closest('#btn-mobile-debug') || target.id === 'btn-close-debug') {
-      toggleDebugUI();
-      return;
-    }
-
     if (isProcessingEvent || isActionBlocked()) return;
 
     const id = target.id;
@@ -119,12 +83,6 @@ function init() {
   });
 
   window.onkeydown = (e) => {
-    if (e.key === 'F2') {
-      e.preventDefault();
-      toggleDebugUI();
-      return;
-    }
-
     if (isProcessingEvent || isActionBlocked()) return;
 
     switch (e.key) {
@@ -269,7 +227,6 @@ function changeFloor(floor) {
   }
   else if (floor === 5) {
     gameState.currentMap = map5F;
-    // ★ 修正：6Fから降りてきた時は南側階段前(7,7)、4Fから上がってきた時は北側階段前(7,1)に着地
     if (gameState.lastTransitMethod === 'stair_down') {
       gameState.player.x = 7; gameState.player.y = 7; gameState.player.dir = 0;
       showMessageDialog("【5階 非常階段前】\n6階から5階へ降りてきた……。", () => redraw());
@@ -357,75 +314,6 @@ function toggleAppUI() {
   }
 }
 
-function toggleDebugUI() {
-  const overlay = document.getElementById('debug-overlay');
-  const info = document.getElementById('debug-info');
-  if (overlay && info) {
-    if (overlay.classList.contains('hidden')) {
-      const p = gameState.player;
-      info.innerHTML = `
-        <div style="font-weight:bold; color:#ffdd66; margin-bottom:5px;">【デバッグ・テストモード】</div>
-        階層: ${gameState.currentFloor}F | 座標: (X:${p.x}, Y:${p.y}) | 向き: ${p.dir}<br>
-        Lv: ${p.level} | HP: ${p.hp}/${p.maxHp} | 💰${p.money} | Sin: ${p.sin}
-        <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
-            <button class="debug-warp-btn" data-floor="1" style="background:#333; color:#fff; border:1px solid #777; padding:4px 8px; cursor:pointer; font-size:11px;">1F</button>
-            <button class="debug-warp-btn" data-floor="2" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">2F</button>
-            <button class="debug-warp-btn" data-floor="3" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">3F</button>
-            <button class="debug-warp-btn" data-floor="4" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">4F</button>
-            <button class="debug-warp-btn" data-floor="5" style="background:#550000; color:#ffdd66; border:1px solid #ff3333; padding:4px 8px; cursor:pointer; font-size:11px;">5F</button>
-            <button class="debug-warp-btn" data-floor="6" style="background:#004400; color:#00ff66; border:1px solid #00ff66; padding:4px 8px; cursor:pointer; font-size:11px;">6F</button>
-            <button class="debug-warp-btn" data-floor="7" style="background:#c5a059; color:#000; border:1px solid #ffdd66; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:bold;">7F</button>
-            <button class="debug-warp-btn" data-floor="8" style="background:#aa0000; color:#fff; border:1px solid #ff0000; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:bold; box-shadow:0 0 5px red;">8F</button>
-        </div>
-      `;
-      overlay.classList.remove('hidden');
-    } else { overlay.classList.add('hidden'); }
-  }
-}
-
-function debugJumpToFloor(floor) {
-  if (!gameState.flags) gameState.flags = {};
-  gameState.lastTransitMethod = 'stair';
-  gameState.hasExorcistInherited = true;
-  gameState.hasModelGun = true;
-  gameState.player.hasModelGun = true;
-  gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
-
-  if (floor === 1) { 
-    gameState.player.level = 1; gameState.player.maxHp = 20; gameState.player.hp = 20; gameState.player.def = 0; gameState.player.agi = 5; gameState.player.money = 0; 
-    gameState.player.maxExp = 115; changeFloor(1); 
-  } else if (floor === 2) { 
-    gameState.player.level = 5; gameState.player.maxHp = 50; gameState.player.hp = 50; gameState.player.def = 2; gameState.player.money = 1000; gameState.hasKey2F = true; 
-    gameState.player.maxExp = 587; changeFloor(2); 
-  } else if (floor === 3) { 
-    gameState.player.level = 10; gameState.player.maxHp = 80; gameState.player.hp = 80; gameState.player.def = 4; gameState.player.money = 3000; gameState.hasKey2F = true; gameState.hasElevatorKey = true; gameState.flags.cleared2F = true; 
-    gameState.player.maxExp = 1294; changeFloor(3); 
-  } else if (floor === 4) { 
-    gameState.player.level = 15; gameState.player.maxHp = 120; gameState.player.hp = 120; gameState.player.def = 6; gameState.player.money = 5000; gameState.flags.cleared3F = true; 
-    gameState.player.maxExp = 2091; changeFloor(4); 
-  } else if (floor === 5) { 
-    gameState.player.level = 20; gameState.player.maxHp = 160; gameState.player.hp = 160; gameState.player.def = 8; gameState.player.money = 8000; gameState.flags.cleared4F = true; 
-    gameState.player.maxExp = 2961; changeFloor(5); 
-  } else if (floor === 6) { 
-    gameState.player.level = 25; gameState.player.maxHp = 200; gameState.player.hp = 200; gameState.player.def = 10; gameState.player.money = 12000; gameState.flags.cleared5F = true; gameState.flags.hasCat = false; 
-    gameState.player.maxExp = 3895; 
-    gameState.lastTransitMethod = 'stair';
-    changeFloor(6); 
-    gameState.player.x = 5; gameState.player.y = 8; gameState.player.dir = 0;
-  } else if (floor === 7) { 
-    gameState.player.level = 30; gameState.player.maxHp = 250; gameState.player.hp = 250; gameState.player.def = 15; gameState.player.money = 20000; gameState.flags.cleared6F = true; gameState.flags.hasCat = true; 
-    gameState.player.maxExp = 4884; changeFloor(7); 
-  } else if (floor === 8) { 
-    gameState.player.level = 35; gameState.player.maxHp = 300; gameState.player.hp = 300; gameState.player.def = 20; gameState.player.money = 30000; gameState.flags.cleared7F = true; gameState.flags.hasCat = true; 
-    gameState.player.maxExp = 5928; changeFloor(8); 
-  }
-
-  gameState.player.exp = 0;
-  gameState.updateEquippedCards(); 
-  toggleDebugUI(); 
-  toggleDebugUI();
-}
-
 function checkEncounterAfterMove() {
   const handleBattleResult = (result) => {
     isProcessingEvent = false;
@@ -469,4 +357,6 @@ function moveBackward() {
 }
 
 if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); } else { init(); }
-initDebug(gameState, { changeFloor: typeof changeFloor === 'function' ? changeFloor : null, redraw: typeof redraw === 'function' ? redraw : null });
+
+// ★ デバッグ機能の起動（本番リリース時はこの1行をコメントアウトするだけで完全消去できます）
+initDebug(gameState, { changeFloor, redraw });
