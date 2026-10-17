@@ -1,4 +1,4 @@
-// gameState.js - appUI連動スロット枠整合・悪魔手記永続化・経験値バランス適正化 完全版
+// gameState.js - appUI連動スロット枠整合・悪魔手記永続化・経験値バランス適正化・8Fキャップ撤廃＆悪魔辞典対応 完全版
 
 export const gameState = {
   player: {
@@ -35,8 +35,9 @@ export const gameState = {
   cards: [],
 
   clearedRooms: {},
-  bossHints: [], // ★ 悪魔手記に記録される討伐ヒント配列
-  justReachedLv15: false, // ★ Lv.15到達演出をUI側で検知するための通知フラグ
+  bossHints: [], // 悪魔手記に記録される討伐ヒント配列
+  discoveredDemons: {}, // ★ 悪魔弱点辞典：猫が看破した悪魔データ { [敵名]: { name, image, weakness, floor } }
+  justReachedLv15: false,
 
   inventory: {
     items: [],
@@ -50,11 +51,11 @@ export const gameState = {
     cleared6F: false,
     cleared7F: false,
     cleared8F: false,
-    postedArmorLetter: false, // ★ 1Fポスト投函フラグ（防具解放キー）
+    postedArmorLetter: false,
     unlockedAdvancedArmor: false,
     hasCat: false,
     isCatTrapped: false,
-    seenLv15CatHint: false,   // ★ Lv.15予兆メッセージ表示済みフラグ
+    seenLv15CatHint: false,
     hasSanadaRoomKey: false,
     hasSanadaHint2: false,
     seen3FIntro: false,
@@ -71,13 +72,12 @@ export const gameState = {
 
   visitedMaps: {},
 
-  // ★ 防具解放ステージ（3Fクリアでは自動解放せず、1Fポスト投函[postedArmorLetter]で初めてStage 1に昇格）
   _armorUnlockStage: 0,
   get armorUnlockStage() {
     if (this.flags) {
       if (this.flags.cleared7F) return 3;
       if (this.flags.cleared5F) return 2;
-      if (this.flags.postedArmorLetter) return 1; // ポスト投函が必須
+      if (this.flags.postedArmorLetter) return 1;
     }
     return this._armorUnlockStage || 0;
   },
@@ -85,13 +85,17 @@ export const gameState = {
     this._armorUnlockStage = val;
   },
 
+  // ★ 8Fはラストフロアのためレベルキャップを完全撤廃 (999)
   getFloorLevelCap(floor = this.currentFloor) {
-    if (floor <= 1) return 999;
+    if (floor <= 1 || floor === 8) return 999;
     return (floor - 1) * 5;
   },
 
-  // ★ 報酬キャップ判定：適正レベル（Lv.15等）では減衰させず、それを超過（>）した時のみ減衰
+  // ★ 8Fは報酬減衰なし（100%獲得）
   calculateRewards(baseExp, baseMoney, floor = this.currentFloor) {
+    if (floor === 8) {
+      return { exp: baseExp, money: baseMoney, isCapped: false };
+    }
     const capLevel = this.getFloorLevelCap(floor);
     if (this.player.level > capLevel) {
       const cappedExp = Math.max(1, Math.floor(baseExp * 0.1));
@@ -99,6 +103,31 @@ export const gameState = {
       return { exp: cappedExp, money: cappedMoney, isCapped: true };
     }
     return { exp: baseExp, money: baseMoney, isCapped: false };
+  },
+
+  // ★ 悪魔弱点の自動記録ヘルパー
+  recordDemon(enemy) {
+    if (!enemy || !enemy.name) return false;
+    if (!this.discoveredDemons) this.discoveredDemons = {};
+    if (this.discoveredDemons[enemy.name]) return false;
+
+    const wList = Array.isArray(enemy.weakness) ? enemy.weakness : [enemy.weaknessCard || 1];
+    this.discoveredDemons[enemy.name] = {
+      name: enemy.name,
+      image: enemy.image,
+      weakness: wList,
+      floor: this.currentFloor
+    };
+    this.saveGame();
+    return true;
+  },
+
+  isDemonDiscovered(enemyName) {
+    return !!(this.discoveredDemons && this.discoveredDemons[enemyName]);
+  },
+
+  getDiscoveredDemon(enemyName) {
+    return this.discoveredDemons ? this.discoveredDemons[enemyName] : null;
   },
 
   markVisited(floor, mapData, px, py) {
@@ -123,7 +152,6 @@ export const gameState = {
     return this.visitedMaps[floor][y][x];
   },
 
-  // ★ appUI.js と整合：Lv.5で2枠、Lv.15で3枠に統一 ＆ 文字列/数値の両対応
   updateEquippedCards() {
     if (!this.player.hasModelGun && !this.hasModelGun) {
       this.equippedCards = [];
@@ -152,7 +180,6 @@ export const gameState = {
     }
   },
 
-  // ★ 経験値獲得：ザコ敵は平均7体でLvUP、ボス報酬（200EXP以上）は縮小せず満額付与
   gainExp(amount) {
     let scaledExp = amount;
     const isBossReward = amount >= 200;
@@ -187,14 +214,12 @@ export const gameState = {
     this.player.hp = this.player.maxHp;
     this.player.agi += 1 * amount;
 
-    // 必要経験値カーブ
     this.player.maxExp = Math.floor(100 + (this.player.level - 1) * 80 + Math.pow(this.player.level, 1.5) * 15);
 
     if (this.player.level % 2 === 0) {
       this.player.def += 1;
     }
 
-    // ★ Lv.15 初回到達時：使い魔の覚醒予兆フラグをセット（黒猫の実体化は5Fストーリーイベントまで保留）
     if (this.player.level >= 15 && prevLevel < 15) {
       if (!this.flags) this.flags = {};
       if (!this.flags.seenLv15CatHint) {
@@ -206,7 +231,6 @@ export const gameState = {
     this.updateEquippedCards();
   },
 
-  // ★ 使い魔の予兆演出用メッセージ取得ヘルパー
   getLv15CatHintText() {
     return "【使い魔の気配】\nLv.15に到達したことで、自身の影の中から確かな霊力の脈動を感じる……！\nしかし、まだ実体化には至らない。\n完全な実体化を果たすには、もっと濃厚な『生体エネルギー』が必要なようだ……。";
   },
@@ -302,6 +326,7 @@ export const gameState = {
     this.equippedCards = [];
     this.clearedRooms = {};
     this.bossHints = [];
+    this.discoveredDemons = {}; // リセット
     this.justReachedLv15 = false;
     this.inventory = { items: [] };
     this.visitedMaps = {};
@@ -350,6 +375,7 @@ export const gameState = {
         Object.assign(this, JSON.parse(data));
         if (!this.visitedMaps) this.visitedMaps = {};
         if (!this.bossHints) this.bossHints = [];
+        if (!this.discoveredDemons) this.discoveredDemons = {};
         if (!this.flags) this.flags = {};
         if (!this.inventory) this.inventory = { items: [] };
         if (!this.inventory.items) this.inventory.items = [];

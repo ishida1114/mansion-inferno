@@ -1,10 +1,11 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { sound } from './sound.js';
 
 const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
+const CARD_NAMES = ["", "Ⅰ 聖水", "Ⅱ 鏡", "Ⅲ 浄化塩", "Ⅳ 十字架", "Ⅴ 聖書", "Ⅵ 聖炎", "Ⅶ 鐘", "Ⅷ 聖香", "Ⅸ 銀杭"];
 
 window.lastDialogCloseTime = 0;
 
@@ -352,6 +353,18 @@ export function openShopUI(onClosed) {
             const price = parseInt(btn.getAttribute("data-price"), 10);
             const item = itemDefinitions[itemId];
 
+            // ★ 黄色いビニール傘の所持上限チェック（最大2本）
+            const isYellow = (itemId || '').includes('yellow') || (item.name || '').includes('黄');
+            if (isYellow) {
+                const currentYellowCount = (gameState.inventory?.items || []).filter(i => 
+                    (i.id || '').includes('yellow') || (i.name || '').includes('黄')
+                ).length;
+                if (currentYellowCount >= 2) {
+                    alert("【所持上限】黄色いビニール傘は最大2本までしか携帯できません！");
+                    return;
+                }
+            }
+
             if (gameState.player.money >= price) {
                 gameState.player.money -= price; 
                 updateShopHeader();
@@ -369,8 +382,13 @@ export function openShopUI(onClosed) {
                     if (!gameState.inventory.items) gameState.inventory.items = [];
                     gameState.inventory.items.push({ ...item });
 
-                    btn.style.background = "#006600"; btn.innerText = "完了！"; 
-                    setTimeout(() => { btn.style.background = ""; btn.innerText = "購入"; }, 500);
+                    // ★ 修正：完了後に赤黒グラデーションへ正しく戻す（白化防止）
+                    btn.style.background = "#006600"; 
+                    btn.innerText = "完了！"; 
+                    setTimeout(() => { 
+                        btn.style.background = "linear-gradient(180deg, #440000, #110000)"; 
+                        btn.innerText = "購入"; 
+                    }, 500);
                 }
             } else {
                 btn.innerText = "資金不足"; 
@@ -382,7 +400,7 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（クロマキー保護＆7F-BGM対応 完全版）
+// 戦闘UI制御（弱点看破・常時表示・戦闘中リロード・ボス逃走不可 完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
     ensureCombatStyles();
@@ -404,29 +422,46 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     let isEnemyCharging = false;
     let enemyStunTurns = 0;
 
+    // ★ 弱点バッジ文字列生成ヘルパー
+    const getWeaknessBadgeText = () => {
+        const isDiscovered = gameState.isDemonDiscovered ? gameState.isDemonDiscovered(enemy.name) : false;
+        if (isDiscovered) {
+            const wNames = enemyWeakness.map(num => CARD_NAMES[num] || num).join(", ");
+            return `<span style="color:#00ff66; font-size:0.85em; margin-left:8px; border:1px solid #00aa44; padding:2px 8px; border-radius:4px; background:rgba(0,40,0,0.6);">弱点: ${wNames}</span>`;
+        } else {
+            return `<span style="color:#888; font-size:0.85em; margin-left:8px; border:1px solid #555; padding:2px 8px; border-radius:4px; background:rgba(20,20,20,0.6);">弱点: ？？？</span>`;
+        }
+    };
+
     const visualHTML = `
-        <div style="position: relative; display: inline-block; margin-bottom: 10px;">
-            <img id="combat-enemy-img" src="${enemy.image}" style="max-height: 200px; border-radius: 8px; object-fit: contain; transition: transform 0.1s ease;">
+        <div style="position: relative; display: inline-block; margin-bottom: 8px;">
+            <img id="combat-enemy-img" src="${enemy.image}" style="max-height: 190px; border-radius: 8px; object-fit: contain; transition: transform 0.1s ease;">
             <div id="damage-popup-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible;"></div>
         </div>
     `;
 
     ui.innerHTML = `
-        <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>
+        <h2 style="color: #ff3333; margin: 0 0 8px 0; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>
         ${visualHTML}
-        <div style="color: #ffdd66; font-size: 1.2em; font-weight: bold;">${enemy.name}</div>
+        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+            <span style="color: #ffdd66; font-size: 1.15em; font-weight: bold;">${enemy.name}</span>
+            <span id="enemy-weakness-badge">${getWeaknessBadgeText()}</span>
+        </div>
+
+        <div style="color: #aaa; font-size: 0.85em; margin-bottom: 6px;">装填中: <span id="current-loaded-cards" style="color:#ffdd66; font-weight:bold;">${(gameState.equippedCards || []).map(n => CARD_NAMES[n] || n).join(' / ') || 'なし'}</span></div>
         
-        <div style="display: flex; gap: 20px; font-size: 1.05em; margin: 10px 0 15px 0; background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 6px; border: 1px solid #333;">
+        <div style="display: flex; gap: 20px; font-size: 1.05em; margin: 4px 0 10px 0; background: rgba(0,0,0,0.6); padding: 5px 16px; border-radius: 6px; border: 1px solid #333;">
             <span id="player-hp-text" style="color: #00ff66; font-weight: bold;">主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}</span>
             <span id="enemy-hp-text" style="color: #ff4444; font-weight: bold;">敵HP: ${enemyHp}</span>
         </div>
 
-        <div id="combat-log" style="width: 100%; max-width: 480px; height: 95px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin-bottom: 15px; color: #ccc; font-size: 0.9em; line-height: 1.5; white-space: pre-wrap; overflow-y: auto;">悪魔が目の前に立ち塞がった！ どうする？</div>
+        <div id="combat-log" style="width: 100%; max-width: 480px; height: 90px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin-bottom: 12px; color: #ccc; font-size: 0.88em; line-height: 1.5; white-space: pre-wrap; overflow-y: auto;">悪魔が目の前に立ち塞がった！ どうする？</div>
 
-        <div style="display: flex; gap: 10px; width: 100%; max-width: 480px;">
-            <button id="btn-attack" style="flex: 1.2; background: #440000; color: #fff; border: 1px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold;">Vox Sacra (射撃)</button>
-            <button id="btn-item" style="flex: 1; background: #002244; color: #66ccff; border: 1px solid #3388ff; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold;">道具</button>
-            <button id="btn-escape" style="flex: 0.8; background: #111; color: #aaa; border: 1px solid #555; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 4px;">逃げる</button>
+        <div style="display: flex; gap: 8px; width: 100%; max-width: 480px;">
+            <button id="btn-attack" style="flex: 1.2; background: #440000; color: #fff; border: 1px solid #ff3333; padding: 10px 4px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.95em;">Vox Sacra (射撃)</button>
+            <button id="btn-reload" style="flex: 0.9; background: #332200; color: #ffdd66; border: 1px solid #aa8800; padding: 10px 4px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.9em;">装填変更</button>
+            <button id="btn-item" style="flex: 0.8; background: #002244; color: #66ccff; border: 1px solid #3388ff; padding: 10px 4px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.9em;">道具</button>
+            <button id="btn-escape" style="flex: 0.7; background: #111; color: #aaa; border: 1px solid #555; padding: 10px 4px; font-family: inherit; cursor: pointer; border-radius: 4px; font-size: 0.9em;">逃げる</button>
         </div>
     `;
     document.body.appendChild(ui);
@@ -439,10 +474,38 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const playerHpText = document.getElementById("player-hp-text");
     const enemyHpText = document.getElementById("enemy-hp-text");
     const attackBtn = document.getElementById("btn-attack");
+    const reloadBtn = document.getElementById("btn-reload");
     const itemBtn = document.getElementById("btn-item");
     const escapeBtn = document.getElementById("btn-escape");
+    const loadedCardsText = document.getElementById("current-loaded-cards");
+    const weaknessBadge = document.getElementById("enemy-weakness-badge");
 
-    // 敵画像の上にダメージ数値をポップアップ表示（クロマキーに影響を与えない）
+    // ★ ボス戦時は逃げるボタンをあらかじめ暗転
+    if (enemy.isBoss) {
+        escapeBtn.style.color = "#555";
+        escapeBtn.style.border = "1px solid #333";
+        escapeBtn.title = "強大な悪魔の前から逃げることはできない！";
+    }
+
+    const appendLog = (htmlText) => {
+        log.innerHTML += (log.innerHTML ? "\n" : "") + htmlText;
+        log.scrollTop = log.scrollHeight;
+    };
+
+    // ★ 使い魔（黒猫）同行時：初見の敵の弱点を看破する演出
+    const hasCatAccompany = gameState.flags && gameState.flags.hasCat && !gameState.flags.isCatTrapped;
+    const isAlreadyDiscovered = gameState.isDemonDiscovered ? gameState.isDemonDiscovered(enemy.name) : false;
+
+    if (hasCatAccompany && !isAlreadyDiscovered) {
+        setTimeout(() => {
+            sound.playSE("assets/audio/se/cat.mp3");
+            const wNames = enemyWeakness.map(num => CARD_NAMES[num] || num).join(", ");
+            appendLog(`\n<span style="color:#E0B0FF; font-weight:bold;">【使い魔の看破】\n黒猫が喉を鳴らして敵の核を凝視した！\n「……フシューッ！（弱点は【${wNames}】だ！ 悪魔辞典に記録した！）」</span>`);
+            if (gameState.recordDemon) gameState.recordDemon(enemy);
+            if (weaknessBadge) weaknessBadge.innerHTML = getWeaknessBadgeText();
+        }, 500);
+    }
+
     const showEnemyDamagePopup = (damageValue, isWeakness = false, prefix = "-") => {
         if (!damageLayer) return;
 
@@ -454,18 +517,11 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
         const popup = document.createElement("div");
         popup.style.cssText = `
-            position: absolute;
-            left: 50%;
-            top: 45%;
-            transform: translate(-50%, -50%);
-            font-family: ${HORROR_FONT};
-            font-size: ${isWeakness ? "2.5em" : "2.1em"};
-            font-weight: 900;
+            position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%);
+            font-family: ${HORROR_FONT}; font-size: ${isWeakness ? "2.5em" : "2.1em"}; font-weight: 900;
             color: ${isWeakness ? "#ffdd44" : "#ff3333"};
             text-shadow: 0 0 10px ${isWeakness ? "#ff6600" : "#ff0000"}, 0 0 20px #000, 2px 2px 0 #000;
-            white-space: nowrap;
-            pointer-events: none;
-            z-index: 3100;
+            white-space: nowrap; pointer-events: none; z-index: 3100;
             animation: damagePopupFloat 0.85s ease-out forwards;
         `;
         popup.innerText = `${isWeakness ? '弱点！ ' : ''}${prefix}${damageValue}`;
@@ -481,19 +537,19 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         setTimeout(() => flash.remove(), 600);
     };
 
-    const appendLog = (htmlText) => {
-        log.innerHTML += (log.innerHTML ? "\n" : "") + htmlText;
-        log.scrollTop = log.scrollHeight;
-    };
-
     const updateHpDisplay = () => {
         playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
     };
 
+    const setControlsDisabled = (disabled) => {
+        attackBtn.disabled = disabled;
+        reloadBtn.disabled = disabled;
+        itemBtn.disabled = disabled;
+        escapeBtn.disabled = disabled;
+    };
+
     const triggerDeathSequence = () => {
-        attackBtn.disabled = true;
-        itemBtn.disabled = true;
-        escapeBtn.disabled = true;
+        setControlsDisabled(true);
         playerHpText.innerText = `主人公HP: 0 / ${gameState.player.maxHp}`;
         playerHpText.style.color = "#ff0000";
         appendLog("\n<span style='color:red; font-weight:bold;'>【敗北】主人公は力尽きて倒れた……！</span>");
@@ -528,9 +584,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             if (enemyStunTurns > 0) {
                 enemyStunTurns--;
                 appendLog(`\n<span style="color:#ffdd66; font-weight:bold;">【行動不能】${enemy.name} は目を押さえて悶絶しており、攻撃できない！（チャンス！）</span>`);
-                attackBtn.disabled = false;
-                itemBtn.disabled = false;
-                escapeBtn.disabled = false;
+                setControlsDisabled(false);
                 return;
             }
 
@@ -588,9 +642,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
             if (actionType === "charge_start") {
                 appendLog(`\n<span style="color:#ff4444; font-weight:bold;">【予兆】${enemy.name} が禍々しい魔力を収束させている……！\n（※次のターン、威力が2.5倍に激増する！ 青い傘で防げ！）</span>`);
-                attackBtn.disabled = false;
-                itemBtn.disabled = false;
-                escapeBtn.disabled = false;
+                setControlsDisabled(false);
                 return;
             }
 
@@ -599,9 +651,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
             if (Math.random() < dodgeChance) {
                 appendLog(`\n素早い身のこなし！ 主人公は悪魔の攻撃を完全に回避した！`);
-                attackBtn.disabled = false;
-                itemBtn.disabled = false;
-                escapeBtn.disabled = false;
+                setControlsDisabled(false);
                 return;
             }
 
@@ -669,9 +719,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 }, 1400);
             } else {
                 updateHpDisplay();
-                attackBtn.disabled = false;
-                itemBtn.disabled = false;
-                escapeBtn.disabled = false;
+                setControlsDisabled(false);
             }
         }, 1400);
     };
@@ -692,10 +740,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }
 
         sound.playSE("assets/audio/se/gun.mp3");
-
-        attackBtn.disabled = true;
-        itemBtn.disabled = true;
-        escapeBtn.disabled = true;
+        setControlsDisabled(true);
 
         log.innerText = "Vox Sacra……ラミナカードが神聖な言葉を弾丸に変える";
 
@@ -721,7 +766,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             const netDamage = Math.max(1, Math.floor((baseDamage - enemyDef) * randomFactor));
 
             enemyHp = Math.max(0, enemyHp - netDamage);
-            
             showEnemyDamagePopup(netDamage, isWeaknessHit);
 
             let shotMsg = `Vox Sacraの射撃！${isWeaknessHit ? '【弱点特効2倍！】' : ''} 悪魔に ${netDamage} ダメージ！`;
@@ -757,6 +801,96 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             enemyHpText.innerText = `敵HP: ${enemyHp}`;
             enemyTurn(shotMsg);
         }, 900);
+    };
+
+    // ★ 戦闘中リロード（装填変更）：必ず1ターン消費して敵が攻撃してくる
+    reloadBtn.onclick = () => {
+        if (Date.now() - window.lastDialogCloseTime < 300) return;
+
+        const maxSlots = gameState.player.level >= 15 ? 3 : (gameState.player.level >= 5 ? 2 : 1);
+        const cardSource = (gameState.cards && gameState.cards.length > 0) ? gameState.cards : gameState.ownedCards;
+        const availableNums = cardSource.map(c => typeof c === 'number' ? c : parseInt(String(c).match(/\d+/)?.[0] || '0', 10))
+                                        .filter(n => n > 0 && n <= gameState.player.level);
+        const uniqueNums = Array.from(new Set(availableNums)).sort((a, b) => a - b);
+
+        if (uniqueNums.length === 0) {
+            appendLog("【装填不可】装填できるラミナカードを所持していない！");
+            return;
+        }
+
+        let tempSelected = [...(gameState.equippedCards || [])];
+
+        const reloadModal = document.createElement("div");
+        reloadModal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); z-index: 3200; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
+
+        const renderModalContent = () => {
+            let cardsGridHTML = "";
+            uniqueNums.forEach(num => {
+                const isSelected = tempSelected.includes(num);
+                cardsGridHTML += `
+                    <div class="reload-card-btn" data-num="${num}" style="height: 60px; border: 2px solid ${isSelected ? '#00ff66' : '#555'}; background: ${isSelected ? '#003311' : '#111'}; color: ${isSelected ? '#00ff66' : '#ffdd66'}; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 0.85em;">
+                        <div>${CARD_NAMES[num]}</div>
+                        <div style="font-size: 0.75em; color: ${isSelected ? '#aaffaa' : '#888'};">${isSelected ? '【装填中】' : '選択'}</div>
+                    </div>
+                `;
+            });
+
+            reloadModal.innerHTML = `
+                <div style="width: 100%; max-width: 420px; background: rgba(15,10,10,0.95); border: 2px solid #aa8800; border-radius: 8px; padding: 16px; box-sizing: border-box;">
+                    <div style="color: #ffdd66; font-size: 1.15em; font-weight: bold; text-align: center; margin-bottom: 6px;">【ラミナカード再装填】</div>
+                    <div style="color: #ff8888; font-size: 0.8em; text-align: center; margin-bottom: 12px;">※装填を実行すると【1ターンを消費】し、敵から攻撃を受けます！</div>
+
+                    <div style="color: #ccc; font-size: 0.85em; margin-bottom: 8px;">選択枠 (最大 ${maxSlots} 枚): <span style="color:#00ff66; font-weight:bold;">${tempSelected.map(n => CARD_NAMES[n]).join(', ') || 'なし'}</span></div>
+
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 200px; overflow-y: auto; padding: 4px; margin-bottom: 14px;">
+                        ${cardsGridHTML}
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btn-confirm-reload" style="flex: 1; background: linear-gradient(180deg, #664400, #221100); color: #ffdd66; border: 1px solid #ffaa00; padding: 10px; cursor: pointer; border-radius: 4px; font-weight: bold; font-family: inherit;">装填してターン消費</button>
+                        <button id="btn-cancel-reload" style="flex: 0.8; background: #222; color: #aaa; border: 1px solid #555; padding: 10px; cursor: pointer; border-radius: 4px; font-family: inherit;">キャンセル</button>
+                    </div>
+                </div>
+            `;
+
+            reloadModal.querySelectorAll(".reload-card-btn").forEach(btn => {
+                btn.onclick = () => {
+                    const n = parseInt(btn.getAttribute("data-num"), 10);
+                    if (tempSelected.includes(n)) {
+                        tempSelected = tempSelected.filter(x => x !== n);
+                    } else {
+                        if (tempSelected.length >= maxSlots) {
+                            tempSelected.shift();
+                        }
+                        tempSelected.push(n);
+                    }
+                    renderModalContent();
+                };
+            });
+
+            document.getElementById("btn-cancel-reload").onclick = () => reloadModal.remove();
+
+            document.getElementById("btn-confirm-reload").onclick = () => {
+                if (tempSelected.length === 0) {
+                    alert("カードを最低1枚は装填してください！");
+                    return;
+                }
+                gameState.equippedCards = [...tempSelected];
+                if (loadedCardsText) {
+                    loadedCardsText.innerText = gameState.equippedCards.map(n => CARD_NAMES[n] || n).join(' / ');
+                }
+                reloadModal.remove();
+
+                setControlsDisabled(true);
+                sound.playSE("assets/audio/se/gun.mp3");
+
+                const reloadedNames = gameState.equippedCards.map(n => CARD_NAMES[n]).join(' / ');
+                enemyTurn(`【装填変更】銃の弾倉を開き、カードを差し替えた！\n[装填完了: ${reloadedNames}]\nしかしカード交換の隙を突かれ、敵の反撃が迫る！`);
+            };
+        };
+
+        renderModalContent();
+        document.body.appendChild(reloadModal);
     };
 
     itemBtn.onclick = () => {
@@ -796,35 +930,27 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
                 itemsList.splice(idx, 1);
                 itemModal.remove();
-
-                attackBtn.disabled = true;
-                itemBtn.disabled = true;
-                escapeBtn.disabled = true;
+                setControlsDisabled(true);
 
                 const itemId = (usedItem.id || "").toLowerCase();
                 const itemName = usedItem.name || "";
 
-                // 回復アイテム
                 if (usedItem.healAmount || itemId === "energy_drink" || itemId === "bento" || itemId === "first_aid" || itemId === "mystery_supplement") {
                     const heal = usedItem.healAmount ? usedItem.healAmount : (itemId === "first_aid" ? 50 : 15);
                     gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + heal);
                     updateHpDisplay();
                     enemyTurn(`【道具使用】${usedItem.name} を使った！\n主人公のHPが ${heal} 回復した！（現在HP: ${gameState.player.hp}）`);
                 } 
-                // 青い傘（ガード）
                 else if (itemId === "blue_umbrella" || itemId === "umbrella_blue" || usedItem.guardEffect || itemName.includes("青") || itemName.includes("ブルー")) {
                     isGuarding = true;
                     enemyTurn(`【道具使用】${usedItem.name} を素早く開いた！\n次の敵の攻撃ダメージを 70% 軽減する！`);
                 } 
-                // 赤い傘（攻撃3倍）
                 else if (itemId === "red_umbrella" || itemId === "umbrella_red" || itemName.includes("赤") || itemName.includes("レッド")) {
                     isRedUmbrellaActive = true;
                     enemyTurn(`【道具使用】${usedItem.name} を開いて構えた！\n力を限界まで蓄積した！ 次の銃撃威力が【3倍】に激増する！`);
                 } 
-                // 黄色い傘（目くらまし・敵ターンスキップ＋次攻撃後もスタン継続）
                 else if (itemId === "yellow_umbrella" || itemId === "umbrella_yellow" || itemName.includes("黄") || itemName.includes("イエロー")) {
                     triggerScreenFlash("rgba(255, 255, 140, 0.85)");
-                    // クロマキーを維持するため filter ではなく opacity で演出
                     if (enemyImg) {
                         enemyImg.style.opacity = "0.5";
                         setTimeout(() => { if (enemyImg) enemyImg.style.opacity = "1"; }, 800);
@@ -834,12 +960,9 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     log.innerHTML = `【道具使用】${usedItem.name} を勢いよく開いた！\n強烈な閃光が炸裂し、敵の目を完全に眩ませた！`;
                     setTimeout(() => {
                         appendLog(`\n<span style="color:#ffdd66; font-weight:bold;">敵は目を押さえて悶絶している！ 隙だらけだ！（2回連続で攻撃可能！）</span>`);
-                        attackBtn.disabled = false;
-                        itemBtn.disabled = false;
-                        escapeBtn.disabled = false;
+                        setControlsDisabled(false);
                     }, 1200);
                 } 
-                // 透明な傘（回避率上昇）
                 else if (itemId === "clear_umbrella" || itemId === "umbrella_clear" || itemName.includes("透明") || itemName.includes("クリア")) {
                     extraAgi += 5;
                     enemyTurn(`【道具使用】${usedItem.name} を纏った！\n身のこなしが軽くなり、回避率と逃走率が上昇した！`);
@@ -854,9 +977,14 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     escapeBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
-        attackBtn.disabled = true;
-        itemBtn.disabled = true;
-        escapeBtn.disabled = true;
+        // ★ ボス戦は逃走不可
+        if (enemy.isBoss) {
+            sound.playSE("assets/audio/se/zero.mp3");
+            appendLog("\n<span style='color:#ff4444; font-weight:bold;'>【逃走不可！】\n強大な威圧感に気圧され、ボスの前から逃げ出すことはできない！</span>");
+            return;
+        }
+
+        setControlsDisabled(true);
         log.innerText = "必死に背を向けて走り出した……！";
 
         setTimeout(() => {
@@ -880,9 +1008,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     } else {
                         updateHpDisplay();
                         appendLog(`背後から追撃！ 主人公は ${damageTaken} ダメージを受けた！`);
-                        attackBtn.disabled = false;
-                        itemBtn.disabled = false;
-                        escapeBtn.disabled = false;
+                        setControlsDisabled(false);
                     }
                 }, 1200);
             }
@@ -890,7 +1016,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     };
 }
 
-// 査問UI制御（初回チュートリアル付き 完全版）
+// 査問UI制御
 export function openInquisitionUI(entity, gameState, onResult, context) {
     const showTutorialIfNeeded = (callback) => {
         if (!gameState.flags) gameState.flags = {};

@@ -1,4 +1,4 @@
-// appUI.js - 全機能完全維持 ＆ 最大3スロット装填 ＆ 8F悪魔手記実装版
+// appUI.js - 全機能完全維持 ＆ 最大3スロット装填 ＆ 8F悪魔手記 ＆ 悪魔弱点辞典(調査ログ拡張) 実装版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -7,6 +7,8 @@ export const LOGO_ASSETS = {
   TITLE_LOGO: 'assets/images/akumanologo.png',
   APP_LOGO: 'assets/images/DictionariumDaemonum.webp'
 };
+
+const CARD_NAMES = ["", "Ⅰ 聖水", "Ⅱ 鏡", "Ⅲ 浄化塩", "Ⅳ 十字架", "Ⅴ 聖書", "Ⅵ 聖炎", "Ⅶ 鐘", "Ⅷ 聖香", "Ⅸ 銀杭"];
 
 if (!document.getElementById("app-style-element")) {
     const fontLink = document.createElement("link");
@@ -74,6 +76,15 @@ if (!document.getElementById("app-style-element")) {
 
         .btn-danger { background: #440000; color: #ff6666; border: 1px solid #ff3333; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
         .btn-danger:hover { background: #660000; color: #fff; }
+
+        .demon-entry-card {
+            background: #140808; border: 1px solid #551515; border-radius: 8px;
+            padding: 10px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center;
+        }
+        .demon-entry-img {
+            width: 55px; height: 55px; object-fit: contain; border-radius: 4px;
+            background: #000; border: 1px solid #331111; flex-shrink: 0;
+        }
     `;
     document.head.appendChild(appStyle);
 }
@@ -180,8 +191,8 @@ export class AppUI {
           <div class="app-icon-title">詳細地図</div>
         </div>
         <div class="app-icon" data-view="log">
-          <div class="app-icon-emoji">📝</div>
-          <div class="app-icon-title">調査ログ</div>
+          <div class="app-icon-emoji">📖</div>
+          <div class="app-icon-title">悪魔弱点辞典</div>
         </div>
         <div class="app-icon" data-view="system" style="grid-column: span 2;">
           <div class="app-icon-emoji">💾</div>
@@ -204,7 +215,7 @@ export class AppUI {
     let slotsHTML = "";
     for (let i = 0; i < maxSlots; i++) {
         if (equipped[i]) {
-            slotsHTML += `<div class="loadout-slot equipped-slot">【スロット ${i+1}】: <strong>カード ${equipped[i]}</strong></div>`;
+            slotsHTML += `<div class="loadout-slot equipped-slot">【スロット ${i+1}】: <strong>カード ${equipped[i]} (${CARD_NAMES[equipped[i]] || ''})</strong></div>`;
         } else {
             slotsHTML += `<div class="loadout-slot">【スロット ${i+1}】: 未装填</div>`;
         }
@@ -284,7 +295,6 @@ export class AppUI {
   }
 
   renderNotesView() {
-    // 既存の動的ヒント
     const hints = gameState.bossHints || [];
     let hintsHTML = "";
     if (hints.length > 0) {
@@ -293,7 +303,6 @@ export class AppUI {
       }).join('');
     }
 
-    // ★ 8F 父親の手記の表示判定
     let midoHint1 = "";
     let midoHint2 = "";
     if (gameState.flags?.clearedCerberus) {
@@ -350,8 +359,64 @@ export class AppUI {
     return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">詳細地図 (${gameState.currentFloor}F)</h3></div><div style="display: flex; justify-content: center; padding: 10px; background: #000; border-radius: 6px;"><div style="display: grid; grid-template-columns: repeat(${map[0]?.length || 1}, 14px); gap: 2px;">${map.map((row, rIdx) => row.map((cell, cIdx) => { const isPlayer = player.x === cIdx && player.y === rIdx; let bg = '#111'; if (cell === 1) bg = '#444'; else if (cell === 2) bg = '#0088cc'; else if (cell === 3) bg = '#aa0000'; else if (cell === 4) bg = '#ff9900'; if (isPlayer) bg = '#00ff66'; return `<div style="width:14px; height:14px; background:${bg}; border-radius:2px; text-align:center; font-size:9px; line-height:14px;">${isPlayer ? '▲' : ''}</div>`; }).join('')).join('')}</div></div>`;
   }
 
+  // ★ 調査ログ ➔ 悪魔弱点辞典への進化（現在の目的も上部に完全維持！）
   renderLogView() {
-    return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">調査ログ</h3></div><div class="loadout-slot" style="border-style: solid; text-align: left;"><div style="color: #ff3333; font-weight: bold;">【現在の目的】</div><div>教え子を救出して最上階の悪魔を撃破する。</div></div>`;
+    const demons = gameState.discoveredDemons ? Object.values(gameState.discoveredDemons) : [];
+    
+    let demonListHTML = "";
+    if (demons.length > 0) {
+      demonListHTML = demons.map(demon => {
+        const wBadges = (demon.weakness || []).map(num => `
+          <span style="display:inline-block; background:#002b11; color:#00ff66; border:1px solid #00aa44; border-radius:4px; padding:1px 6px; font-size:0.75em; margin:2px 2px 0 0; font-weight:bold;">
+            ${CARD_NAMES[num] || ('カード' + num)}
+          </span>
+        `).join('');
+
+        return `
+          <div class="demon-entry-card">
+            <img class="demon-log-img demon-entry-img" src="${demon.image || 'assets/images/demon/demon1.png'}" alt="${demon.name}" onerror="this.src='assets/images/demon/demon1.png';" />
+            <div style="flex: 1; min-width: 0;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:#ffdd66; font-weight:bold; font-size:0.9em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${demon.name}</span>
+                <span style="color:#888; font-size:0.72em;">${demon.floor ? demon.floor + 'F' : ''}</span>
+              </div>
+              <div style="margin-top:4px;">
+                <span style="color:#aaa; font-size:0.75em;">弱点:</span>
+                <div>${wBadges}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      demonListHTML = `
+        <div class="loadout-slot" style="color:#888; font-size:0.8em; line-height:1.6; text-align:left; background:#120505;">
+          （まだ看破した悪魔はいません）<br>
+          ※黒猫が同行している戦闘で初見の悪魔に遭遇すると、黒猫が敵の核を凝視して弱点を自動記録します。
+        </div>
+      `;
+    }
+
+    return `
+      <div class="sub-header">
+        <span class="back-btn" id="btn-back">◄ 戻る</span>
+        <h3 class="sub-title">悪魔弱点辞典</h3>
+      </div>
+
+      <div class="loadout-slot" style="border-style: solid; text-align: left; margin-bottom: 12px; border-color: #551111; background: #180808;">
+        <div style="color: #ff5555; font-weight: bold; font-size:0.85em;">【現在の目的】</div>
+        <div style="font-size:0.8em; color:#ccc;">教え子を救出して最上階の悪魔を撃破する。</div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <div style="font-size: 0.85em; color: #ffdd66; font-weight:bold;">看破済み悪魔一覧 (${demons.length}体)</div>
+        <button id="btn-jump-to-loadout" style="background:#332200; color:#ffdd66; border:1px solid #aa8800; padding:3px 8px; border-radius:4px; font-size:0.75em; cursor:pointer; font-family:inherit;">銃に装填する ➔</button>
+      </div>
+
+      <div style="max-height: 52vh; overflow-y: auto; padding-right: 2px;">
+        ${demonListHTML}
+      </div>
+    `;
   }
 
   renderSystemView() {
@@ -367,6 +432,14 @@ export class AppUI {
 
     const backBtn = document.getElementById('btn-back');
     if (backBtn) backBtn.onclick = () => { this.currentSubView = 'home'; this.renderApp(); };
+
+    const jumpLoadoutBtn = document.getElementById('btn-jump-to-loadout');
+    if (jumpLoadoutBtn) {
+      jumpLoadoutBtn.onclick = () => {
+        this.currentSubView = 'loadout';
+        this.renderApp();
+      };
+    }
 
     const contractBtn = document.getElementById('btn-dark-contract');
     if (contractBtn) {
@@ -418,6 +491,10 @@ export class AppUI {
 
     const catImg = document.getElementById('familiar-cat-img');
     applyChromaKey(catImg);
+
+    document.querySelectorAll('.demon-log-img').forEach(img => {
+      applyChromaKey(img);
+    });
 
     const cardItems = document.querySelectorAll('.card-item');
     cardItems.forEach(item => {
