@@ -1,10 +1,11 @@
-// maps/map4F.js - 全機能・セリフ完全維持・ピンクもや撤去・構文エラー修正版
+// maps/map4F.js - 黒猫霊体レスキューイベント追加＆親衛隊・ボス全機能維持 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
     playFloorTransition, playVideo, openShopUI, openCombatUI, openInquisitionUI, openBossPuzzleUI 
 } from '../ui.js';
 import { ENEMIES, evaluateRinaPuzzle } from '../enemies.js';
+import { sound } from '../sound.js'; // ★黒猫のSE再生用
 
 export const playerStart4F = { x: 5, y: 8, dir: 0 };
 
@@ -249,7 +250,10 @@ function startShineiAEvent(gameState, context, onComplete) {
                 gameState.flags.hasBrandBag = true;
 
                 showConversationDialog("assets/images/demon/shineia.png", "【リナ親衛隊A】\n「苦しかったけど、楽しかった、リナちゃんに貢いでる時だけが生きてる感じがした、解放されて寂しくなる。。。（息絶えた）」", () => {
-                    showItemAcquiredModal("assets/images/present.png", "高級ブランドバッグ", "【貢ぎ物キーアイテム】\nリナ親衛隊Aが大事に抱え込んでいた『高級ブランドバッグ』を手に入れた！", onComplete);
+                    showItemAcquiredModal("assets/images/present.png", "高級ブランドバッグ", "【貢ぎ物キーアイテム】\nリナ親衛隊Aが大事に抱え込んでいた『高級ブランドバッグ』を手に入れた！", () => {
+                        context.redraw();
+                        onComplete();
+                    });
                 });
             } else {
                 onComplete();
@@ -284,7 +288,10 @@ function startShineiBEvent(gameState, context, onComplete) {
                 gameState.flags.hasChampagne = true;
 
                 showConversationDialog("assets/images/demon/shineib.png", "【リナ親衛隊B】\n「リナちゃんが俺だけじゃないなんて知ってたよ、でもリナちゃんはたくさんいないと寂しさが埋まらないんだ、それは俺だけが知ってるんだ。。。（息絶えた）」", () => {
-                    showItemAcquiredModal("assets/images/present.png", "高級シャンパン", "【貢ぎ物キーアイテム】\nリナ親衛隊Bが祭壇に捧げていた『高級シャンパン』を手に入れた！", onComplete);
+                    showItemAcquiredModal("assets/images/present.png", "高級シャンパン", "【貢ぎ物キーアイテム】\nリナ親衛隊Bが祭壇に捧げていた『高級シャンパン』を手に入れた！", () => {
+                        context.redraw();
+                        onComplete();
+                    });
                 });
             } else {
                 onComplete();
@@ -293,94 +300,143 @@ function startShineiBEvent(gameState, context, onComplete) {
     });
 }
 
+// ==========================================
+// ★ 黒猫霊体レスキュー ＆ リナボス戦闘シーケンス
+// ==========================================
 function startRinaBossSequence(gameState, context, onComplete) {
     showMessageDialog("【台座に貢ぎ物を設置】\n『高級ブランドバッグ』と『高級シャンパン』を台座に並べた。\n桃色の結界が霧散し、最奥の扉が開いた……！", () => {
         playVideo("assets/images/demon/4f-rina.mp4", () => {
-            showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「みんなひどいことばっかり言うの、私は弱いのに、私の強がりをわかってくれない。困ってるの、男のひとはみんな怖い、あなたは？あなたも怖いひと？助けて、私の強いひと♥」", () => {
-                const puzzleConfig = {
-                    title: "【4Fボス解読】色欲のパパ活女子・リナ♥",
-                    subTitle: "甘い誘惑と精神攻撃を断ち切れ",
-                    bossName: "リナ",
-                    slots: [
-                        { id: '1', label: '上：惑わしの瞳', gridPos: 'grid-area: 1 / 2;' },
-                        { id: '3', label: '左：色香の腕', gridPos: 'grid-area: 2 / 1;' },
-                        { id: '5', label: '右：誘惑の腕', gridPos: 'grid-area: 2 / 3;' },
-                        { id: '7', label: '下：執着の足', gridPos: 'grid-area: 3 / 2;' }
-                    ]
-                };
+            
+            // ★ リナの甘言（前半）
+            showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「うふふ……本当に持ってきてくれたのね。ありがとう、大好き……」", () => {
+                
+                // 画面をピンク色に染める演出
+                const prevBg = document.body.style.backgroundColor;
+                document.body.style.backgroundColor = "#ffccff"; 
+                
+                setTimeout(() => {
+                    showMessageDialog("（画面がピンク色のモヤに包まれ、甘く重苦しい香気が漂う）", () => {
+                        
+                        // ★ リナの甘言（後半）
+                        showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「父親のことなんて、もうどうでもいいじゃない……？\n頑張らなくていいのよ。これからは私のお婿さんになって、ずぅっと甘い夢の中で暮らしましょう……？」", () => {
+                            
+                            // ★ 主人公の堕ちかけモノローグ
+                            showMessageDialog("（頭がぼーっとする……。甘い匂いで、考えるのが面倒になっていく……。\nそうだ、就職も全部落ちて、俺は何のために苦労してるんだ？\nもう……全部あきらめて、この人に身を任せてしまえば楽になれるんじゃないか……？）\n\n（主人公がだらりと銃を取り落としそうになる）", () => {
+                                
+                                // ★ 黒猫霊体の乱入！！
+                                sound.playSE("assets/audio/se/cat.mp3");
+                                document.body.style.backgroundColor = prevBg; // 背景を瞬時に戻す
 
-                openBossPuzzleUI(puzzleConfig, gameState, (placedSlots) => {
-                    const evalResult = typeof evaluateRinaPuzzle === 'function' ? evaluateRinaPuzzle(placedSlots) : { result: 'FAIL', correctCount: 0 };
+                                setTimeout(() => {
+                                    showMessageDialog("【？？？（黒猫の霊体）】\n「――ギャウッ、フシャーーーッ！！」", () => {
+                                        showMessageDialog("（暗闇から飛び出した漆黒の影が、主人公の頬を一閃！）\n（ピシッ！ という鋭い炸裂音）", () => {
+                                            
+                                            showMessageDialog("【主人公】\n「痛っっっ！？ ……ハッ、俺は何を……！？」", () => {
+                                                showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「キャッ！？ な、何よ今の黒い影……！ 私の術を引っ掻き破るなんて……！！」", () => {
+                                                    
+                                                    // ★ モノローグと立ち直り
+                                                    showMessageDialog("（足元を冷たい風がすり抜けた。\n闇の奥へ消えていく小さな黒い影……猫……使い魔？\n……危なかった。あいつが痛烈な一撃をくれなきゃ、完全に自我を喰われるところだった！）", () => {
+                                                        showMessageDialog("【主人公】\n「悪魔のまやかしに、危うく呑まれるところだった。。\n……（深呼吸して）銃はあるか、身体に違和感は…大丈夫か、よし、やれる」", () => {
+                                                            
+                                                            // ★ パズル UI 起動へ
+                                                            const puzzleConfig = {
+                                                                title: "【4Fボス解読】色欲のパパ活女子・リナ♥",
+                                                                subTitle: "甘い誘惑と精神攻撃を断ち切れ",
+                                                                bossName: "リナ",
+                                                                slots: [
+                                                                    { id: '1', label: '上：惑わしの瞳', gridPos: 'grid-area: 1 / 2;' },
+                                                                    { id: '3', label: '左：色香の腕', gridPos: 'grid-area: 2 / 1;' },
+                                                                    { id: '5', label: '右：誘惑の腕', gridPos: 'grid-area: 2 / 3;' },
+                                                                    { id: '7', label: '下：執着の足', gridPos: 'grid-area: 3 / 2;' }
+                                                                ]
+                                                            };
 
-                    const applyDamageAndCombat = () => {
-                        const floor = 4;
-                        const targetLevel = (floor - 1) * 5;
-                        const playerLevel = gameState.player.level || 1;
+                                                            openBossPuzzleUI(puzzleConfig, gameState, (placedSlots) => {
+                                                                const evalResult = typeof evaluateRinaPuzzle === 'function' ? evaluateRinaPuzzle(placedSlots) : { result: 'FAIL', correctCount: 0 };
 
-                        let hpRatio = 1.0;
-                        let resultMsg = "";
+                                                                const applyDamageAndCombat = () => {
+                                                                    const floor = 4;
+                                                                    const targetLevel = (floor - 1) * 5;
+                                                                    const playerLevel = gameState.player.level || 1;
 
-                        if (evalResult.result === 'PERFECT') {
-                            if (playerLevel >= targetLevel) {
-                                hpRatio = 0.2;
-                                resultMsg = `【完全正解！】適正レベル(Lv.${targetLevel})到達！\n陣が眩く輝き、リナの体力を 8割削減 した！`;
-                            } else {
-                                hpRatio = 0.5;
-                                resultMsg = `【完全正解！】魔方陣の解読に成功！\n聖なる光が吹き荒れ、リナの体力を 半減 させた！`;
-                            }
-                        } else if (evalResult.result === 'PARTIAL') {
-                            const reductionRate = Math.min(evalResult.correctCount * 0.1, 0.3);
-                            hpRatio = 1.0 - reductionRate;
-                            resultMsg = `【部分正解】${evalResult.correctCount}箇所の弱点が合致！\nリナの体力を ${Math.round(reductionRate * 100)}% 削減した！`;
-                        } else {
-                            hpRatio = 1.0;
-                            resultMsg = `【解読失敗】不完全な陣だ！ ダメージを与えられなかった！`;
-                        }
+                                                                    let hpRatio = 1.0;
+                                                                    let resultMsg = "";
 
-                        const baseHp = ENEMIES.RINA_4F ? ENEMIES.RINA_4F.hp : 480;
-                        const startHp = Math.max(1, Math.floor(baseHp * hpRatio));
+                                                                    if (evalResult.result === 'PERFECT') {
+                                                                        if (playerLevel >= targetLevel) {
+                                                                            hpRatio = 0.2;
+                                                                            resultMsg = `【完全正解！】適正レベル(Lv.${targetLevel})到達！\n陣が眩く輝き、リナの体力を 8割削減 した！`;
+                                                                        } else {
+                                                                            hpRatio = 0.5;
+                                                                            resultMsg = `【完全正解！】魔方陣の解読に成功！\n聖なる光が吹き荒れ、リナの体力を 半減 させた！`;
+                                                                        }
+                                                                    } else if (evalResult.result === 'PARTIAL') {
+                                                                        const reductionRate = Math.min(evalResult.correctCount * 0.1, 0.3);
+                                                                        hpRatio = 1.0 - reductionRate;
+                                                                        resultMsg = `【部分正解】${evalResult.correctCount}箇所の弱点が合致！\nリナの体力を ${Math.round(reductionRate * 100)}% 削減した！`;
+                                                                    } else {
+                                                                        hpRatio = 1.0;
+                                                                        resultMsg = `【解読失敗】不完全な陣だ！ ダメージを与えられなかった！`;
+                                                                    }
 
-                        showMessageDialog(`${resultMsg}\nリナとの決戦に入る！`, () => {
-                            const rinaEnemy = {
-                                name: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.name : "色欲のパパ活女子・リナ",
-                                image: "assets/images/demon/4f-rina.jpg",
-                                hp: startHp, maxHp: baseHp,
-                                atk: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.atk : 60,
-                                def: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.def : 8,
-                                weakness: [2, 5],
-                                rewardExp: 400,
-                                rewardMoney: 1500,
-                                isBoss: true
-                            };
+                                                                    const baseHp = ENEMIES.RINA_4F ? ENEMIES.RINA_4F.hp : 480;
+                                                                    const startHp = Math.max(1, Math.floor(baseHp * hpRatio));
 
-                            openCombatUI(rinaEnemy, gameState, (combatRes) => {
-                                if (combatRes === 'win') {
-                                    if (!gameState.flags) gameState.flags = {};
-                                    gameState.flags.cleared4F = true;
-                                    if (gameState.saveGame) gameState.saveGame();
+                                                                    showMessageDialog(`${resultMsg}\nリナとの決戦に入る！`, () => {
+                                                                        const rinaEnemy = {
+                                                                            name: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.name : "色欲のパパ活女子・リナ",
+                                                                            image: "assets/images/demon/4f-rina-b.jpg",
+                                                                            hp: startHp, maxHp: baseHp,
+                                                                            atk: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.atk : 60,
+                                                                            def: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.def : 8,
+                                                                            weakness: [2, 5],
+                                                                            rewardExp: 400,
+                                                                            rewardMoney: 1500,
+                                                                            isBoss: true
+                                                                        };
 
-                                    gameState.player.x = 1;
-                                    gameState.player.y = 1;
-                                    gameState.player.dir = 2;
+                                                                        openCombatUI(rinaEnemy, gameState, (combatRes) => {
+                                                                            if (combatRes === 'win') {
+                                                                                if (!gameState.flags) gameState.flags = {};
+                                                                                gameState.flags.cleared4F = true;
+                                                                                if (gameState.saveGame) gameState.saveGame();
 
-                                    clearPinkMist();
+                                                                                gameState.player.x = 1;
+                                                                                gameState.player.y = 1;
+                                                                                gameState.player.dir = 2;
 
-                                    showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「バカじゃないの、この悪魔！ ひとでなし！　中学生の父親？ あの男はなびかないから5Fの蛭沼っちに渡したわ、蛭沼っち、改造できるおもちゃを欲しがってたから。ねぇ助けてよ……お願いだから見捨てないでぇぇっ…」", () => {
-                                        showMessageDialog(`【4Fフロアボス討滅！】\nリナの怨霊を浄化し、甘い桃色の霧と蔦が消え去った！\n\n主人公「5Fの蛭沼、まだ上かよ、あぁクソ……無事だといいけど……！」\n※5階への非常階段が解禁されました！`, onComplete);
+                                                                                clearPinkMist();
+
+                                                                                showConversationDialog("assets/images/demon/4f-rina.jpg", "【色欲・リナ】\n「バカじゃないの、この悪魔！ ひとでなし！ 中学生の父親？ あの男はなびかないから5Fの蛭沼っちに渡したわ、蛭沼っち、改造できるおもちゃを欲しがってたから。ねぇ助けてよ……お願いだから見捨てないでぇぇっ…」", () => {
+                                                                                    showMessageDialog(`【4Fフロアボス討滅！】\nリナの怨霊を浄化し、甘い桃色の霧と蔦が消え去った！\n\n主人公「5Fの蛭沼、まだ上かよ、あぁクソ……無事だといいけど……！」\n※5階への非常階段が解禁されました！`, onComplete);
+                                                                                });
+                                                                            } else {
+                                                                                onComplete();
+                                                                            }
+                                                                        }, context);
+                                                                    });
+                                                                };
+
+                                                                if (evalResult.result === 'PERFECT') {
+                                                                    playVideo("assets/videos/magic-circle.mp4", applyDamageAndCombat);
+                                                                } else {
+                                                                    applyDamageAndCombat();
+                                                                }
+                                                            });
+                                                        });
+                                                    });
+                                                });
+                                            });
+
+                                        });
                                     });
-                                } else {
-                                    onComplete();
-                                }
-                            }, context);
-                        });
-                    };
+                                }, 200);
 
-                    if (evalResult.result === 'PERFECT') {
-                        playVideo("assets/videos/magic-circle.mp4", applyDamageAndCombat);
-                    } else {
-                        applyDamageAndCombat();
-                    }
-                });
+                            });
+                        });
+                    });
+                }, 100);
+
             });
         });
     });
