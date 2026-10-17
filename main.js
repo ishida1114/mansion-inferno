@@ -246,7 +246,7 @@ function changeFloor(floor) {
               document.body.style.backgroundColor = prevBg;
               if (!gameState.flags) gameState.flags = {};
               gameState.flags.hasCat = true; gameState.flags.isCatTrapped = false;
-              showMessageDialog("【使い魔の実体化】\n5階に充満する濃厚な生体エネルギーに反応し、主人公の影からすっと黒猫が実体化して現れた！\n（※足元に寄り添い、戦闘中に身を挺して庇ってくれたり、追撃してくれたりするようになった！）", () => redraw());
+              showMessageDialog("【使い魔の実体化】\n5階に充満する濃厚な生体エネルギーに反応し、主人公の影からすっと黒猫が実体化して現れた！\n（※使い魔が足元に寄り添い、戦闘中に身を挺して庇ってくれたり、追撃してくれたりするようになった！）", () => redraw());
             });
           });
         });

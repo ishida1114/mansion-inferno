@@ -257,8 +257,8 @@ function startRefrigeratorEvent(gameState, context, onComplete) {
     }
 
     showConversationDialog("assets/images/reizouko.png", "【巨大冷蔵庫の部屋】\n部屋の中央に、鎖でぐるぐる巻きにされた業務用冷蔵庫が置かれている。\n中から「ドン……ドン……」と、かすかに叩くような音が聞こえる……！", () => {
-        showConversationDialog("assets/images/human6.png", "【管理人（清掃員）】\n「ぶはあっ……！！ うう……助かった……！\n3Fの悪臭について苦情を言いに来たら、急にあのゴミまみれの男（真田）に殴り倒されて……気付いたらこんな冷蔵庫に放り込まれていて……。」", () => {
-            showConversationDialog("assets/images/human6.png", "【管理人（清掃員）】\n「……そういえば、気を失う直前、非常階段を駆け上がっていく男の人を見ました。\nたしか、2階に住んでいる中学生の息子さんがいるお父さんです。\n必死な形相で上へ向かっていましたが……あの人も無事だといいんですが……」", () => {
+        showConversationDialog("assets/images/human6.png", "【マンション管理人】\n「ぶはあっ……！！ うう……助かった……！\n3Fの悪臭について苦情を言いに来たら、急にあのゴミまみれの男（真田）に殴り倒されて……気付いたらこんな冷蔵庫に放り込まれていて……。」", () => {
+            showConversationDialog("assets/images/human6.png", "【マンション管理人】\n「……そういえば、気を失う直前、非常階段を駆け上がっていく男の人を見ました。\nたしか、2階に住んでいる中学生の息子さんがいるお父さんです。\nテレビの記者だったかな…。\n必死な形相で上へ向かっていましたが……あの人も無事だといいんですが……」", () => {
                 showMessageDialog("【主人公の心情】\n（あの教え子の父親か……！ 生きて上へ向かったんだな。急いで後を追わなくては！）", () => {
                     gameState.flags.rescuedManager = true;
 

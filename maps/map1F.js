@@ -148,7 +148,7 @@ export function handleEvent1F(targetCell, gameState, context) {
 // 段階的防具解放ポストイベント
 function startPostEvent(gameState, onComplete) {
     if (!gameState.hasExorcistInherited) {
-        showMessageDialog("【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n……『悪魔辞典アプリ』を持っていないため、まだ調べる意味はなさそうだ。\n（※まずは中庭の血の池を調べよう）", onComplete);
+        showMessageDialog("【1階 ポルターガイストだらけの集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n……『悪魔辞典アプリ』を持っていないため、まだ調べる意味はなさそうだ。\n（※まずは中庭の血の池を調べよう）", onComplete);
         return;
     }
 
