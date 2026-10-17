@@ -93,7 +93,7 @@ function createGuardedDialogContainer(contentHTML, onClosed) {
 export function showOpeningUI(onClosed) {
     const html = `
         <div style="width: 90%; max-width: 580px; max-height: 90vh; padding: 20px; background-color: rgba(5, 0, 0, 0.96); color: #dddddd; border: 2px solid #770000; border-radius: 8px; font-family: ${HORROR_FONT}; box-shadow: 0 0 30px rgba(255,0,0,0.5); display: flex; flex-direction: column; align-items: center; box-sizing: border-box; overflow-y: auto; pointer-events: auto;">
-            <img src="assets/images/opening.png" style="width: 100%; max-height: 300px; object-fit: contain; border-radius: 6px; margin-bottom: 15px; border: 1px solid #440000;" onerror="this.style.display='none'">
+            <img src="assets/images/opening.webp" style="width: 100%; max-height: 300px; object-fit: contain; border-radius: 6px; margin-bottom: 15px; border: 1px solid #440000;" onerror="this.style.display='none'">
             <div style="font-size: 0.92em; line-height: 1.8; white-space: pre-wrap; color: #ccc; text-align: left; width: 100%; margin-bottom: 15px;">
 新卒の就職活動は全滅した。
 目標を見失い大学を卒業してからも定職には就かず、
