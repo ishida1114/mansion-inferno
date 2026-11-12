@@ -63,7 +63,9 @@ export function check6FRandomEncounter(gameState, onEncounter, context) {
         ];
         const chosenEnemy = demonTypes[Math.floor(Math.random() * demonTypes.length)];
         if (onEncounter) onEncounter({ ...chosenEnemy });
+    return; // ← 追加
     }
+    if (onEncounter) onEncounter(null); // ← 何も起きなかった時も操作ロックを解除
 }
 
 export function handleEvent6F(targetCell, gameState, context) {

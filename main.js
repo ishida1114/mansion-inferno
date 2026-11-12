@@ -1,4 +1,4 @@
-// main.js - ゲーム本体コアコントローラー（デバッグ完全分離・7F-BGM対応・本編軽量版）
+// main.js - ゲーム本体コアコントローラー（デバッグ完全分離・7F-BGM対応・6Fイベントロック完全対応版）
 import { gameState } from './gameState.js';
 import { AppUI } from './appUI.js';
 import { Renderer } from './renderer.js';
@@ -327,7 +327,19 @@ function checkEncounterAfterMove() {
   else if (gameState.currentFloor === 3) { check3FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
   else if (gameState.currentFloor === 4) { check4FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
   else if (gameState.currentFloor === 5) { if (typeof check5FRandomEncounter === 'function') check5FRandomEncounter(gameState, (enemy) => { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); }); }
-  else if (gameState.currentFloor === 6) { if (typeof check6FRandomEncounter === 'function') check6FRandomEncounter(gameState, (enemy) => { if (enemy) { isProcessingEvent = true; openCombatUI(enemy, gameState, handleBattleResult, { changeFloor }); } else { redraw(); } }); }
+  else if (gameState.currentFloor === 6) {
+    if (typeof check6FRandomEncounter === 'function') {
+      isProcessingEvent = true;
+      check6FRandomEncounter(gameState, (enemy) => {
+        if (enemy) {
+          openCombatUI(enemy, gameState, handleBattleResult, { changeFloor, redraw });
+        } else {
+          isProcessingEvent = false;
+          redraw();
+        }
+      }, { changeFloor, redraw });
+    }
+  }
   else if (gameState.currentFloor === 7) { if (typeof check7FRandomEncounter === 'function') { isProcessingEvent = true; check7FRandomEncounter(gameState, { changeFloor }, () => { isProcessingEvent = false; redraw(); }); } }
   else if (gameState.currentFloor === 8) { if (typeof check8FRandomEncounter === 'function') { isProcessingEvent = true; check8FRandomEncounter(gameState, { changeFloor }, () => { isProcessingEvent = false; redraw(); }); } }
 }

@@ -1,4 +1,4 @@
-// maps/map3F.js - エレベーター(3)統一・真田部屋(8)・ゴミ山(7)・冷蔵庫(9) 完全修正版
+// maps/map3F.js - エレベーター(3)統一(7F連携対応)・真田部屋(8)・ゴミ山(7)・冷蔵庫(9) 完全修正版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -13,15 +13,15 @@ export const playerStart3F = { x: 5, y: 8, dir: 0 };
 // 7: ゴミの山(探索ポイント) / 9: 巨大冷蔵庫の部屋
 export const map3F = [
     [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1], 
-    [1, 8, 1, 0, 0, 0, 0, 0, 1, 2, 1], // (9,1) 住人の部屋2
-    [1, 0, 1, 0, 1, 0, 1, 0, 9, 0, 1], // ★ 9: 巨大冷蔵庫(x:8, y:2) ※通路を塞がない壁位置へ移動
-    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1], // ★ (9,3)を通路(0)に開放！(9,1)へ進めるように修正
-    [1, 0, 1, 7, 1, 0, 1, 7, 1, 0, 1], // 7: ゴミの山(x:3, y:4) と (x:7, y:4)
+    [1, 8, 1, 0, 0, 0, 0, 0, 1, 2, 1], // (8):真田部屋 / (9,1):住人の部屋2
+    [1, 0, 1, 0, 1, 0, 1, 0, 9, 0, 1], // (8,2):巨大冷蔵庫
+    [1, 0, 2, 0, 1, 0, 1, 0, 0, 0, 1], // (2,3):住人の部屋1
+    [1, 0, 1, 7, 1, 0, 1, 7, 1, 0, 1], // (3,4),(7,4):ゴミの山
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 7, 1, 0, 1, 1, 1, 0, 1, 7, 1], // 7: ゴミの山(x:1, y:6) と (x:9, y:6)
+    [1, 7, 1, 0, 1, 1, 1, 0, 1, 7, 1], // (1,6),(9,6):ゴミの山
     [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
     [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 3, 1, 1, 1, 0, 1], 
+    [1, 0, 1, 1, 1, 3, 1, 1, 1, 0, 1], // (5,9):エレベーター(ここ1箇所のみ)
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
@@ -36,15 +36,26 @@ export function check3FRandomEncounter(gameState, onEncounter) {
 }
 
 export function handleEvent3F(targetCell, gameState, context) {
-    // 3: エレベーター
+    // 3: エレベーター（1F・4Fと仕様を統一し、7F解禁後の行き来にも対応）
     if (targetCell === 3) {
         return { 
             run: (onComplete) => {
                 const evModal = document.createElement("div");
                 evModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; font-family: monospace;";
                 
+                const canGo7F = gameState.flags && (
+                    gameState.flags.cleared6F || 
+                    gameState.flags.cleared7F || 
+                    gameState.flags.seen7FIntro || 
+                    gameState.flags.unlocked7FElevator
+                );
+
                 let html = `<h2 style="color: #66ccff; margin-bottom: 20px;">【エレベーター】</h2>`;
                 
+                if (canGo7F) {
+                    html += `<button class="ev-btn" data-floor="7" style="width: 240px; padding: 15px; margin: 5px; background: linear-gradient(180deg, #664400, #221100); color: #ffdd66; border: 1px solid #ffcc00; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px rgba(255,200,0,0.4);">7F (VIPラウンジ)</button>`;
+                }
+
                 const is5FUnlocked = gameState.flags && gameState.flags.cleared4F;
                 html += `<button class="ev-btn" data-floor="5" style="width: 240px; padding: 15px; margin: 5px; background: ${is5FUnlocked ? '#222' : '#111'}; color: ${is5FUnlocked ? '#fff' : '#666'}; border: 1px solid ${is5FUnlocked ? '#666' : '#333'}; font-size: 1.1em; cursor: pointer;">5F (精神科病棟) ${is5FUnlocked ? '' : '🔒'}</button>`;
                 html += `<button class="ev-btn" data-floor="3" style="width: 240px; padding: 15px; margin: 5px; background: #004400; color: #00ff66; border: 1px solid #00ff66; font-size: 1.1em; cursor: pointer;">3F (現在地)</button>`;
@@ -106,14 +117,14 @@ export function handleEvent3F(targetCell, gameState, context) {
         };
     }
 
-    // ★ 7: ゴミの山（探索ギミック・YES/NO選択対応）
+    // 7: ゴミの山（探索ギミック・YES/NO選択対応）
     if (targetCell === 7) {
         return {
             run: (onComplete) => startGarbagePileEvent(gameState, context, onComplete)
         };
     }
 
-    // ★ 9: 巨大冷蔵庫の部屋（管理人救出イベント）
+    // 9: 巨大冷蔵庫の部屋（管理人救出イベント）
     if (targetCell === 9) {
         return {
             run: (onComplete) => startRefrigeratorEvent(gameState, context, onComplete)
@@ -167,7 +178,7 @@ export function handleEvent3F(targetCell, gameState, context) {
 }
 
 // ----------------------------------------------------
-// ★ ゴミの山の探索ギミック（YES / NO 選択肢付き）
+// ゴミの山の探索ギミック（YES / NO 選択肢付き）
 // ----------------------------------------------------
 function startGarbagePileEvent(gameState, context, onComplete) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
@@ -182,7 +193,6 @@ function startGarbagePileEvent(gameState, context, onComplete) {
         return;
     }
 
-    // ★ 選択モーダルUI（勝手に進まないようYES/NOボタンを配置）
     const searchModal = document.createElement("div");
     searchModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3500; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: 'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif; padding: 20px; box-sizing: border-box;";
     searchModal.innerHTML = `
@@ -235,7 +245,7 @@ function startGarbagePileEvent(gameState, context, onComplete) {
             gameState.clearedRooms[key] = true;
             showMessageDialog(`【奇襲！！】\nガシッ……！！\nゴミの奥から無数の「黒い手」が飛び出し、主人公の腕を掴んだ！\nゴミに擬態していた悪魔が襲いかかってきた！！`, () => {
                 gameState.player.hp = Math.max(1, gameState.player.hp - 12);
-                const demonEnemy = { ...ENEMIES['DEVIL5_3F'] };
+                const demonEnemy = { ...(ENEMIES['DEVIL5_3F'] || { hp: 80, atk: 14, def: 2, weakness: [6], image: 'assets/images/demon/demon5.png' }) };
                 demonEnemy.name = "ゴミに潜む悪魔";
                 
                 openCombatUI(demonEnemy, gameState, (res) => {
@@ -247,7 +257,7 @@ function startGarbagePileEvent(gameState, context, onComplete) {
 }
 
 // ----------------------------------------------------
-// ★ 巨大冷蔵庫の部屋（管理人救出）
+// 巨大冷蔵庫の部屋（管理人救出）
 // ----------------------------------------------------
 function startRefrigeratorEvent(gameState, context, onComplete) {
     if (!gameState.flags) gameState.flags = {};
@@ -277,7 +287,8 @@ function startRefrigeratorEvent(gameState, context, onComplete) {
 }
 
 // ----------------------------------------------------
-
+// 住人の部屋（査問・真田鍵とヒント取得）
+// ----------------------------------------------------
 function start3FRoomInquisition(gameState, context, onComplete) {
     const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
     const vec = dirVectors[gameState.player.dir];
@@ -364,6 +375,9 @@ function start3FRoomInquisition(gameState, context, onComplete) {
     }
 }
 
+// ----------------------------------------------------
+// 3Fボス：真田戦シーケンス
+// ----------------------------------------------------
 function startSanadaBossSequence(gameState, context, onComplete) {
     showConversationDialog("assets/images/demon/3f-sanada.jpg", "【ゴミ屋敷の狂人・真田】\n「え？ 2Fの中学生の父親？ 知らねえよ、食えんのかよ、うちのBBAが不味かったからな、お前で口直ししてやるよ」", () => {
         playVideo("assets/images/demon/3f-sanada.mp4", () => {
@@ -380,7 +394,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
             };
 
             openBossPuzzleUI(puzzleConfig, gameState, (placedSlots) => {
-                const evalResult = evaluateSanadaPuzzle(placedSlots);
+                const evalResult = typeof evaluateSanadaPuzzle === 'function' ? evaluateSanadaPuzzle(placedSlots) : { result: 'FAIL', correctCount: 0 };
 
                 const applyDamageAndCombat = () => {
                     const floor = 3;
@@ -412,6 +426,7 @@ function startSanadaBossSequence(gameState, context, onComplete) {
 
                     showMessageDialog(`${resultMsg}\n真田との決戦に入る！`, () => {
                         const sanadaEnemy = {
+                            id: "SANADA_3F",
                             name: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.name : "ゴミ屋敷の狂人・真田",
                             image: "assets/images/demon/3f-sanada.jpg",
                             hp: startHp, maxHp: baseHp,
