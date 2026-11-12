@@ -1,4 +1,4 @@
-// maps/map2F.js - 教え子セリフ(御堂の伏線＆コンビニ避難指示)追加版
+// maps/map2F.js - 教え子セリフ(御堂伏線)＆2Fボスヒント取得追加版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -61,7 +61,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         if (!gameState.hasModelGun) {
             return {
                 run: (onComplete) => {
-                    showConversationDialog("assets/images/human1.png", " 【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nお父さんが『御堂を止めに行く』って非常階段を上がったきり、戻ってこないんだ……。\nこれ……お父さんの部屋にあったモデルガンと魔除けのお守りなんだ。お願い、お父さんを探して！」\n主人公（おいおい、本気か、無理だよ、こんなモデルガンで…）", () => {
+                    showConversationDialog("assets/images/human1.png", " 【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nお父さんが『御堂を止めに行く』って非常階段を上がったきり、戻ってこないんだ……。\nこれ……お父さんの部屋にあったモデルガンと魔除けのお守り。お願い、お父さんを探して！」\n主人公（おいおい、本気か、無理だよ、こんなモデルガンで…）", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
                         gameState.player.def += 1;
@@ -71,14 +71,14 @@ export function handleEvent2F(targetCell, gameState, context) {
                             "モデルガン ＆ 魔除けのお守り", 
                             "『モデルガン（Vox Sacra連動）』と『魔除けのお守り（DEF +1）』を受け取った！", 
                             () => {
-                                showMessageDialog("【現象が発生！】\nモデルガンが青白く光った！\nポケットの中でスマホが激しく振動し、『悪魔辞典アプリ』が自動的に立ち上がった……！", () => {
+                                showMessageDialog("【霊的現象が発生！】\nモデルガンが青白く光った！\nポケットの中でスマホが激しく振動し、『悪魔辞典アプリ』が自動的に立ち上がった……！", () => {
                                     showMessageDialog("【悪魔辞典】\n「手持ちの退魔カード『ラミナ』が共鳴して光っている……。\nモデルガンにラミナを装填しろということだろうか？」", () => {
                                         if (context && context.openLoadoutApp) {
                                             context.openLoadoutApp();
                                         }
                                         
-                                        showMessageDialog("教え子が不安そうに見ている。\n【主人公】\n「（くそっ、やるしかないのか！？）ここは危険だ。今すぐ1階のコンビニに避難するんだ。あそこなら比較的安全なはず。\nお父さんのことは…なんとか、やってみる」", () => {
-                                            showConversationDialog("assets/images/human1.png", "【教え子】\n「わかった……！ 先生もどうか気をつけてね！」\n\n（教え子は足早に部屋を飛び出し、1階へと向かった……）", () => {
+                                        showMessageDialog("教え子が不安そうに見ている。\n【主人公】\n「（くそっ、やるしかないのか！？）　ここは危険だ。今すぐ1階のコンビニに避難するんだ。あそこなら比較的安全なはず。\nお父さんのことは…なんとか、やってみる」", () => {
+                                            showConversationDialog("assets/images/human1.png", "【教え子】\n「わかった……！ 先生もどうか気をつけて！」\n\n（教え子は足早に部屋を飛び出し、1階へと向かった……）", () => {
                                                 onComplete();
                                             });
                                         });
@@ -200,6 +200,26 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
+                // ★ ランダムにヒントを付与する関数
+                const grantKageyamaHint = (messageTitle, callback) => {
+                    if (!gameState.bossHints) gameState.bossHints = [];
+                    
+                    const hints = [
+                        "【2F 影山の攻略ヒント①】「顔（上段）には『真実の鏡(2)』を突きつけ、覗き見の欲求を封じろ！」",
+                        "【2F 影山の攻略ヒント②】「足元（下段）には『浄化塩(3)』を撒き、ストーカーの未練を断ち切れ！」",
+                        "【2F 影山の攻略ヒント③】「左右の腕には、『聖水(1)』と『十字架(4)』のどちらかをセットしろ！」"
+                    ];
+                    
+                    const availableHints = hints.filter(h => !gameState.bossHints.includes(h));
+                    if (availableHints.length > 0) {
+                        const nextHint = availableHints[0];
+                        gameState.bossHints.push(nextHint);
+                        showMessageDialog(`${messageTitle}\n『2F 影山の魔方陣メモ』がスマホの悪魔手記に記録された！\n\n${nextHint}`, callback);
+                    } else {
+                        showMessageDialog(`${messageTitle}\n新たな情報は得られなかった……。`, callback);
+                    }
+                };
+
                 const humanImages = ["assets/images/human1.png", "assets/images/human2.png", "assets/images/human3.png"];
                 const randFace = humanImages[Math.floor(Math.random() * humanImages.length)];
 
@@ -212,8 +232,7 @@ export function handleEvent2F(targetCell, gameState, context) {
 
                 const isDemon = Math.random() < 0.5;
                 
-                // ★ 修正箇所：悪魔の場合も、査問画面では「怯えるマンション住民」に偽装させる
-                // 本当の悪魔の名前は `trueName` としてこっそり持たせておく
+                // ★ 査問画面では「怯えるマンション住民」に偽装させる
                 const entity = isDemon ? {
                     name: "怯えるマンション住民", // ネタバレ防止
                     trueName: randDemon.name,     // 戦闘時に表示する本来の名前
@@ -223,24 +242,26 @@ export function handleEvent2F(targetCell, gameState, context) {
                     image: randDemon.realImage,
                     weakness: randDemon.weakness,
                     rewardExp: 50,
-                    rewardMoney: 150
+                    rewardMoney: 150,
+                    dialogue: "「ヒィッ……！ あ、あの魔方陣のヒント……知ってるよ……！ だから助けて……！」"
                 } : {
                     name: "怯えるマンション住民",
                     type: "human",
                     faceImage: randFace,
                     image: randFace,
-                    weakness: null
+                    weakness: null,
+                    dialogue: "「な、なんだお前は！？ 頼む、ヒントなら教えるから撃たないでくれ……！」"
                 };
 
                 if (context && context.openInquisitionUI) {
                     context.openInquisitionUI(entity, gameState, (result) => {
                         if (result === "combat_win" || result === "finish" || result === "kill_human") {
                             gameState.clearedRooms[roomKey] = true;
-                            onComplete();
+                            grantKageyamaHint("【査問クリア】", onComplete);
                         } else if (result === "demon_ambush") {
                             gameState.player.hp = Math.max(1, gameState.player.hp - 10);
                             
-                            // ★ 修正箇所：正体を現して戦闘に入る時は、本来の名前(trueName)を使う
+                            // 正体を現して戦闘に入る時は本来の名前(trueName)を使う
                             const demonEnemy = {
                                 name: entity.trueName || entity.name, 
                                 image: entity.realImage,
@@ -249,8 +270,12 @@ export function handleEvent2F(targetCell, gameState, context) {
                                 rewardExp: 50, rewardMoney: 150
                             };
                             openCombatUI(demonEnemy, gameState, (res) => {
-                                if (res === "win") gameState.clearedRooms[roomKey] = true;
-                                onComplete();
+                                if (res === "win") {
+                                    gameState.clearedRooms[roomKey] = true;
+                                    grantKageyamaHint("【悪魔を討滅した】\n悪魔の残骸から手記を発見した！", onComplete);
+                                } else {
+                                    onComplete();
+                                }
                             }, context);
                         } else {
                             onComplete();
@@ -277,7 +302,6 @@ function handleKageyamaWin(gameState, onComplete) {
     gameState.player.dir = 3;
 
     showMessageDialog("【2F ボス撃破！】\n「ギャアアアアッ！ 覗いて何が悪いんだァァァ！！」\n影山は叫び声をあげて消滅した！\n（『エレベーターキー』を獲得！）\n※1階のエレベーターから3階へ直接移動可能になりました！", () => {
-        // ※お金とEXPは ui.js 側で加算されるため、ここでの二重加算は削除済み（報酬は kageyamaEnemy オブジェクトに設定）
         onComplete();
     });
 }
