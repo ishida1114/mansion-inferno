@@ -1,4 +1,4 @@
-// maps/map2F.js - 教え子セリフ(御堂伏線)＆2Fボスヒント取得追加版
+// maps/map2F.js - 教え子セリフ(御堂伏線)＆2Fボス完全ヒント取得対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -61,7 +61,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         if (!gameState.hasModelGun) {
             return {
                 run: (onComplete) => {
-                    showConversationDialog("assets/images/human1.png", " 【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nお父さんが『御堂を止めに行く』って非常階段を上がったきり、戻ってこないんだ……。\nこれ……お父さんの部屋にあったモデルガンと魔除けのお守り。お願い、お父さんを探して！」\n主人公（モデルガン！？　おいおい、本気か、無理だよ、こんなモデルガンで…）", () => {
+                    showConversationDialog("assets/images/human1.png", " 【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nお父さんが『御堂を止めに行く』って非常階段を上がったきり、戻ってこないんだ……。\nこれ……お父さんの部屋にあったモデルガンと魔除けのお守り。お願い、お父さんを探して！」\n主人公（モデルガン！？ おいおい、本気か、無理だよ、こんなモデルガンで…）", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
                         gameState.player.def += 1;
@@ -77,7 +77,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                                             context.openLoadoutApp();
                                         }
                                         
-                                        showMessageDialog("教え子が不安そうに見ている。\n【主人公】\n「（くそっ、やるしかないのか！？）　ここは危険だ。今すぐ1階のコンビニに避難するんだ。あそこなら比較的安全なはず。\nお父さんのことは…なんとか、やってみる」", () => {
+                                        showMessageDialog("教え子が不安そうに見ている。\n【主人公】\n「（くそっ、やるしかないのか！？） ここは危険だ。今すぐ1階のコンビニに避難するんだ。あそこなら比較的安全なはず。\nお父さんのことは…なんとか、やってみる」", () => {
                                             showConversationDialog("assets/images/human1.png", "【教え子】\n「わかった……！ 先生もどうか気をつけて！」\n\n（教え子は足早に部屋を飛び出し、1階へと向かった……）", () => {
                                                 onComplete();
                                             });
@@ -192,33 +192,37 @@ export function handleEvent2F(targetCell, gameState, context) {
                     return;
                 }
 
-                // ボス部屋以外の通常の部屋（査問・心理戦）
-                if (!gameState.clearedRooms) gameState.clearedRooms = {};
+                // ★ 影山攻略の完全ヒント付与関数（2Fの査問部屋は1箇所のため①〜③を一括で記録）
+                const kageyamaHints = [
+                    "【2F 影山の攻略ヒント①】「顔（上段）には『真実の鏡(2)』を突きつけ、覗き見の欲求を封じろ！」",
+                    "【2F 影山の攻略ヒント②】「足元（下段）には『浄化塩(3)』を撒き、ストーカーの未練を断ち切れ！」",
+                    "【2F 影山の攻略ヒント③】「左右の腕には、『聖水(1)』と『十字架(4)』のどちらかをセットしろ！」"
+                ];
 
-                if (gameState.clearedRooms[roomKey]) {
-                    showMessageDialog("【住人の部屋】\nこの部屋にはもう誰もいない……。", onComplete);
-                    return;
-                }
-
-                // ★ ランダムにヒントを付与する関数
                 const grantKageyamaHint = (messageTitle, callback) => {
                     if (!gameState.bossHints) gameState.bossHints = [];
                     
-                    const hints = [
-                        "【2F 影山の攻略ヒント①】「顔（上段）には『真実の鏡(2)』を突きつけ、覗き見の欲求を封じろ！」",
-                        "【2F 影山の攻略ヒント②】「足元（下段）には『浄化塩(3)』を撒き、ストーカーの未練を断ち切れ！」",
-                        "【2F 影山の攻略ヒント③】「左右の腕には、『聖水(1)』と『十字架(4)』のどちらかをセットしろ！」"
-                    ];
-                    
-                    const availableHints = hints.filter(h => !gameState.bossHints.includes(h));
-                    if (availableHints.length > 0) {
-                        const nextHint = availableHints[0];
-                        gameState.bossHints.push(nextHint);
-                        showMessageDialog(`${messageTitle}\n『2F 影山の魔方陣メモ』がスマホの悪魔手記に記録された！\n\n${nextHint}`, callback);
+                    const missingHints = kageyamaHints.filter(h => !gameState.bossHints.includes(h));
+                    if (missingHints.length > 0) {
+                        missingHints.forEach(h => gameState.bossHints.push(h));
+                        showMessageDialog(`${messageTitle}\n『2F 影山の魔方陣メモ（全文）』がスマホの悪魔手記に記録された！\n\n${missingHints.join('\n')}`, callback);
                     } else {
                         showMessageDialog(`${messageTitle}\n新たな情報は得られなかった……。`, callback);
                     }
                 };
+
+                // ボス部屋以外の通常の部屋（査問・心理戦）
+                if (!gameState.clearedRooms) gameState.clearedRooms = {};
+
+                if (gameState.clearedRooms[roomKey]) {
+                    const hasUncollected = gameState.bossHints && kageyamaHints.some(h => !gameState.bossHints.includes(h));
+                    if (hasUncollected) {
+                        grantKageyamaHint("【住人の部屋】\n部屋にはもう誰もいないが、机の陰に破れたメモの続きが落ちていた！", onComplete);
+                    } else {
+                        showMessageDialog("【住人の部屋】\nこの部屋にはもう誰もいない……。", onComplete);
+                    }
+                    return;
+                }
 
                 const humanImages = ["assets/images/human1.png", "assets/images/human2.png", "assets/images/human3.png"];
                 const randFace = humanImages[Math.floor(Math.random() * humanImages.length)];
@@ -243,14 +247,14 @@ export function handleEvent2F(targetCell, gameState, context) {
                     weakness: randDemon.weakness,
                     rewardExp: 50,
                     rewardMoney: 150,
-                    dialogue: "「ヒィッ……！ あ、あの魔方陣のヒント……知ってるよ……！ だから助けて……！」"
+                    dialogue: "「ヒィッ……！ あ、あの魔方陣のメモ……置いていくから助けて……！」"
                 } : {
                     name: "怯えるマンション住民",
                     type: "human",
                     faceImage: randFace,
                     image: randFace,
                     weakness: null,
-                    dialogue: "「な、なんだお前は！？ 頼む、ヒントなら教えるから撃たないでくれ……！」"
+                    dialogue: "「な、なんだお前は！？ 頼む、ヒントのメモを渡すから撃たないでくれ……！」"
                 };
 
                 if (context && context.openInquisitionUI) {

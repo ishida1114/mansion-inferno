@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズルUI 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -1220,49 +1220,84 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
     showTutorialIfNeeded(initUI);
 }
 
-// ボス魔方陣パズルUI制御
+// ==========================================
+// ボス魔方陣パズルUI制御（大型視認性・セットカード画像表示・選択枠ハイライト・自動カーソル送り対応版）
+// ==========================================
 export function openBossPuzzleUI(puzzleConfig, gameState, onSubmit) {
     const oldUI = document.getElementById("boss-puzzle-modal");
     if (oldUI) oldUI.remove();
 
     const ui = document.createElement("div");
     ui.id = "boss-puzzle-modal";
-    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.96); z-index: 3500; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 10px; font-family: ${HORROR_FONT}; box-sizing: border-box; overflow-y: auto;`;
+    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.96); z-index: 3500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; font-family: ${HORROR_FONT}; box-sizing: border-box; overflow-y: auto;`;
 
     let slots = {};
     (puzzleConfig.slots || []).forEach(s => slots[s.id] = null);
     let activeSlotKey = puzzleConfig.slots && puzzleConfig.slots.length > 0 ? puzzleConfig.slots[0].id : null;
 
-    let slotsHTML = "";
-    puzzleConfig.slots.forEach(s => {
-        slotsHTML += `<div id="${s.id}" class="boss-slot" style="${s.gridPos} background: #2a0000; border: 2px dashed #ff3333; display: flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer; color:#ffdd66; font-size:0.75em;">${s.label}</div>`;
-    });
+    const cardNames = ["", "Ⅰ 聖水", "Ⅱ 鏡", "Ⅲ 浄化塩", "Ⅳ 十字架", "Ⅴ 聖書", "Ⅵ 聖炎", "Ⅶ 鐘", "Ⅷ 聖香", "Ⅸ 銀杭"];
 
     ui.innerHTML = `
-        <h2 style="color: #ff3333; margin: 4px 0; text-shadow: 0 0 10px red; font-size: 1.35em;">${puzzleConfig.title}</h2>
-        <div style="color: #bbb; font-size: 0.8em; margin-bottom: 6px;">${puzzleConfig.subTitle}</div>
+        <div style="width: 100%; max-width: 920px; display: flex; flex-direction: column; align-items: center; margin: auto;">
+            <h2 style="color: #ff3333; margin: 0 0 4px 0; text-shadow: 0 0 12px red; font-size: 1.55em; text-align: center;">${puzzleConfig.title}</h2>
+            <div style="color: #ccc; font-size: 0.92em; margin-bottom: 14px; text-align: center;">${puzzleConfig.subTitle}</div>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 62px); grid-template-rows: repeat(3, 75px); gap: 6px; margin-bottom: 8px; background: rgba(20,0,0,0.85); padding: 8px; border: 2px solid #550000; border-radius: 8px; position: relative;">
-            <div style="grid-area: 2 / 2; background: #150000; border: 1px solid #440000; display:flex; justify-content:center; align-items:center; color:#ff3333; font-weight:bold; font-size:0.95em;">${puzzleConfig.bossName}</div>
-            ${slotsHTML}
+            <div style="width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 22px; margin-bottom: 16px;">
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div id="boss-puzzle-grid" style="display: grid; grid-template-columns: repeat(3, 98px); grid-template-rows: repeat(3, 114px); gap: 8px; background: rgba(25,0,0,0.9); padding: 12px; border: 2px solid #770000; border-radius: 12px; box-shadow: 0 0 25px rgba(255,0,0,0.25);">
+                        <div style="grid-area: 2 / 2; background: radial-gradient(circle, #330000, #120000); border: 2px solid #880000; border-radius: 8px; display:flex; justify-content:center; align-items:center; color:#ff4444; font-weight:bold; font-size:1.25em; text-shadow: 0 0 8px red; text-align:center; padding:4px;">${puzzleConfig.bossName}</div>
+                    </div>
+                    <div style="color: #bbb; font-size: 0.95em; margin-top: 8px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold; font-size:1.05em;">${puzzleConfig.slots[0]?.label.replace(/<br>/g, ' ') || ''}</span></div>
+                </div>
+
+                <div style="width: 100%; max-width: 440px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px; background: rgba(12,4,4,0.92); border: 2px solid #660000; border-radius: 12px; box-shadow: 0 0 20px rgba(0,0,0,0.8);" id="boss-cards"></div>
+            </div>
+
+            <button id="btn-fire-vox" style="width: 100%; max-width: 440px; background: linear-gradient(180deg, #770000, #2a0000); color: #ffdd66; border: 2px solid #ff4444; padding: 14px; font-family: inherit; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 1.25em; letter-spacing: 0.08em; box-shadow: 0 0 18px rgba(255,0,0,0.6);">Vox Sacra 発射！</button>
         </div>
-
-        <div style="color: #aaa; font-size: 0.82em; margin-bottom: 6px;">選択中の対象: <span id="current-target-label" style="color:#ffdd66; font-weight:bold;">${puzzleConfig.slots[0].label}</span></div>
-
-        <div style="width: 100%; max-width: 360px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; background: rgba(0,0,0,0.85); border: 2px solid #550000; border-radius: 8px;" id="boss-cards"></div>
-
-        <button id="btn-fire-vox" style="margin-top: 10px; width: 100%; max-width: 340px; background: linear-gradient(180deg, #660000, #220000); color: #ffdd66; border: 2px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 1.15em; box-shadow: 0 0 15px red;">Vox Sacra 発射！</button>
     `;
     document.body.appendChild(ui);
 
-    puzzleConfig.slots.forEach(s => {
-        document.getElementById(s.id).onclick = () => {
-            activeSlotKey = s.id;
-            document.getElementById("current-target-label").innerText = s.label;
-        };
-    });
+    const gridDiv = document.getElementById("boss-puzzle-grid");
 
-    const cardNames = ["", "Ⅰ 聖水", "Ⅱ 鏡", "Ⅲ 浄化塩", "Ⅳ 十字架", "Ⅴ 聖書", "Ⅵ 聖炎", "Ⅶ 鐘", "Ⅷ 聖香", "Ⅸ 銀杭"];
+    const renderSlots = () => {
+        gridDiv.querySelectorAll(".boss-slot").forEach(el => el.remove());
+
+        puzzleConfig.slots.forEach(s => {
+            const isSelected = (activeSlotKey === s.id);
+            const assignedNum = slots[s.id];
+            const slotEl = document.createElement("div");
+            slotEl.id = s.id;
+            slotEl.className = "boss-slot";
+
+            const borderStyle = isSelected
+                ? "border: 2px solid #ffdd66; box-shadow: 0 0 14px rgba(255, 221, 102, 0.75); background: #381800;"
+                : (assignedNum ? "border: 2px solid #00cc55; background: #0a2210;" : "border: 2px dashed #ff4444; background: #240404;");
+
+            slotEl.style.cssText = `${s.gridPos} ${borderStyle} border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #ffdd66; padding: 4px; box-sizing: border-box; transition: all 0.15s ease; text-align: center;`;
+
+            if (assignedNum) {
+                slotEl.innerHTML = `
+                    <div style="font-size: 0.72em; color: #aaa; line-height: 1.1; margin-bottom: 2px;">${s.label.replace(/<br>/g, '')}</div>
+                    <img src="assets/images/cards/${assignedNum}card.png" style="max-height: 58px; max-width: 58px; object-fit: contain; margin-bottom: 2px;" onerror="this.src='assets/images/cards/${assignedNum}Card.png'; this.onerror=function(){ this.style.display='none'; };">
+                    <div style="font-size: 0.85em; font-weight: bold; color: #00ff66; white-space: nowrap;">${cardNames[assignedNum]}</div>
+                `;
+            } else {
+                slotEl.innerHTML = `
+                    <div style="font-size: 0.95em; font-weight: bold; line-height: 1.3; color: ${isSelected ? '#ffdd66' : '#ffaaaa'};">${s.label}</div>
+                    <div style="font-size: 0.72em; color: ${isSelected ? '#ffdd66' : '#888'}; margin-top: 4px;">${isSelected ? '▼ 選択中' : 'タップ'}</div>
+                `;
+            }
+
+            slotEl.onclick = () => {
+                activeSlotKey = s.id;
+                document.getElementById("current-target-label").innerText = s.label.replace(/<br>/g, ' ');
+                renderSlots();
+            };
+
+            gridDiv.appendChild(slotEl);
+        });
+    };
 
     const renderCardGrid = () => {
         const cardsDiv = document.getElementById("boss-cards");
@@ -1271,30 +1306,36 @@ export function openBossPuzzleUI(puzzleConfig, gameState, onSubmit) {
         [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(num => {
             const isUsed = Object.values(slots).includes(num);
             const cDiv = document.createElement("div");
-            cDiv.style.cssText = `height: 95px; border: 2px solid ${isUsed ? '#333' : '#770000'}; background: ${isUsed ? '#050505' : '#111'}; opacity: ${isUsed ? '0.4' : '1'}; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: ${isUsed ? 'not-allowed' : 'pointer'}; color: #ffdd66; font-weight: bold; border-radius: 6px; padding: 4px; box-sizing: border-box;`;
+            cDiv.style.cssText = `height: 122px; border: 2px solid ${isUsed ? '#333' : '#881111'}; background: ${isUsed ? '#080808' : '#160808'}; opacity: ${isUsed ? '0.45' : '1'}; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: ${isUsed ? 'not-allowed' : 'pointer'}; color: #ffdd66; font-weight: bold; border-radius: 8px; padding: 6px; box-sizing: border-box; transition: transform 0.1s ease, border-color 0.15s ease;`;
             
             cDiv.innerHTML = `
-                <img src="assets/images/cards/${num}card.png" style="max-height: 52px; max-width: 52px; object-fit: contain; margin-bottom: 3px;" onerror="this.src='assets/images/cards/${num}Card.png'; this.onerror=function(){ this.style.display='none'; };">
-                <div style="font-size:0.85em; color:${isUsed ? '#666' : '#ffdd66'}; white-space:nowrap; font-weight:bold;">${isUsed ? '使用中' : cardNames[num]}</div>
+                <img src="assets/images/cards/${num}card.png" style="max-height: 78px; max-width: 78px; object-fit: contain; margin-bottom: 4px;" onerror="this.src='assets/images/cards/${num}Card.png'; this.onerror=function(){ this.style.display='none'; };">
+                <div style="font-size: 0.95em; color: ${isUsed ? '#666' : '#ffdd66'}; white-space: nowrap; font-weight: bold;">${isUsed ? '使用中' : cardNames[num]}</div>
             `;
             
             cDiv.onclick = () => {
                 Object.keys(slots).forEach(k => {
                     if (slots[k] === num) {
                         slots[k] = null;
-                        const sObj = puzzleConfig.slots.find(x => x.id === k);
-                        document.getElementById(k).innerHTML = sObj ? sObj.label : k;
                     }
                 });
 
                 slots[activeSlotKey] = num;
-                document.getElementById(activeSlotKey).innerHTML = `<div style="font-size:1.6em; font-weight:bold; color:#00ff66;">${num}</div>`;
+
+                const nextEmpty = puzzleConfig.slots.find(s => slots[s.id] === null);
+                if (nextEmpty) {
+                    activeSlotKey = nextEmpty.id;
+                    document.getElementById("current-target-label").innerText = nextEmpty.label.replace(/<br>/g, ' ');
+                }
+
+                renderSlots();
                 renderCardGrid();
             };
             cardsDiv.appendChild(cDiv);
         });
     };
 
+    renderSlots();
     renderCardGrid();
 
     document.getElementById("btn-fire-vox").onclick = () => {
