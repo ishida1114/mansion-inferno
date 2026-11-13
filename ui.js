@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -1016,8 +1016,14 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     };
 }
 
-// 査問UI制御
+// ==========================================
+// 査問UI制御（擬態名と本来の悪魔名の完全分離版）
+// ==========================================
 export function openInquisitionUI(entity, gameState, onResult, context) {
+    // ★ 査問中は必ず住民として偽装表示し、正体がバレた後のみ本来の悪魔名(trueName)を使う
+    const displayName = (entity.type === "demon" && !entity.trueName) ? "怯えるマンション住民" : entity.name;
+    const actualDemonName = entity.trueName || (entity.name !== "怯えるマンション住民" ? entity.name : "擬態していた悪魔");
+
     const showTutorialIfNeeded = (callback) => {
         if (!gameState.flags) gameState.flags = {};
         if (!gameState.flags.seenInqTutorial) {
@@ -1040,7 +1046,7 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         ui.innerHTML = `
             <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 8px red;">【査問】住人との対面</h2>
             ${visualHTML}
-            <div style="color: #ddd; font-size: 1.1em; margin-top: 5px; font-weight: bold;">${entity.name}</div>
+            <div style="color: #ddd; font-size: 1.1em; margin-top: 5px; font-weight: bold;">${displayName}</div>
             
             <div id="inq-log" style="width: 100%; max-width: 500px; height: 110px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin: 12px 0; color: #ccc; font-size: 0.9em; line-height: 1.5; overflow-y: auto; white-space: pre-wrap;">（住人と対面した。ラミナカードを提示して相手の表情や仕草を伺おう……）</div>
 
@@ -1134,12 +1140,12 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         showBtn.onclick = () => {
             if (step === 1) {
                 if (!selected[0]) { alert("1枚目のカードを選択してください。"); return; }
-                log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[0], entity);
+                log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${displayName}】\n` + getReactionMessage(selected[0], entity);
                 step = 2;
                 showBtn.innerText = "2枚目を提示する";
             } else if (step === 2) {
                 if (!selected[1]) { alert("2枚目のカードを選択してください。"); return; }
-                log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${entity.name}】\n` + getReactionMessage(selected[1], entity);
+                log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${displayName}】\n` + getReactionMessage(selected[1], entity);
                 step = 3;
                 showBtn.style.display = "none";
                 shootBtn.style.display = "block";
@@ -1167,13 +1173,13 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
                     if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3");
                     
                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-                    showMessageDialog(`【完全見破り成功！】\n悪魔の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
+                    showMessageDialog(`【完全見破り成功！】\n人間に擬態していた『${actualDemonName}』の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
                         onResult("combat_win");
                     });
                 } else {
-                    showMessageDialog(`【見破り成功！ しかし弱点不一致】\n悪魔の正体を暴いたが、弱点属性を打ち抜けなかった！\n先制ダメージを与え、敵HP50%状態で戦闘に入る！`, () => {
+                    showMessageDialog(`【見破り成功！ しかし弱点不一致】\n悪魔の正体を暴いた！ 正体は『${actualDemonName}』だった！\n弱点属性を打ち抜けなかったが、先制ダメージを与え敵HP50%状態で戦闘に入る！`, () => {
                         const demonEnemy = {
-                            name: entity.name,
+                            name: actualDemonName,
                             image: entity.realImage,
                             hp: 15,
                             atk: 10,
@@ -1199,7 +1205,7 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
                     onResult("finish");
                 });
             } else {
-                showMessageDialog(`【痛恨の判断ミス！】\n悪魔を「保護」しようとして不用意に近づいてしまった！\n悪魔から確定の先制攻撃を受ける！`, () => {
+                showMessageDialog(`【痛恨の判断ミス！】\n悪魔を「保護」しようとして不用意に近づいてしまった！\n正体を現した『${actualDemonName}』から確定の先制攻撃を受ける！`, () => {
                     onResult("demon_ambush");
                 });
             }
