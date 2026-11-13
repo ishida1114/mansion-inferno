@@ -1,4 +1,4 @@
-// appUI.js - 全機能完全維持 ＆ 最大3スロット装填 ＆ 8F悪魔手記 ＆ 悪魔弱点辞典(調査ログ拡張) 実装版
+// appUI.js - 全機能完全維持 ＆ 最大3スロット装填 ＆ 8F悪魔手記 ＆ 悪魔弱点辞典 ＆ 経験値残量完全一致版
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
 import { applyChromaKey } from './ui.js';
@@ -111,7 +111,9 @@ export class AppUI {
     }
 
     const familiarPercent = gameState.flags?.hasCat ? 100 : Math.min(100, Math.floor((gameState.player.level / 15) * 100));
-    const nextExp = Math.max(0, (gameState.player.maxExp || 100) - (gameState.player.exp || 0));
+    const nextExp = gameState.getRemainingExp
+      ? gameState.getRemainingExp()
+      : Math.max(0, (gameState.player.maxExp || 100) - (gameState.player.exp || 0));
 
     appContainer.innerHTML = `
       <div class="smartphone">
@@ -254,7 +256,7 @@ export class AppUI {
           const isAllowed = hasGun && (num <= pLevel);
           return `
             <div class="card-item ${isAllowed ? '' : 'disabled'}" data-card-num="${num}">
-              <img src="assets/images/cards/\${num}card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}Card.png';" />
+              <img src="assets/images/cards/${num}card.png" alt="Card ${num}" onerror="this.src='assets/images/cards/${num}Card.png';" />
               <div style="font-size: 0.7em; font-weight:bold;">【${num}】${isAllowed ? '' : '<br><span style="color:#ff4444;">ロック</span>'}</div>
             </div>
           `;
@@ -359,7 +361,6 @@ export class AppUI {
     return `<div class="sub-header"><span class="back-btn" id="btn-back">◄ 戻る</span><h3 class="sub-title">詳細地図 (${gameState.currentFloor}F)</h3></div><div style="display: flex; justify-content: center; padding: 10px; background: #000; border-radius: 6px;"><div style="display: grid; grid-template-columns: repeat(${map[0]?.length || 1}, 14px); gap: 2px;">${map.map((row, rIdx) => row.map((cell, cIdx) => { const isPlayer = player.x === cIdx && player.y === rIdx; let bg = '#111'; if (cell === 1) bg = '#444'; else if (cell === 2) bg = '#0088cc'; else if (cell === 3) bg = '#aa0000'; else if (cell === 4) bg = '#ff9900'; if (isPlayer) bg = '#00ff66'; return `<div style="width:14px; height:14px; background:${bg}; border-radius:2px; text-align:center; font-size:9px; line-height:14px;">${isPlayer ? '▲' : ''}</div>`; }).join('')).join('')}</div></div>`;
   }
 
-  // ★ 調査ログ ➔ 悪魔弱点辞典への進化（現在の目的も上部に完全維持！）
   renderLogView() {
     const demons = gameState.discoveredDemons ? Object.values(gameState.discoveredDemons) : [];
     
@@ -465,11 +466,9 @@ export class AppUI {
         const itemIdx = parseInt(btn.getAttribute('data-index'));
         if (!isNaN(itemIdx) && gameState.inventory?.items[itemIdx]) {
           const item = gameState.inventory.items[itemIdx];
-          let msg = "";
-          
-          const healVal = item.heal || 15;
+          const healVal = item.healAmount || item.heal || 15;
           gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + healVal);
-          msg = `【${item.name}】を使用した！ HPが ${healVal} 回復した！（現在HP: ${gameState.player.hp}/${gameState.player.maxHp}）`;
+          const msg = `【${item.name}】を使用した！ HPが ${healVal} 回復した！（現在HP: ${gameState.player.hp}/${gameState.player.maxHp}）`;
 
           gameState.inventory.items.splice(itemIdx, 1);
           alert(msg);

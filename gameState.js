@@ -1,4 +1,4 @@
-// gameState.js - appUI連動スロット枠整合・悪魔手記永続化・経験値バランス適正化・8Fキャップ撤廃＆悪魔辞典対応 完全版
+// gameState.js - ソフトキャップ(余裕+3＆段階減衰)・メタ警告撤廃・経験値表示完全一致・悪魔辞典対応 完全版
 
 export const gameState = {
   player: {
@@ -7,7 +7,7 @@ export const gameState = {
     dir: 0,
     level: 1,
     exp: 0,
-    maxExp: 115,
+    maxExp: 100,
     hp: 20,
     maxHp: 20,
     def: 0,
@@ -36,7 +36,7 @@ export const gameState = {
 
   clearedRooms: {},
   bossHints: [], // 悪魔手記に記録される討伐ヒント配列
-  discoveredDemons: {}, // ★ 悪魔弱点辞典：猫が看破した悪魔データ { [敵名]: { name, image, weakness, floor } }
+  discoveredDemons: {}, // 悪魔弱点辞典：猫が看破した悪魔データ { [敵名]: { name, image, weakness, floor } }
   justReachedLv15: false,
 
   inventory: {
@@ -85,24 +85,50 @@ export const gameState = {
     this._armorUnlockStage = val;
   },
 
-  // ★ 8Fはラストフロアのためレベルキャップを完全撤廃 (999)
-  getFloorLevelCap(floor = this.currentFloor) {
-    if (floor <= 1 || floor === 8) return 999;
-    return (floor - 1) * 5;
+  // ★ 次のレベルに必要な経験値を計算する統一関数
+  calcRequiredExp(level = this.player.level) {
+    if (level <= 1) return 100;
+    return Math.floor(100 + (level - 1) * 80 + Math.pow(level, 1.5) * 15);
   },
 
-  // ★ 8Fは報酬減衰なし（100%獲得）
+  // ★ 次のレベルまでの残り必要経験値を取得（appUI表示と完全一致）
+  getRemainingExp() {
+    const req = this.player.maxExp || this.calcRequiredExp(this.player.level);
+    return Math.max(0, req - (this.player.exp || 0));
+  },
+
+  // ★ 適正レベル＋3の安全マージン（1F・8Fは上限なし）
+  getFloorLevelCap(floor = this.currentFloor) {
+    if (floor <= 1 || floor === 8) return 999;
+    return ((floor - 1) * 5) + 3;
+  },
+
+  // ★ ソフトキャップ方式：適正Lv+3までは100%獲得、以降は段階的になだらかに減衰（メタ警告文も非表示）
   calculateRewards(baseExp, baseMoney, floor = this.currentFloor) {
-    if (floor === 8) {
+    if (floor <= 1 || floor === 8) {
       return { exp: baseExp, money: baseMoney, isCapped: false };
     }
-    const capLevel = this.getFloorLevelCap(floor);
-    if (this.player.level > capLevel) {
-      const cappedExp = Math.max(1, Math.floor(baseExp * 0.1));
-      const cappedMoney = Math.max(1, Math.floor(baseMoney * 0.5));
-      return { exp: cappedExp, money: cappedMoney, isCapped: true };
+
+    const softCap = this.getFloorLevelCap(floor);
+    const over = this.player.level - softCap;
+
+    if (over <= 0) {
+      return { exp: baseExp, money: baseMoney, isCapped: false };
     }
-    return { exp: baseExp, money: baseMoney, isCapped: false };
+
+    let expRate = 0.25;
+    let moneyRate = 0.70;
+    if (over === 1) {
+      expRate = 0.75;
+      moneyRate = 0.90;
+    } else if (over === 2) {
+      expRate = 0.50;
+      moneyRate = 0.80;
+    }
+
+    const scaledExp = Math.max(1, Math.floor(baseExp * expRate));
+    const scaledMoney = Math.max(1, Math.floor(baseMoney * moneyRate));
+    return { exp: scaledExp, money: scaledMoney, isCapped: false };
   },
 
   // ★ 悪魔弱点の自動記録ヘルパー
@@ -180,24 +206,14 @@ export const gameState = {
     }
   },
 
+  // ★ 獲得EXPをそのまま100%加算し、表示と残り経験値の減り方を完全一致させる
   gainExp(amount) {
-    let scaledExp = amount;
-    const isBossReward = amount >= 200;
-
-    if (isBossReward) {
-      scaledExp = Math.max(amount, Math.floor(this.player.maxExp * 0.35));
-    } else {
-      const maxGain = Math.floor(this.player.maxExp * 0.18);
-      const minGain = Math.max(1, Math.floor(this.player.maxExp * 0.11));
-
-      if (amount > maxGain) {
-        scaledExp = Math.floor(this.player.maxExp * 0.14);
-      } else if (amount < minGain && amount > 0) {
-        scaledExp = Math.floor(this.player.maxExp * 0.12);
-      }
+    const addExp = Math.max(0, Math.floor(Number(amount) || 0));
+    if (!this.player.maxExp || this.player.maxExp <= 0) {
+      this.player.maxExp = this.calcRequiredExp(this.player.level);
     }
 
-    this.player.exp += scaledExp;
+    this.player.exp = (this.player.exp || 0) + addExp;
     let leveledUp = false;
     while (this.player.exp >= this.player.maxExp) {
       this.player.exp -= this.player.maxExp;
@@ -214,7 +230,7 @@ export const gameState = {
     this.player.hp = this.player.maxHp;
     this.player.agi += 1 * amount;
 
-    this.player.maxExp = Math.floor(100 + (this.player.level - 1) * 80 + Math.pow(this.player.level, 1.5) * 15);
+    this.player.maxExp = this.calcRequiredExp(this.player.level);
 
     if (this.player.level % 2 === 0) {
       this.player.def += 1;
@@ -303,7 +319,7 @@ export const gameState = {
     this.player.dir = 0;
     this.player.level = 1;
     this.player.exp = 0;
-    this.player.maxExp = 115;
+    this.player.maxExp = 100;
     this.player.hp = 20;
     this.player.maxHp = 20;
     this.player.def = 0;
@@ -326,7 +342,7 @@ export const gameState = {
     this.equippedCards = [];
     this.clearedRooms = {};
     this.bossHints = [];
-    this.discoveredDemons = {}; // リセット
+    this.discoveredDemons = {};
     this.justReachedLv15 = false;
     this.inventory = { items: [] };
     this.visitedMaps = {};
@@ -379,6 +395,15 @@ export const gameState = {
         if (!this.flags) this.flags = {};
         if (!this.inventory) this.inventory = { items: [] };
         if (!this.inventory.items) this.inventory.items = [];
+        if (this.player) {
+          if (!this.player.maxExp || this.player.maxExp <= 0) {
+            this.player.maxExp = this.calcRequiredExp(this.player.level || 1);
+          }
+          while (this.player.exp >= this.player.maxExp) {
+            this.player.exp -= this.player.maxExp;
+            this.levelUp(1);
+          }
+        }
         return true;
       }
       return false;

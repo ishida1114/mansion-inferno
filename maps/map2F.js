@@ -61,7 +61,7 @@ export function handleEvent2F(targetCell, gameState, context) {
         if (!gameState.hasModelGun) {
             return {
                 run: (onComplete) => {
-                    showConversationDialog("assets/images/human1.png", " 【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nお父さんが『御堂を止めに行く』って非常階段を上がったきり、戻ってこないんだ……。\nこれ……お父さんの部屋にあったモデルガンと魔除けのお守り。お願い、お父さんを探して！」\n主人公（おいおい、本気か、無理だよ、こんなモデルガンで…）", () => {
+                    showConversationDialog("assets/images/human1.png", " 【教え子】\n「先生……っ！ 助けに来てくれたんだね！\nお父さんが『御堂を止めに行く』って非常階段を上がったきり、戻ってこないんだ……。\nこれ……お父さんの部屋にあったモデルガンと魔除けのお守り。お願い、お父さんを探して！」\n主人公（モデルガン！？　おいおい、本気か、無理だよ、こんなモデルガンで…）", () => {
                         gameState.hasModelGun = true;
                         gameState.player.hasModelGun = true;
                         gameState.player.def += 1;

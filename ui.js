@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -1017,7 +1017,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 }
 
 // ==========================================
-// 査問UI制御（擬態名と本来の悪魔名の完全分離版）
+// 査問UI制御（擬態名と本来の悪魔名の完全分離＆見破り銃撃SE対応版）
 // ==========================================
 export function openInquisitionUI(entity, gameState, onResult, context) {
     // ★ 査問中は必ず住民として偽装表示し、正体がバレた後のみ本来の悪魔名(trueName)を使う
@@ -1161,6 +1161,9 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
                     onResult("kill_human");
                 });
             } else {
+                // ★ 見破り成功時の銃撃SEを再生
+                sound.playSE("assets/audio/se/gun.mp3");
+
                 const isWeaknessHit = selected.some(num => parseInt(num, 10) === entity.weakness);
 
                 if (isWeaknessHit) {
@@ -1170,7 +1173,9 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
                     gameState.player.money += reward.money;
                     const isLvUp = gameState.gainExp(reward.exp);
                     
-                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3");
+                    if (isLvUp) {
+                        setTimeout(() => sound.playSE("assets/audio/se/levelup.mp3"), 350);
+                    }
                     
                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
                     showMessageDialog(`【完全見破り成功！】\n人間に擬態していた『${actualDemonName}』の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
