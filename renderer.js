@@ -1,4 +1,4 @@
-// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示＆4F/7F専用テクスチャ対応 完全版
+// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示＆4F/7F専用テクスチャ＆3Fゴミ山表示修正 完全版
 
 import { gameState } from './gameState.js';
 
@@ -14,7 +14,8 @@ const baseImages = {
     wall: "assets/images/wall.png",
     stairDoor: "assets/images/stair_door.png",
     elevator: "assets/images/elevator.png",
-    entrance: "assets/images/entrance.png", 
+    entrance: "assets/images/entrance.png",
+    reizouko: "assets/images/reizouko.png",
     left1: "assets/images/leftwall1.png",
     left2: "assets/images/leftwall2.png",
     left3: "assets/images/leftwall3.png",
@@ -216,24 +217,24 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
             }
 
             // 正面
-                if (currentMap[fY] && currentMap[fY][fX] !== 0) {
-                    const cellType = currentMap[fY][fX], b = frontBounds[depth];
-                    let targetImg = images.wall;
-                    let is7FCustom = false;
-                    
-                    if ((cellType === 4 || cellType === 5) && isImageReady(images.stairDoor)) {
-                        targetImg = images.stairDoor;
-                    } else if (cellType === 6 && isImageReady(images.entrance)) {
-                        targetImg = images.entrance;
-                    } else if (cellType === 3 && isImageReady(images.elevator)) { // ★ 7 を除外
-                        targetImg = images.elevator;
-                    // ★ 追加：7(ゴミ山) と 9(冷蔵庫部屋) を reizouko.png で描画
-                    } else if ((cellType === 7 || cellType === 9) && isImageReady(images.reizouko)) {
-                        targetImg = images.reizouko;
-                    // ★ 9 を除外
-                    } else if ([2, 8].includes(cellType) && isImageReady(images.door)) {
-                        targetImg = images.door;
-                    }
+            if (currentMap[fY] && currentMap[fY][fX] !== 0) {
+                const cellType = currentMap[fY][fX], b = frontBounds[depth];
+                let targetImg = images.wall;
+                let is7FCustom = false;
+                
+                if ((cellType === 4 || cellType === 5) && isImageReady(images.stairDoor)) {
+                    targetImg = images.stairDoor;
+                } else if (cellType === 6 && isImageReady(images.entrance)) {
+                    targetImg = images.entrance;
+                } else if (cellType === 3 && isImageReady(images.elevator)) {
+                    targetImg = images.elevator;
+                } else if (cellType === 7 && currentFloor !== 3 && isImageReady(images.elevator)) {
+                    targetImg = images.elevator;
+                } else if ((cellType === 7 || cellType === 9) && isImageReady(images.reizouko)) {
+                    targetImg = images.reizouko;
+                } else if ([2, 8].includes(cellType) && isImageReady(images.door)) {
+                    targetImg = images.door;
+                }
 
                 // ★ 4階専用の壁・扉テクスチャ切り替え
                 if (currentFloor === 4) {
@@ -266,8 +267,6 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     } else {
                         ctx.drawImage(targetImg, b.x, b.y, b.w, b.h);
                     }
-
-                    // ※以前の不自然なピンク色被せ（fillRect）は完全に撤去済み
 
                     const shadowAlpha = (depth - 1) * 0.22;
                     if (shadowAlpha > 0) {
@@ -316,8 +315,16 @@ function drawActionHint(ctx, canvas, player, currentMap) {
             } else if (gameState.currentFloor === 7) {
                 label = "[ SPACE ] 8階へ登る";
             }
-        } else if (target === 3 || target === 7) {
+        } else if (target === 3) {
             label = "[ SPACE ] エレベーターに乗る";
+        } else if (target === 7) {
+            if (gameState.currentFloor === 3) {
+                label = "[ SPACE ] ゴミの山を調べる";
+            } else {
+                label = "[ SPACE ] エレベーターに乗る";
+            }
+        } else if (target === 9 && gameState.currentFloor === 3) {
+            label = "[ SPACE ] 冷蔵庫を調べる";
         } else if (target === 2 && gameState.currentFloor === 1) {
             label = "[ SPACE ] コンビニに入る";
         }
@@ -443,7 +450,7 @@ function drawCompass(ctx, canvas, player, currentFloor) {
     ctx.strokeRect(canvas.width - 90, 10, 80, 26);
     ctx.fillStyle = "#ffdd66"; 
     ctx.font = `bold 14px ${HORROR_FONT}`; 
-    ctx.textAlign = "center";
+    ctx.textAlign = "center"; 
     ctx.textBaseline = "alphabetic";
     ctx.fillText(`${currentFloor}F: ` + dirNames[player.dir], canvas.width - 50, 28);
 }

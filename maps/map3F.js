@@ -1,4 +1,4 @@
-// maps/map3F.js - エレベーター(3)統一(7F連携対応)・真田部屋(8)・ゴミ山(7)・冷蔵庫(9) 完全修正版
+// maps/map3F.js - エレベーター(3)統一(7F連携対応)・真田部屋(8)・ゴミ山(7)・冷蔵庫(9)・構文＆EXP完全修正版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -245,7 +245,7 @@ function startGarbagePileEvent(gameState, context, onComplete) {
             gameState.clearedRooms[key] = true;
             showMessageDialog(`【奇襲！！】\nガシッ……！！\nゴミの奥から無数の「黒い手」が飛び出し、主人公の腕を掴んだ！\nゴミに擬態していた悪魔が襲いかかってきた！！`, () => {
                 gameState.player.hp = Math.max(1, gameState.player.hp - 12);
-                const demonEnemy = { ...(ENEMIES['DEVIL5_3F'] || { hp: 80, atk: 14, def: 2, weakness: [6], image: 'assets/images/demon/demon5.png' }) };
+                const demonEnemy = { ...(ENEMIES['DEVIL5_3F'] || { hp: 80, atk: 14, def: 2, weakness: [6], image: 'assets/images/demon/demon5.png', rewardExp: 420, rewardMoney: 200 }) };
                 demonEnemy.name = "ゴミに潜む悪魔";
                 
                 openCombatUI(demonEnemy, gameState, (res) => {
@@ -344,7 +344,7 @@ function start3FRoomInquisition(gameState, context, onComplete) {
             faceImage: "assets/images/human1.png",
             realImage: "assets/images/demon/demon4.png",
             weakness: 8,
-            rewardExp: 80,
+            rewardExp: ENEMIES.DEVIL4_3F ? ENEMIES.DEVIL4_3F.rewardExp : 380,
             rewardMoney: 200
         };
         openInquisitionUI(entity, gameState, (res) => {
@@ -356,9 +356,10 @@ function start3FRoomInquisition(gameState, context, onComplete) {
                 const demonEnemy = {
                     name: entity.trueName || "ゴミに潜む悪魔",
                     image: entity.realImage,
-                    hp: 30, atk: 10, def: 1,
+                    hp: 42, atk: 13, def: 2,
                     weakness: [entity.weakness],
-                    rewardExp: 80, rewardMoney: 200
+                    rewardExp: entity.rewardExp || 380,
+                    rewardMoney: 200
                 };
                 openCombatUI(demonEnemy, gameState, (cRes) => {
                     if (cRes === "win") {
@@ -433,8 +434,8 @@ function startSanadaBossSequence(gameState, context, onComplete) {
                             atk: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.atk : 18,
                             def: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.def : 3,
                             weakness: [8, 6],
-                            rewardExp: 200,
-                            rewardMoney: 800,
+                            rewardExp: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.rewardExp : 950,
+                            rewardMoney: ENEMIES.SANADA_3F ? ENEMIES.SANADA_3F.rewardMoney : 800,
                             isBoss: true
                         };
 
