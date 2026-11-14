@@ -1,4 +1,4 @@
-// maps/map6F.js - 一家心中事件の裏設定・ホラー演出統合版
+// maps/map6F.js - 一家心中事件の裏設定・ホラー演出・6F統一経験値カーブ統合版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -54,18 +54,18 @@ export function check6FRandomEncounter(gameState, onEncounter, context) {
         return;
     }
 
-    // ③ 通常のランダムエンカウント
+    // ③ 通常のランダムエンカウント（★ 6F統一報酬カーブ：4200〜5000 EXP）
     if (Math.random() < 0.15) {
         const demonTypes = [
-            { id: 'DEVIL13_6F', name: '停滞の糸紡ぎ', image: 'assets/images/demon/demon14.png', hp: 260, atk: 45, def: 8, weakness: [6], agi: 14, rewardExp: 220, rewardMoney: 750 },
-            { id: 'DEVIL14_6F', name: '神父の悪夢', image: 'assets/images/demon/demon15.png', hp: 220, atk: 58, def: 5, weakness: [7], agi: 18, rewardExp: 240, rewardMoney: 800 },
-            { id: 'DEVIL15_6F', name: '可能性のひとつだった幻の未来', image: 'assets/images/demon/demon13.png', hp: 320, atk: 48, def: 12, weakness: [2, 4], agi: 10, rewardExp: 260, rewardMoney: 850 }
+            { id: 'DEVIL13_6F', name: '停滞の糸紡ぎ', image: 'assets/images/demon/demon14.png', hp: 260, atk: 45, def: 8, weakness: [6], agi: 14, rewardExp: 4200, rewardMoney: 750 },
+            { id: 'DEVIL14_6F', name: '神父の悪夢', image: 'assets/images/demon/demon15.png', hp: 220, atk: 58, def: 5, weakness: [7], agi: 18, rewardExp: 4600, rewardMoney: 800 },
+            { id: 'DEVIL15_6F', name: '可能性のひとつだった幻の未来', image: 'assets/images/demon/demon13.png', hp: 320, atk: 48, def: 12, weakness: [2, 4], agi: 10, rewardExp: 5000, rewardMoney: 850 }
         ];
         const chosenEnemy = demonTypes[Math.floor(Math.random() * demonTypes.length)];
         if (onEncounter) onEncounter({ ...chosenEnemy });
-    return; // ← 追加
+        return;
     }
-    if (onEncounter) onEncounter(null); // ← 何も起きなかった時も操作ロックを解除
+    if (onEncounter) onEncounter(null);
 }
 
 export function handleEvent6F(targetCell, gameState, context) {
@@ -106,7 +106,7 @@ export function handleEvent6F(targetCell, gameState, context) {
         const frontY = gameState.player.y + vec.y;
 
         if (frontX === 2 && frontY === 7) return { run: (onComplete) => startMusumeRoomEvent(gameState, context, onComplete) }; // 娘の部屋
-        if (frontX === 8 && frontY === 7) return { run: (onComplete) => startMomBossEvent(gameState, context, onComplete) };    // 母親の心中現場
+        if (frontX === 8 && frontY === 7) return { run: (onComplete) => startMomBossEvent(gameState, context, onComplete) };     // 母親の心中現場
         if (frontX === 1 && frontY === 3) return { run: (onComplete) => handleSpiderMiniBoss(gameState, context, onComplete) }; // 銀鋏取得
         if (frontX === 5 && frontY === 2) return { run: (onComplete) => handleCocoonBossRoom(gameState, context, onComplete) }; // 黒猫救出・ボス
     }
@@ -160,7 +160,7 @@ export function triggerDadAmbushEvent(gameState, context, onComplete) {
                     atk: 35,
                     def: 5,
                     weakness: [6], // Ⅵ 聖炎
-                    rewardExp: 180,
+                    rewardExp: 3600,
                     rewardMoney: 500,
                     actions: [
                         "は折れ曲がった首を軋ませて突進してきた！",
@@ -227,7 +227,7 @@ export function startMusumeRoomEvent(gameState, context, onComplete) {
                             atk: 32,
                             def: 4,
                             weakness: [4], // Ⅳ 十字架
-                            rewardExp: 200,
+                            rewardExp: 3800,
                             rewardMoney: 600,
                             actions: [
                                 "は泣き叫びながら鋭い爪で引っ掻いてきた！",
@@ -246,7 +246,10 @@ export function startMusumeRoomEvent(gameState, context, onComplete) {
                                         
                                         // 悪魔手記に記録
                                         if (!gameState.bossHints) gameState.bossHints = [];
-                                        gameState.bossHints.push("【6F 術式メモ】<br>「影の頭部（上段）に『Ⅶ 鐘』を鳴らせ。足元（下段）に『Ⅱ 鏡』を突きつけろ」");
+                                        const hint6F_1 = "【6F 術式メモ】<br>「影の頭部（上段）に『Ⅶ 鐘』を鳴らせ。足元（下段）に『Ⅱ 鏡』を突きつけろ」";
+                                        if (!gameState.bossHints.includes(hint6F_1)) {
+                                            gameState.bossHints.push(hint6F_1);
+                                        }
                                         showMessageDialog("【悪魔の消滅】\n部屋の隅から、魔方陣の解読メモを発見した！\n（※悪魔手記に記録されました）", onComplete);
 
                                     });
@@ -291,7 +294,7 @@ export function startMomBossEvent(gameState, context, onComplete) {
                                     def: 8,
                                     weakness: [1, 6], // Ⅰ 聖水、Ⅵ 聖炎
                                     isBoss: true,
-                                    rewardExp: 350,
+                                    rewardExp: 6200,
                                     rewardMoney: 1200,
                                     actions: [
                                         "は粘着質な絶望の糸を吐き散らし、主人公の動きを封じにかかる！",
@@ -309,7 +312,10 @@ export function startMomBossEvent(gameState, context, onComplete) {
                                             
                                             // 悪魔手記に記録
                                             if (!gameState.bossHints) gameState.bossHints = [];
-                                            gameState.bossHints.push("【6F 術式メモ】<br>「怠惰の影を断ち切る術式数値は6マスの合計で『25』。胸の虚無（左）には【Ⅳ 十字架】を穿て」");
+                                            const hint6F_2 = "【6F 術式メモ】<br>「怠惰の影を断ち切る術式数値は6マスの合計で『25』。胸の虚無（左）には【Ⅳ 十字架】を穿て」";
+                                            if (!gameState.bossHints.includes(hint6F_2)) {
+                                                gameState.bossHints.push(hint6F_2);
+                                            }
                                             
                                             showMessageDialog("【母親の怨念浄化】\n巨大な繭が崩れ落ち、悪魔の残骸から魔方陣の解読メモを発見した！\n（※悪魔手記に記録されました）\n\n主人公「待ってろよ、御堂……！ もう誰も、お前の食い物にはさせない！」", () => {
                                                 if (context && context.redraw) context.redraw();
@@ -344,7 +350,7 @@ function handleSpiderMiniBoss(gameState, context, onComplete) {
         const miniBoss = { 
             name: "蜘蛛の怪異", image: "assets/images/demon/demon14.png", 
             hp: 450, atk: 52, def: 10, weakness: [6], agi: 13,
-            rewardExp: 400, rewardMoney: 1500
+            rewardExp: 7200, rewardMoney: 1500
         };
         openCombatUI(miniBoss, gameState, (res) => {
             if (res === "win" || res === "combat_win") {
@@ -457,7 +463,7 @@ function startDoppelgangerPuzzle(gameState, context, onComplete) {
             atk: isPerfect ? 50 : 70, 
             def: isPerfect ? 10 : 20, 
             weakness: [4, 7], agi: 15,
-            rewardExp: 800, rewardMoney: 3500, isBoss: true
+            rewardExp: 12000, rewardMoney: 3500, isBoss: true
         };
 
         const startBossBattle = () => {
@@ -474,7 +480,7 @@ function startDoppelgangerPuzzle(gameState, context, onComplete) {
                                 showMessageDialog("主人公「……痛かったよな。よく耐えてくれた。」\n\n屈んでその頭を撫でると、温かい体温が掌に伝わってきた。\n神父から託されたただの「使い魔」ではない。絶望の中で背中を預け合える、たった一人の仲間だ。\n\n主人公「行こう……相棒。8Fの元凶（御堂）を止めて、全部終わらせるぞ」", () => {
                                     showConversationDialog(
                                         "assets/images/ketui.png",
-                                        "【不退転の決意】\n瞳に宿る迷いは完全に消え去った。\n\n自分を信じてくれた黒猫と共に、主人公は前を見据える。\n目指すは最上階――全ての元凶を断ち切るために。\n\n（※黒猫が真の相棒として合流！ 7階への非常階段が開通した！）",
+                                        "【不退転の決意】\n瞳に宿る迷いは完全に消え去った。\n\n自分を信じてくれた黒猫と共に、主人公は前を見据える。\n目指すは最上階――全ての元凶を断ち切るために。\\n\n（※黒猫が真の相棒として合流！ 7階への非常階段が開通した！）",
                                         onComplete
                                     );
                                 });

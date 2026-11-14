@@ -1,4 +1,4 @@
-// maps/map4F.js - 黒猫霊体レスキューイベント追加＆親衛隊・ボス全機能維持 完全版
+// maps/map4F.js - 黒猫霊体レスキューイベント＆4F統一経験値・構文修正 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -39,8 +39,8 @@ export function check4FRandomEncounter(gameState, onEncounter) {
         const chosenKey = demonKeys[Math.floor(Math.random() * demonKeys.length)];
         const demonData = ENEMIES[chosenKey] || ENEMIES['DEVIL7_4F'];
         
-        const scaledEnemy = { ...demonData, rewardExp: 80, rewardMoney: 250 };
-        onEncounter(scaledEnemy);
+        // ★ enemies.js の統一経験値・報酬（950〜1150 EXP）をそのまま使用
+        onEncounter({ ...demonData });
     }
 }
 
@@ -184,6 +184,7 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
             }
         }, context);
     } else {
+        const baseDemon = ENEMIES.DEVIL7_4F || { hp: 95, atk: 30, def: 3, rewardExp: 1050, rewardMoney: 300 };
         const entity = {
             type: "demon",
             name: "怯えるマンション住民",
@@ -193,8 +194,8 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
             dialogue: hintDialogue,
             message: hintDialogue,
             weakness: 2,
-            rewardExp: 80,
-            rewardMoney: 250
+            rewardExp: baseDemon.rewardExp,
+            rewardMoney: baseDemon.rewardMoney
         };
         openInquisitionUI(entity, gameState, (res) => {
             if (res === "combat_win" || res === "kill_human") {
@@ -205,9 +206,12 @@ function start4FRoomInquisition(gameState, context, onComplete, roomType = 8) {
                 const demonEnemy = {
                     name: entity.trueName,
                     image: entity.realImage,
-                    hp: 40, atk: 14, def: 2,
+                    hp: baseDemon.hp,
+                    atk: baseDemon.atk,
+                    def: baseDemon.def,
                     weakness: [entity.weakness],
-                    rewardExp: 80, rewardMoney: 250
+                    rewardExp: baseDemon.rewardExp,
+                    rewardMoney: baseDemon.rewardMoney
                 };
                 openCombatUI(demonEnemy, gameState, (cRes) => {
                     if (cRes === "win") {
@@ -239,8 +243,8 @@ function startShineiAEvent(gameState, context, onComplete) {
             atk: ENEMIES.SHINEI_A_4F.atk,
             def: ENEMIES.SHINEI_A_4F.def,
             weakness: [2],
-            rewardExp: 100,
-            rewardMoney: 350
+            rewardExp: ENEMIES.SHINEI_A_4F.rewardExp,
+            rewardMoney: ENEMIES.SHINEI_A_4F.rewardMoney
         };
 
         openCombatUI(enemyA, gameState, (res) => {
@@ -277,8 +281,8 @@ function startShineiBEvent(gameState, context, onComplete) {
             atk: ENEMIES.SHINEI_B_4F.atk,
             def: ENEMIES.SHINEI_B_4F.def,
             weakness: [5],
-            rewardExp: 100,
-            rewardMoney: 350
+            rewardExp: ENEMIES.SHINEI_B_4F.rewardExp,
+            rewardMoney: ENEMIES.SHINEI_B_4F.rewardMoney
         };
 
         openCombatUI(enemyB, gameState, (res) => {
@@ -390,8 +394,8 @@ function startRinaBossSequence(gameState, context, onComplete) {
                                                                             atk: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.atk : 60,
                                                                             def: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.def : 8,
                                                                             weakness: [2, 5],
-                                                                            rewardExp: 400,
-                                                                            rewardMoney: 1500,
+                                                                            rewardExp: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.rewardExp : 3200,
+                                                                            rewardMoney: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.rewardMoney : 2000,
                                                                             isBoss: true
                                                                         };
 
@@ -427,16 +431,13 @@ function startRinaBossSequence(gameState, context, onComplete) {
                                                     });
                                                 });
                                             });
-
                                         });
                                     });
                                 }, 200);
-
                             });
                         });
                     });
                 }, 100);
-
             });
         });
     });

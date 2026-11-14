@@ -1,439 +1,502 @@
-// maps/map7F.js - 7F「VIPラウンジ」完全版（706号室白鳥撃破後プレゼント表示・ステータス完全維持版）
+// maps/map6F.js - 一家心中事件の裏設定・ホラー演出・6F統一経験値カーブ統合版
 
 import { 
-    showMessageDialog, showConversationDialog, 
-    playVideo, openCombatUI, playFloorTransition 
+    showMessageDialog, showConversationDialog, showItemAcquiredModal, 
+    playFloorTransition, playVideo, openBossPuzzleUI, openCombatUI, openInquisitionUI 
 } from '../ui.js';
+import { sound } from '../sound.js'; // SE再生用
 
-export const playerStart7F = { x: 3, y: 8, dir: 0 };
+export const playerStart6F = { x: 5, y: 8, dir: 0 };
 
-// 1: 壁 / 0: 直線通路
-// 4: 6Fへの階段 (3, 9) / 5: 8Fへの大階段 (3, 0)
-// 8: 白鳥のペントハウス扉 (3, 1)
-// 3: 1F直通エレベーター (2, 8)
-// 2: 各個室の扉（ボスラッシュ・カジノ・ラウンジ）
-export const map7F = [
-    [1, 1, 1, 5, 1, 1, 1], // y=0 (5: 8Fへの大階段)
-    [1, 1, 1, 8, 1, 1, 1], // y=1 (8: 白鳥のペントハウス扉)
-    [1, 1, 1, 0, 1, 1, 1], // y=2
-    [1, 1, 2, 0, 2, 1, 1], // y=3 (西: 705 カジノ / 東: 706 シャンパンラウンジ)
-    [1, 1, 1, 0, 1, 1, 1], // y=4
-    [1, 1, 2, 0, 2, 1, 1], // y=5 (西: 703 剥製・里奈 / 東: 704 剥製・蛭沼)
-    [1, 1, 1, 0, 1, 1, 1], // y=6
-    [1, 1, 2, 0, 2, 1, 1], // y=7 (西: 701 剥製・影山 / 東: 702 剥製・真田)
-    [1, 1, 3, 0, 1, 1, 1], // y=8 (西の 2,8 にエレベーター新設！ 開始地点: 3, 8)
-    [1, 1, 1, 4, 1, 1, 1], // y=9 (4: 6Fへの階段)
-    [1, 1, 1, 1, 1, 1, 1]  // y=10
+export const map6F = [
+    [1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 2, 1, 1, 1, 0, 1],
+    [1, 2, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 2, 0, 1, 0, 1, 0, 2, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  
 ];
 
-const TAXIDERMY_CONFIG = {
-    kageyama: {
-        roomName: "701号室【黄金の剥製：影山】",
-        flag: "clearedTaxidermyKageyama",
-        video: "assets/images/demon/2f-kageyama.mp4",
-        introText: "【701号室：黄金の展示室】\n部屋の中央に、純金でコーティングされた2Fのボス・影山が鎖で繋がれている……！\nマダム・白鳥の魔力で操られ、獰猛な唸り声をあげて襲いかかってきた！",
-        enemy: {
-            name: "黄金の剥製・影山",
-            image: "assets/images/demon/2f-kageyama2.jpg",
-            hp: 350,
-            atk: 50,
-            def: 5,
-            weakness: [2, 5],
-            actions: ["は黄金の拳を振り下ろした！", "が鎖を引きちぎらんばかりに突進してくる！", "の濁った瞳から金粉がこぼれ落ちる"]
-        },
-        rewardMoney: 1500
-    },
-    sanada: {
-        roomName: "702号室【黄金の剥製：真田】",
-        flag: "clearedTaxidermySanada",
-        video: "assets/images/demon/3f-sanada.mp4",
-        introText: "【702号室：黄金の展示室】\n3Fで倒したはずの真田が、全身に宝石を埋め込まれた異様な剥製として鎮座している……！\n白鳥の強欲の呪いによって蘇り、怨嗟の声を上げながら飛びかかってきた！",
-        enemy: {
-            name: "黄金の剥製・真田",
-            image: "assets/images/demon/3f-sanada.jpg",
-            hp: 450,
-            atk: 55,
-            def: 6,
-            weakness: [3, 8],
-            actions: ["の鋭利な爪が空を裂く！", "は宝石の光を乱反射させて目を眩ませてきた！", "の金縛りの怨念が体を締め付ける！"]
-        },
-        rewardMoney: 2000
-    },
-    rina: {
-        roomName: "703号室【黄金の剥製：里奈】",
-        flag: "clearedTaxidermyRina",
-        video: "assets/images/demon/4f-rina.mp4",
-        introText: "【703号室：黄金の展示室】\n4Fの里奈が、悪趣味な金のドレスを着せられ愛玩動物のように飾られている……！\n「アハハ……お金……綺麗なドレス……」\n虚ろな笑みを浮かべ、殺意に満ちた魔力弾を放ってきた！",
-        enemy: {
-            name: "黄金の剥製・里奈",
-            image: "assets/images/demon/4f-rina.jpg",
-            hp: 550,
-            atk: 60,
-            def: 8,
-            weakness: [1, 6],
-            actions: ["は冷酷な眼差しで魔弾を連射した！", "の金のドレスが禍々しい魔気を放つ！", "の甲高い笑い声が精神を蝕む！"]
-        },
-        rewardMoney: 2500
-    },
-    hirunuma: {
-        roomName: "704号室【黄金の剥製：蛭沼】",
-        flag: "clearedTaxidermyHirunuma",
-        video: "assets/images/demon/5f-hirunuma.mp4",
-        introText: "【704号室：黄金の展示室】\n5Fの巨漢・蛭沼が、分厚い純金の鎧を皮膚に直接ボルトで打ち込まれて固定されている……！\n知性を完全に失った怪物が、白鳥の命令に従い侵入者を叩き潰そうと迫り来る！",
-        enemy: {
-            name: "黄金の剥製・蛭沼",
-            image: "assets/images/demon/5f-hirunuma.png",
-            hp: 650,
-            atk: 65,
-            def: 10,
-            weakness: [4, 7],
-            actions: ["の重厚な黄金の腕が薙ぎ払われる！", "の凄まじい地響きが部屋を揺るがす！", "は暴走し、周囲の壁を粉砕しながら突進してきた！"]
-        },
-        rewardMoney: 3000
-    }
-};
-
-export function handleEvent7F(targetCell, gameState, context) {
-    const px = gameState.player.x;
-    const py = gameState.player.y;
-    const dir = gameState.player.dir;
-    const dx = [0, 1, 0, -1];
-    const dy = [-1, 0, 1, 0];
-    const frontX = px + dx[dir];
-    const frontY = py + dy[dir];
-
-    // 3: 1F直通エレベーター
-    if (targetCell === 3) {
-        return {
-            run: (onComplete) => {
-                showMessageDialog("【VIPエレベーター】\n1階のエントランス（集合ポスト・無人レジ）へ降りますか？", () => {
-                    gameState.lastTransitMethod = 'elevator';
-                    playFloorTransition(1, () => {
-                        context.changeFloor(1);
-                        onComplete();
+// ランダムエンカウント ＆ 進入時イベント ＆ 通路の怨霊ギミック
+export function check6FRandomEncounter(gameState, onEncounter, context) {
+    if (gameState.currentFloor !== 6) return;
+    
+    // ① 進入時の環境演出（主人公の心境「最近一家心中があったから絶対行きたくない」を追加）
+    if (!gameState.flags) gameState.flags = {};
+    if (!gameState.flags.seen6FIntro) {
+        gameState.flags.seen6FIntro = true;
+        showMessageDialog("【6階：濃密な蜘蛛の巣】\n5階から駆け上がっていった黒猫を追い、6階へ足を踏み入れた。\nフロア全体に、異常なほど白く粘つく蜘蛛の糸が張り巡らされている……。\n（うわ、なんだこれ？蜘蛛？マジか、あらゆる生き物で蜘蛛が一番苦手なんだよなぁ）", () => {
+            showMessageDialog("糸をかき分けて進もうとすると、全身が泥に沈むような強烈な『無気力感』に襲われた。\n（え、気持ち悪い…吐き気がする…だるい…）\nどうやらこの糸自体が、精神を蝕む悪魔の毒を発しているようだ。", () => {
+                showMessageDialog("（目がかすむ……なんだ、これ。身体が、重い……）\n\n毒にあてられた脳内に、一番逃げ出したい過去の記憶が幻聴となってこびりつく。\n\n『――あなたの志望動機は？』\n『この会社で、何をしてみたいのですか？』", () => {
+                    showMessageDialog("無機質な面接官の声が響く。\n\n主人公（分からない……給与と安定以外に、正解があるのか。やりたいことなんて、何もやってもないのに分かるわけがないだろ……）\n\n（俺は……ここで何をしてるんだ？ 家庭教師の生徒とはいえ、他人の父親を助けるために悪魔と戦う？ ……馬鹿げてる）", () => {
+                        showMessageDialog("（ふと、1階で息絶えた神父の顔が浮かんだ）\n\n『8Fの御堂は私の想像を超えていた……頼む……』\n\n（神父も人選ミスだ。どうしてよりによって、何者にもなれない俺なんかに託した……？）\n憂鬱と自己嫌悪が渦巻く中、遠くから微かに猫の鳴き声が聞こえた。どうした、何か助けを求めてるのか？", () => {
+                            showMessageDialog("（……そういえば、6階ってつい最近、投資詐欺に巻き込まれて借金を背負わされた『一家心中事件』があった階じゃなかったか……？）\n\n（マジかよ……絶対に行きたくないんだよな……でも、あいつ（黒猫）を放っておくわけにはいかない……！）", () => {
+                                if (onEncounter) onEncounter(null);
+                            });
+                        });
                     });
                 });
-            }
-        };
+            });
+        });
+        return;
     }
 
-    // 4: 6Fへの階段
+    // ② 歩行時の「父親の怨念」二択ギミック（12%の確率で発生）
+    if (Math.random() < 0.12) {
+        triggerDadAmbushEvent(gameState, context, () => {
+            if (onEncounter) onEncounter(null);
+        });
+        return;
+    }
+
+    // ③ 通常のランダムエンカウント（★ 6F統一報酬カーブ：4200〜5000 EXP）
+    if (Math.random() < 0.15) {
+        const demonTypes = [
+            { id: 'DEVIL13_6F', name: '停滞の糸紡ぎ', image: 'assets/images/demon/demon14.png', hp: 260, atk: 45, def: 8, weakness: [6], agi: 14, rewardExp: 4200, rewardMoney: 750 },
+            { id: 'DEVIL14_6F', name: '神父の悪夢', image: 'assets/images/demon/demon15.png', hp: 220, atk: 58, def: 5, weakness: [7], agi: 18, rewardExp: 4600, rewardMoney: 800 },
+            { id: 'DEVIL15_6F', name: '可能性のひとつだった幻の未来', image: 'assets/images/demon/demon13.png', hp: 320, atk: 48, def: 12, weakness: [2, 4], agi: 10, rewardExp: 5000, rewardMoney: 850 }
+        ];
+        const chosenEnemy = demonTypes[Math.floor(Math.random() * demonTypes.length)];
+        if (onEncounter) onEncounter({ ...chosenEnemy });
+        return;
+    }
+    if (onEncounter) onEncounter(null);
+}
+
+export function handleEvent6F(targetCell, gameState, context) {
+    if (!gameState.flags) gameState.flags = {};
+
     if (targetCell === 4) {
         return {
             run: (onComplete) => {
-                gameState.lastTransitMethod = 'stair_down';
-                playFloorTransition(6, () => {
-                    context.changeFloor(6);
-                    onComplete();
+                showMessageDialog("【非常階段】\n5階へ降りますか？", () => {
+                    gameState.lastTransitMethod = 'stair_down';
+                    playFloorTransition(5, () => { context.changeFloor(5); onComplete(); });
                 });
             }
         };
     }
 
-    // 5: 8Fへの大階段
     if (targetCell === 5) {
-        if (!gameState.flags || !gameState.flags.cleared7F) {
+        if (!gameState.flags.cleared6F) {
             return {
-                run: (onComplete) => showMessageDialog("【8Fへの大階段】\n黄金の魔力で堅く閉ざされている。マダム・白鳥を討伐しないと進めない。", onComplete)
+                run: (onComplete) => showMessageDialog("【非常階段の扉】\n強固な蜘蛛の糸と鉛のような倦怠の気配が階段を閉ざしている。\n自らの過去の影（ドッペルゲンガー）を打ち破らなければ先へは進めない！", onComplete)
             };
         } else {
             return {
                 run: (onComplete) => {
-                    gameState.lastTransitMethod = 'stairs';
-                    playFloorTransition(8, () => {
-                        context.changeFloor(8);
-                        onComplete();
+                    showMessageDialog("【非常階段】\n7階へ昇りますか？", () => {
+                        gameState.lastTransitMethod = 'stair';
+                        playFloorTransition(7, () => { context.changeFloor(7); onComplete(); });
                     });
                 }
             };
         }
     }
 
-    // 8: マダム・白鳥のペントハウス扉
-    if (targetCell === 8) {
-        return {
-            run: (onComplete) => handleBossPenthouse(gameState, context, onComplete)
-        };
-    }
-
-    // 2: 各個室の扉
     if (targetCell === 2) {
-        if (frontX === 2 && frontY === 7) return { run: (onComplete) => handleTaxidermyRoom(gameState, context, "kageyama", onComplete) };
-        if (frontX === 4 && frontY === 7) return { run: (onComplete) => handleTaxidermyRoom(gameState, context, "sanada", onComplete) };
-        if (frontX === 2 && frontY === 5) return { run: (onComplete) => handleTaxidermyRoom(gameState, context, "rina", onComplete) };
-        if (frontX === 4 && frontY === 5) return { run: (onComplete) => handleTaxidermyRoom(gameState, context, "hirunuma", onComplete) };
-        if (frontX === 2 && frontY === 3) return { run: (onComplete) => openCasinoUI(gameState, onComplete) };
-        if (frontX === 4 && frontY === 3) return { run: (onComplete) => handleLoungeRest(gameState, onComplete) };
+        const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+        const vec = dirVectors[gameState.player.dir];
+        const frontX = gameState.player.x + vec.x;
+        const frontY = gameState.player.y + vec.y;
+
+        if (frontX === 2 && frontY === 7) return { run: (onComplete) => startMusumeRoomEvent(gameState, context, onComplete) }; // 娘の部屋
+        if (frontX === 8 && frontY === 7) return { run: (onComplete) => startMomBossEvent(gameState, context, onComplete) };     // 母親の心中現場
+        if (frontX === 1 && frontY === 3) return { run: (onComplete) => handleSpiderMiniBoss(gameState, context, onComplete) }; // 銀鋏取得
+        if (frontX === 5 && frontY === 2) return { run: (onComplete) => handleCocoonBossRoom(gameState, context, onComplete) }; // 黒猫救出・ボス
     }
 
     return null;
 }
 
-// 剥製展示室
-function handleTaxidermyRoom(gameState, context, bossKey, onComplete) {
-    if (!gameState.flags) gameState.flags = {};
-    const cfg = TAXIDERMY_CONFIG[bossKey];
+// ==========================================
+// ★ 一家心中の怨霊イベント（父親・娘・母親）
+// ==========================================
 
-    if (gameState.flags[cfg.flag]) {
-        showMessageDialog(`【${cfg.roomName}】\n剥製は砕け散り、静まり返っている。ここにはもう用はない。`, onComplete);
+// ① 父親：通路の気配察知・二択ギミック
+export function triggerDadAmbushEvent(gameState, context, onComplete) {
+    if (gameState.flags && gameState.flags.clearedDadAmbush) {
+        if (onComplete) onComplete();
         return;
     }
 
-    const startCombatSequence = () => {
-        playVideo(cfg.video, () => {
-            showMessageDialog(cfg.introText, () => {
-                openCombatUI(cfg.enemy, gameState, (res) => {
-                    if (res === "win") {
-                        gameState.flags[cfg.flag] = true;
-                        gameState.player.money += cfg.rewardMoney;
-                        
-                        const clearedCount = ["clearedTaxidermyKageyama", "clearedTaxidermySanada", "clearedTaxidermyRina", "clearedTaxidermyHirunuma"].filter(k => gameState.flags[k]).length;
-                        
-                        let unlockMsg = `【撃破成功！】\n${cfg.enemy.name} の呪縛を解き、粉砕した！\n剥製の中から宝石と金貨がこぼれ落ちる……（💰${cfg.rewardMoney} 獲得！）`;
-                        unlockMsg += `\n\n【館内放送・マダム白鳥】\n「ちょっと！！ あなた、私のコレクションに何してくれてるの！？\nそれを純金でコーティングするのに、いくらかかったと思ってるのよ！\nあんなゴミみたいな悪魔の魂でも、私が装飾してやったから『価値』が生まれたのに！\n弁償しなさい！ 今すぐその汚い臓器を全部売って、私の口座に振り込みなさい！！」`;
+    sound.playSE("assets/audio/se/zero.mp3");
 
-                        if (clearedCount >= 4) {
-                            unlockMsg += `\n\n【展示室完全制覇！】\n全ての剥製を破壊した！ 廊下の最奥、マダム・白鳥のペントハウスの封印扉が開錠された！`;
-                        } else {
-                            unlockMsg += `\n\n（ペントハウスの封印解除まで あと ${4 - clearedCount} 体）`;
-                        }
-                        showMessageDialog(unlockMsg, onComplete);
-                    } else {
-                        onComplete();
-                    }
-                }, context);
-            });
-        });
-    };
-
-    if (!gameState.flags.seenTaxidermyIntro) {
-        gameState.flags.seenTaxidermyIntro = true;
-        showConversationDialog(
-            "assets/images/demon/7f-shiratori.png", 
-            "【館内放送・マダム白鳥】\n「ふふふ……驚いた？ それはね、私が特別に作らせた『アート』よ。\nあなたが下の階で倒したゴミ屑たち……魂を買い取って、純金と宝石でドレスアップしてあげたの！\n生きていた時よりもずっと美しくて、価値のある存在になったと思わない？\n愛も、憎しみも、最後はこうして『私だけのモノ』になる。\nあぁ、なんて素晴らしいコレクションかしら！\nさあ、私の可愛いペットたち。その貧相な闖入者を引き裂いて、新しい赤い絨毯の染料にしておしまい！」", 
-            startCombatSequence
-        );
-    } else {
-        startCombatSequence();
-    }
-}
-
-// ★ 706号室：シャンパンラウンジ（白鳥撃破後は present.png に差し替え）
-function handleLoungeRest(gameState, onComplete) {
-    const isCleared = gameState.flags && gameState.flags.cleared7F;
-    const dialogImage = isCleared ? "assets/images/present.png" : "assets/images/demon/7f-shiratori.png";
-    const dialogText = isCleared
-        ? "【706号室：シャンパンラウンジ】\nマダム・白鳥が消滅した部屋には、豪奢なプレゼントの小箱と冷えた高級シャンパンが残されている。\n一口含むと、心地よい芳醇な香りと共に全身の傷が急速に癒えていく……。\n\n（主人公のHPが全快した！）"
-        : "【706号室：シャンパンラウンジ】\nクリスタルのテーブルに、黄金に輝く最高級シャンパンが冷やされている。\n一口含むと、心地よい芳醇な香りと共に全身の傷が急速に癒えていく……。\n\n（主人公のHPが全快した！）";
-
-    showConversationDialog(dialogImage, dialogText, () => {
-        gameState.player.hp = gameState.player.maxHp;
-        onComplete();
-    });
-}
-
-// 705号室：闇カジノ
-function openCasinoUI(gameState, onComplete) {
-    const HORROR_FONT = "'Shippori Mincho', 'Yu Mincho', 'MS Mincho', serif";
-    const modal = document.createElement("div");
-    modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3500; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ${HORROR_FONT}; color: #fff; box-sizing: border-box; padding: 15px;`;
-
-    let currentCard = Math.floor(Math.random() * 13) + 1;
-    let streak = 0;
-    const payouts = [0, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
-
-    const render = () => {
-        const nextReward = payouts[Math.min(streak + 1, payouts.length - 1)];
-        const currentReward = payouts[streak];
-        
-        modal.innerHTML = `
-            <div style="background: rgba(25, 10, 10, 0.95); border: 2px solid #c5a059; border-radius: 12px; width: 100%; max-width: 440px; padding: 20px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); text-align: center; box-sizing: border-box;">
-                <h2 style="color: #ffdd66; margin: 0 0 5px 0; font-size: 1.5em; text-shadow: 0 0 10px #c5a059;">【闇カジノ：ハイ＆ロー】</h2>
-                <div style="color: #bbb; font-size: 0.85em; margin-bottom: 15px;">白鳥が用意した遊戯盤。次のカードの数字を当て続けろ。</div>
-                <div style="font-size: 0.95em; color: #ffdd66; margin-bottom: 10px;">所持金: 💰 ${gameState.player.money}</div>
-
-                <div style="margin: 15px auto; width: 110px; height: 155px; background: linear-gradient(135deg, #2a0808, #110000); border: 2px solid #ffdd66; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(255,221,102,0.4);">
-                    <div style="font-size: 0.75em; color: #aaa; margin-bottom: 5px;">現在の札</div>
-                    <div style="font-size: 3.2em; font-weight: bold; color: #ffdd66; text-shadow: 0 0 10px red;">${currentCard}</div>
-                    <div style="font-size: 0.7em; color: #888;">(1〜13)</div>
+    showMessageDialog("（ピキン……ッ！\n足元の床板が軋み、頭上と背後の空間からねばつくような悪意が張り詰める……！）", () => {
+        showConversationDialog("assets/images/6f-dad.png", "【？？？のうわ言】\n「……御堂さん、どうして……俺のせいじゃない……俺だって騙されたんだ……\n……お前も、俺を責めに来た記者か……？ 一緒に死んでくれ……！」", () => {
+            
+            const choiceModal = document.createElement("div");
+            choiceModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3500; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; font-family: 'Shippori Mincho', serif; box-sizing: border-box;";
+            
+            choiceModal.innerHTML = `
+                <div style="width: 100%; max-width: 480px; background: rgba(20,5,5,0.95); border: 2px solid #aa0000; border-radius: 8px; padding: 20px; text-align: center; box-shadow: 0 0 25px red;">
+                    <div style="color: #ff3333; font-size: 1.2em; font-weight: bold; margin-bottom: 10px;">【悪魔の殺気！】</div>
+                    <div style="color: #ccc; font-size: 0.9em; line-height: 1.6; margin-bottom: 20px;">
+                        天井の太い糸がきしむ音と、背後の冷たい息遣いが同時に迫る！<br>
+                        気配は頭上か、それとも背後か……！？
+                    </div>
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button id="btn-choice-up" style="flex: 1; padding: 12px; background: linear-gradient(180deg, #550000, #220000); color: #ffdd66; border: 1px solid #ff4444; border-radius: 4px; font-weight: bold; cursor: pointer; font-family: inherit;">[ 1: 頭上へ銃を向ける ]</button>
+                        <button id="btn-choice-back" style="flex: 1; padding: 12px; background: linear-gradient(180deg, #550000, #220000); color: #ffdd66; border: 1px solid #ff4444; border-radius: 4px; font-weight: bold; cursor: pointer; font-family: inherit;">[ 2: 振り返って背後を撃つ ]</button>
+                    </div>
                 </div>
+            `;
+            document.body.appendChild(choiceModal);
 
-                <div style="margin-bottom: 15px; font-size: 0.95em;">
-                    <span style="color: #00ff66; font-weight: bold;">連勝数: ${streak} 回</span>
-                    <span style="color: #ffaa00; margin-left: 12px; font-weight: bold;">現在の獲得賞金: 💰 ${currentReward}</span>
-                </div>
+            const handleChoice = (isUpChosen) => {
+                choiceModal.remove();
+                const isCorrect = (Math.random() < 0.5);
 
-                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                    <button id="btn-high" style="flex: 1; padding: 12px; background: #660000; color: #ffdd66; border: 1px solid #ff3333; font-size: 1.1em; font-weight: bold; cursor: pointer; border-radius: 6px;">▲ HIGH (大きい)</button>
-                    <button id="btn-low" style="flex: 1; padding: 12px; background: #002244; color: #66ccff; border: 1px solid #3388ff; font-size: 1.1em; font-weight: bold; cursor: pointer; border-radius: 6px;">▼ LOW (小さい)</button>
-                </div>
-
-                <div style="font-size: 0.8em; color: #aaa; margin-bottom: 15px;">次の的中で【💰 ${nextReward}】に倍増！</div>
-
-                <div style="display: flex; gap: 10px;">
-                    <button id="btn-cashout" ${streak === 0 ? 'disabled style="flex:1; padding:8px; background:#333; color:#777; border:1px solid #555; border-radius:4px;"' : 'style="flex:1; padding:8px; background:#005500; color:#fff; border:1px solid #00ff66; font-weight:bold; cursor:pointer; border-radius:4px;"'}>賞金を確定して降りる</button>
-                    <button id="btn-leave" style="flex: 1; padding: 8px; background: #222; color: #bbb; border: 1px solid #555; cursor: pointer; border-radius: 4px;">やめる</button>
-                </div>
-            </div>
-        `;
-
-        modal.querySelector("#btn-high").onclick = () => playGuess("high");
-        modal.querySelector("#btn-low").onclick = () => playGuess("low");
-        modal.querySelector("#btn-cashout").onclick = () => {
-            gameState.player.money += currentReward;
-            modal.remove();
-            showMessageDialog(`【勝負終了！】\n賞金 💰${currentReward} を換金して受け取った！`, onComplete);
-        };
-        modal.querySelector("#btn-leave").onclick = () => {
-            modal.remove();
-            onComplete();
-        };
-    };
-
-    const playGuess = (choice) => {
-        if (streak === 0 && gameState.player.money >= 100) {
-            gameState.player.money -= 100;
-        }
-
-        const nextCard = Math.floor(Math.random() * 13) + 1;
-        const isHigh = nextCard > currentCard;
-        const isLow = nextCard < currentCard;
-        const isWin = (choice === "high" && isHigh) || (choice === "low" && isLow);
-
-        if (nextCard === currentCard) {
-            alert(`【引き分け！】同じ数字「${nextCard}」が出た！ もう一度！`);
-            render();
-            return;
-        }
-
-        if (isWin) {
-            streak++;
-            currentCard = nextCard;
-            if (streak >= 8) {
-                const maxPrize = payouts[8];
-                gameState.player.money += maxPrize;
-                modal.remove();
-                showMessageDialog(`【前人未到の8連勝達成！！】\nディーラー悪魔が悲鳴をあげた！\n最高賞金 💰${maxPrize} を手に入れた！ これで漆黒コートも思いのままだ！`, onComplete);
-                return;
-            }
-            render();
-        } else {
-            modal.remove();
-            showMessageDialog(`【敗北……】\n引いたカードは「${nextCard}」だった！\n予想が外れ、これまでの賞金は全て白鳥の金庫へと没収された……。`, onComplete);
-        }
-    };
-
-    if (gameState.player.money < 100) {
-        showMessageDialog("【ディーラー悪魔】\n「ケケッ！ 所持金が100💰もない貧乏人か？\n……いいぜ、白鳥様の慈悲だ。1ゲーム目はタダで賭けさせてやるよ！ 勝ち上がってみせな！」", () => {
-            document.body.appendChild(modal);
-            render();
-        });
-    } else {
-        document.body.appendChild(modal);
-        render();
-    }
-}
-
-// 最奥：マダム・白鳥のペントハウス
-function handleBossPenthouse(gameState, context, onComplete) {
-    if (!gameState.flags) gameState.flags = {};
-
-    if (gameState.flags.cleared7F) {
-        showMessageDialog("【ペントハウス：白鳥の間】\nマダム・白鳥の金ピカの虚飾は崩れ去り、ただの空室となっている。\n奥の大階段から【8階】へ進みます……。", () => {
-            gameState.lastTransitMethod = 'stairs';
-            playFloorTransition(8, () => {
-                context.changeFloor(8);
-                onComplete();
-            });
-        });
-        return;
-    }
-
-    const clearedCount = ["clearedTaxidermyKageyama", "clearedTaxidermySanada", "clearedTaxidermyRina", "clearedTaxidermyHirunuma"].filter(k => gameState.flags[k]).length;
-    if (clearedCount < 4) {
-        showMessageDialog(`【白鳥のペントハウス扉】\n重厚な扉には4つの黄金の鎖が巻き付いている。\n（※フロア内の剥製展示室にいる4体のボスを全て撃破しないと開かない。現在: ${clearedCount}/4 体撃破）`, onComplete);
-        return;
-    }
-
-    showConversationDialog(
-        "assets/images/demon/7f-shiratori.png", 
-        "【タワマンマダム・白鳥】\n「本当つまらない庶民ね\n頭も良くないんでしょうね\n私のまぁまぁ気に入ってたコレクションを４つも台無しにして……あなたの無価値な命を何度すり潰しても足りないわ。\n肉は美味しそうだから削ぎ取って今夜のディナーのステーキと唐揚げにしてあげる\n……でも、そうね。ひとつ許される方法があるわ。\nあなた、神父の力を受け継いでいるんでしょう？ なかなか珍しいモノを持ってるじゃない。\nそれがあれば他の悪魔も支配できそうよね\nどう？ ここで私に土下座して『永遠の奴隷になります』って誓約書に血判を押すなら、命だけは助けてあげるわよ？\nほら、さっさとひざまずきなさい、頭が悪い庶民だけど、ペットぐらいならできるでしょ！」", 
-        () => {
-            playVideo("assets/images/demon/7f-shiratori.mp4", () => {
-                const shiratoriBoss = {
-                    name: "マダム・白鳥（強欲の化身）",
-                    image: "assets/images/demon/7fshiratoriakuma.png",
-                    hp: 1200,
-                    atk: 85,
-                    def: 12,
-                    weakness: [7, 9],
+                const dadEnemyBase = {
+                    id: "6F_DAD",
+                    name: "縊死した父親の怨霊",
+                    image: "assets/images/6f-dad.png",
+                    hp: 200,
+                    atk: 35,
+                    def: 5,
+                    weakness: [6], // Ⅵ 聖炎
+                    rewardExp: 3600,
+                    rewardMoney: 500,
                     actions: [
-                        "の鋭利な角が黄金の魔力をスパークさせる！",
-                        "は『マネーストーム』を放った！ 猛烈な金貨の嵐が降り注ぐ！",
-                        "の宝石が妖しく輝き、強欲の波動が精神を締め付ける！",
-                        "は高笑いしながら宝石の爪で引き裂いてきた！"
+                        "は折れ曲がった首を軋ませて突進してきた！",
+                        "「返せ……俺の人生を返せぇぇっ！」血涙を流して殴りかかってきた！",
+                        "の首から伸びた無数の蜘蛛の糸が首を絞めにかかる！"
                     ]
                 };
 
-                openCombatUI(shiratoriBoss, gameState, (res) => {
-                    if (res === "win") {
-                        gameState.flags.cleared7F = true;
-                        gameState.player.money += 5000;
-                        
-                        showMessageDialog(
-                            "【マダム・白鳥 討滅！】\n「私が偉そうだって？？当たり前じゃない、偉いんだから\nねぇ、見逃してくれたらあなたの好きにしていいのよ、私、今夜は飲みに行きたい気分\n\nぐはぁ（口から液体が溢れる）\n\nいや、崩れる、顔が崩れる\n助けなさいよ、このグズッ\n\nいやだ、庶民には戻りたくないぃぃぃぃっ……！！」\n\n主人公「庶民にも、戻す気はないよ」\n\n（白鳥の全身を覆っていた黄金がドロドロに溶け崩れ、ただの灰となって消滅した……。）\n（💰5,000 を獲得！）",
-                            () => {
-                                showMessageDialog(
-                                    "【次なる目的】\n強欲の魔女を倒した。\nスタート地点横のVIPエレベーターで1階の集合ポストへ向かえば、決戦用防具『エクソシストの漆黒コート』を取り寄せられるはずだ。\n\n準備が整い次第、奥の大階段から【8F：最上階】へ挑もう！",
-                                    onComplete
-                                );
+                if (isCorrect) {
+                    sound.playSE("assets/audio/se/gun.mp3");
+                    showMessageDialog("【看破成功！】\n闇に潜んでいた悪霊の出鼻を挫き、至近距離から銃弾を叩き込んだ！\n（先制攻撃！ 敵HPを大幅に削った状態で戦闘開始！）", () => {
+                        const enemy = { ...dadEnemyBase, hp: Math.floor(dadEnemyBase.hp * 0.4) };
+                        openCombatUI(enemy, gameState, (res) => {
+                            if (res === 'win') {
+                                gameState.flags.clearedDadAmbush = true;
+                                showMessageDialog("【怨霊撃退】\n「許さない……御堂……絶対に許さないぞ……」\n男の影は床の隙間に染み込むように消え去った。", onComplete);
+                            } else {
+                                onComplete();
                             }
-                        );
-                    } else {
-                        onComplete();
-                    }
-                }, context);
-            });
-        }
-    );
+                        }, context);
+                    });
+                } else {
+                    sound.playSE("assets/audio/se/zero.mp3");
+                    gameState.player.hp = Math.max(1, gameState.player.hp - 20);
+                    showMessageDialog("【判断ミス！】\n死角から組み付かれた！ 首の折れた男の顔が目の前に迫る！\n（奇襲を受けて主人公のHPが減少！）", () => {
+                        openCombatUI(dadEnemyBase, gameState, (res) => {
+                            if (res === 'win') {
+                                gameState.flags.clearedDadAmbush = true;
+                                showMessageDialog("【怨霊撃退】\n「許さない……御堂……絶対に許さないぞ……」\n男の影は床の隙間に染み込むように消え去った。", onComplete);
+                            } else {
+                                onComplete();
+                            }
+                        }, context);
+                    });
+                }
+            };
+
+            document.getElementById("btn-choice-up").onclick = () => handleChoice(true);
+            document.getElementById("btn-choice-back").onclick = () => handleChoice(false);
+        });
+    });
 }
 
-// 7F 通常ランダムエンカウント
-export function check7FRandomEncounter(gameState, context, onComplete) {
-    const roll = Math.random();
-    if (roll > 0.18) {
-        if (onComplete) onComplete();
+// ② 娘：子供部屋のドア攻防 ＆ 逃げ遅れた娘の残滓
+export function startMusumeRoomEvent(gameState, context, onComplete) {
+    if (gameState.flags && gameState.flags.clearedMusumeRoom) {
+        showMessageDialog("【子供部屋の残骸】\n壁一面に赤いクレヨンで書かれた文字は消え、静まり返っている……。", onComplete);
         return;
     }
 
-    const isCop = Math.random() < 0.5;
-    const enemy = isCop ? {
-        name: "取り憑かれた悪徳警官",
-        image: "assets/images/demon/demon17.png",
-        hp: 250,
-        atk: 55,
-        def: 8,
-        weakness: [4, 7],
-        actions: [
-            "の構えた銃口から銃弾が放たれる！",
-            "は『公務執行妨害だ』と濁った声で呟き警棒を振り下ろした！",
-            "は白鳥の金バッジを握りしめ、獲物を威嚇している！"
-        ]
-    } : {
-        name: "極道ゾンビ",
-        image: "assets/images/demon/demon16.png",
-        hp: 300,
-        atk: 60,
-        def: 5,
-        weakness: [2, 9],
-        actions: [
-            "の抜き身のドスが閃光のように走る！",
-            "は胸の刺青を露わにして野獣のように咆哮した！",
-            "の凄まじい威圧感が全身を金縛りにする！"
+    showMessageDialog("（ドアノブに手をかけると、内側から「ガタガタガタッ！」と必死にドアを押さえつける振動が走った！）", () => {
+        showConversationDialog("assets/images/6f-musume.jpg", "【内側からの叫び】\n「開けないで！ お願いだから開けないで！\nお父さんが来ちゃう！ お父さんがみんな一緒に死のうって……！！」", () => {
+            showMessageDialog("【主人公】\n「（中に生存者が……！？ いや、この禍々しい気配は……！）」\n\n主人公は意を決して、固く閉ざされたドアを蹴破った！", () => {
+                
+                showMessageDialog("【荒れ果てた子供部屋】\n床には『シニアレジデンス計画・推薦人：御堂』と書かれた大量の破棄チラシ。\n壁一面には赤いクレヨンで『パパは悪くない』『うそつきテレビ』と狂気じみた殴り書きがされている……。", () => {
+                    
+                    showConversationDialog("assets/images/6f-musume.jpg", "【逃げ遅れた娘の残滓】\n「……お父さんじゃない……？\nテレビの人……？ パパをいじめに来たの……？\n……あはっ、あはははっ！ じゃあ、お兄ちゃんもいっしょにしんじゃえええっ！！」", () => {
+                        
+                        const musumeEnemy = {
+                            id: "6F_MUSUME",
+                            name: "逃げ遅れた娘の残滓",
+                            image: "assets/images/6f-musume.jpg",
+                            hp: 180,
+                            atk: 32,
+                            def: 4,
+                            weakness: [4], // Ⅳ 十字架
+                            rewardExp: 3800,
+                            rewardMoney: 600,
+                            actions: [
+                                "は泣き叫びながら鋭い爪で引っ掻いてきた！",
+                                "「パパをいじめないで！」耳をつんざく金切り声を上げた！",
+                                "は床下を蜘蛛のようにカサカサと這い回り、足首に噛みついてきた！"
+                            ]
+                        };
+
+                        openCombatUI(musumeEnemy, gameState, (res) => {
+                            if (res === 'win') {
+                                if (!gameState.flags) gameState.flags = {};
+                                gameState.flags.clearedMusumeRoom = true;
+
+                                showConversationDialog("assets/images/6f-musume.jpg", "【逃げ遅れた娘の残滓】\n「……う……うぅ……パパ……ママ……痛いよ……暗いよぉ……（光の粒子となって消滅した）」", () => {
+                                    showMessageDialog("【怨念の解放】\n少女の霊は霧散した。\n机の上には、未払いの督促状の山と、家族3人で笑い合う写真立てが残されていた……。", () => {
+                                        
+                                        // 悪魔手記に記録
+                                        if (!gameState.bossHints) gameState.bossHints = [];
+                                        const hint6F_1 = "【6F 術式メモ】<br>「影の頭部（上段）に『Ⅶ 鐘』を鳴らせ。足元（下段）に『Ⅱ 鏡』を突きつけろ」";
+                                        if (!gameState.bossHints.includes(hint6F_1)) {
+                                            gameState.bossHints.push(hint6F_1);
+                                        }
+                                        showMessageDialog("【悪魔の消滅】\n部屋の隅から、魔方陣の解読メモを発見した！\n（※悪魔手記に記録されました）", onComplete);
+
+                                    });
+                                });
+                            } else {
+                                onComplete();
+                            }
+                        }, context);
+
+                    });
+                });
+            });
+        });
+    });
+}
+
+// ③ 母親：心中現場の繭 ＆ 絶望への抗い（中ボス戦）
+export function startMomBossEvent(gameState, context, onComplete) {
+    if (gameState.flags && gameState.flags.clearedMomBoss) {
+        showMessageDialog("【心中現場の部屋】\n蜘蛛の糸と腐臭は消え去り、家族が眠る静寂だけが残されている。", onComplete);
+        return;
+    }
+
+    showMessageDialog("【凄惨な心中現場】\n部屋の中央には、古びた毛布やシーツが黒い糸で幾重にも巻かれた『巨大な繭』が天井から吊り下げられている……。\n\n足元には散乱した『督促状』と、殴り書きされた父親の遺書がある。\n『御堂さん、信じていたのに……。マスコミがドアを叩く音が止まりません。もう、どこにも逃げ場がありません』", () => {
+        
+        showMessageDialog("（……部屋の奥から、ノイズ混じりの歪んだ子守唄が聞こえてくる……）\n\n『ねんねん……ころりよ……おころりよ……』", () => {
+            
+            showConversationDialog("assets/images/6f-mom.png", "【抱擁の繭・母親】\n「しぃっ……静かに……。この子は今、やっと苦しみから解放されて、ゆっくり眠っているの……」", () => {
+                showConversationDialog("assets/images/6f-mom.png", "【抱擁の繭・母親】\n「あなたも、就活に失敗して……生きているのが辛いのでしょう……？\n生きる意味なんて、最初からどこにもなかったのよ……。\nもう頑張らなくていいの。さあ、私たちと一緒に、泥のように眠りましょう……？」", () => {
+                    
+                    showMessageDialog("【主人公の葛藤】\n（甘く重い絶望の香気が脳を麻痺させる……。\n確かに、俺の人生は挫折だらけだった。\nここで目を閉じて、すべてを諦めてしまえば……どれだけ楽になれるだろう……？）", () => {
+                        showMessageDialog("【主人公の覚悟】\n「――ふざけるな！！」\n\n（違う……諦めて逃げ込んだ先に待っているのは、こんな腐った地獄だけだ！\n騙されて命を奪われたこの家族の無念を……そして何より、俺を信じて待っている教え子を、こんなところで投げ出せるか！！）", () => {
+                            
+                            showConversationDialog("assets/images/6f-mom.png", "【抱擁の繭・母親】\n「ああ……可哀想に……狂ってしまったのね……。\n無理にでも、私の腕の中で眠らせてあげるわァァッ！！」", () => {
+                                
+                                const momEnemy = {
+                                    id: "6F_MOM",
+                                    name: "抱擁の繭（母親の怨念）",
+                                    image: "assets/images/6f-mom.png",
+                                    hp: 350,
+                                    atk: 45,
+                                    def: 8,
+                                    weakness: [1, 6], // Ⅰ 聖水、Ⅵ 聖炎
+                                    isBoss: true,
+                                    rewardExp: 6200,
+                                    rewardMoney: 1200,
+                                    actions: [
+                                        "は粘着質な絶望の糸を吐き散らし、主人公の動きを封じにかかる！",
+                                        "「誰も信じない……誰も許さない……！」狂乱の叫びが精神を削る！",
+                                        "の巨大な繭から無数の黒い手が伸び、引きずり込もうとする！"
+                                    ]
+                                };
+
+                                openCombatUI(momEnemy, gameState, (res) => {
+                                    if (res === 'win') {
+                                        if (!gameState.flags) gameState.flags = {};
+                                        gameState.flags.clearedMomBoss = true;
+
+                                        showConversationDialog("assets/images/6f-mom.png", "【抱擁の繭・母親】\n「ああ……あたたかい……。\nあの子……パパ……私たち、やっと……本当の朝を迎えられるのね……（光となって昇天した）」", () => {
+                                            
+                                            // 悪魔手記に記録
+                                            if (!gameState.bossHints) gameState.bossHints = [];
+                                            const hint6F_2 = "【6F 術式メモ】<br>「怠惰の影を断ち切る術式数値は6マスの合計で『25』。胸の虚無（左）には【Ⅳ 十字架】を穿て」";
+                                            if (!gameState.bossHints.includes(hint6F_2)) {
+                                                gameState.bossHints.push(hint6F_2);
+                                            }
+                                            
+                                            showMessageDialog("【母親の怨念浄化】\n巨大な繭が崩れ落ち、悪魔の残骸から魔方陣の解読メモを発見した！\n（※悪魔手記に記録されました）\n\n主人公「待ってろよ、御堂……！ もう誰も、お前の食い物にはさせない！」", () => {
+                                                if (context && context.redraw) context.redraw();
+                                                onComplete();
+                                            });
+                                        });
+                                    } else {
+                                        onComplete();
+                                    }
+                                }, context);
+
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+}
+
+// ==========================================
+// 銀鋏（アイテム）＆ ボス・ドッペルゲンガー戦
+// ==========================================
+
+function handleSpiderMiniBoss(gameState, context, onComplete) {
+    if (gameState.flags.hasSilverShears) {
+        showMessageDialog("【廃棄物保管室】\n巨大蜘蛛を討伐した部屋。散らばった糸は干からびている。", onComplete);
+        return;
+    }
+
+    showMessageDialog("【廃棄物保管室】\n扉を開けた瞬間、天井から粘着性の糸が降り注ぐ！\n先行していた黒猫を襲った元凶、「蜘蛛の怪異」が這いずり出てきた！", () => {
+        const miniBoss = { 
+            name: "蜘蛛の怪異", image: "assets/images/demon/demon14.png", 
+            hp: 450, atk: 52, def: 10, weakness: [6], agi: 13,
+            rewardExp: 7200, rewardMoney: 1500
+        };
+        openCombatUI(miniBoss, gameState, (res) => {
+            if (res === "win" || res === "combat_win") {
+                gameState.flags.hasSilverShears = true;
+                
+                if (gameState.saveGame) gameState.saveGame();
+
+                showMessageDialog("蜘蛛の怪異を討ち滅ぼした！\n奴の巣の奥に、悪魔の糸をも断ち切る鋭利な刃物が突き刺さっているのを発見した。", () => {
+                    showItemAcquiredModal("assets/images/knife.jpg", "断ち切りの銀鋏", "【キーアイテム】\n精神を蝕む悪魔の繭糸を切断できる聖銀の鋏。\nこれで奥の部屋に捕らわれているかもしれない『黒猫』を救出できる！", onComplete);
+                });
+            } else { onComplete(); }
+        }, context);
+    });
+}
+
+function handleCocoonBossRoom(gameState, context, onComplete) {
+    if (gameState.flags.cleared6F) {
+        showMessageDialog("【最奥の部屋】\n自らの影を乗り越えた静寂が広がっている。\n足元には頼もしい相棒（黒猫）がいる。", onComplete);
+        return;
+    }
+
+    if (!gameState.flags.hasSilverShears) {
+        showMessageDialog("【蜘蛛の繭部屋】\n部屋の中央に巨大な糸の繭があり、その中に黒猫が閉じ込められている！\nしかし悪魔の糸は強固で、モデルガンや素手では引きちぎれない……！\nどこかで『糸を断ち切る刃物』を見つける必要がある！", onComplete);
+        return;
+    }
+
+    if (gameState.flags.isCocoonCut) {
+        gameState.flags.hasCat = true;
+        gameState.flags.isCatTrapped = false;
+        showMessageDialog("【最奥の部屋】\n自由を取り戻した黒猫が、部屋の奥で牙を剥いている。\n暗闇から再び、主人公と同じ姿をした影（ドッペルゲンガー）が嘲笑を浮かべて歩み出てきた！\n\n主人公「……もうお前の言葉には惑わされない。決着をつけるぞ！」", () => {
+            startDoppelgangerPuzzle(gameState, context, onComplete);
+        });
+        return;
+    }
+
+    showConversationDialog("assets/images/catpinchi.jpg", "【捕らわれた黒猫】\n部屋の中央。張り巡らされた巨大な蜘蛛の巣に、黒猫が絡め取られていた。\n\n物理的な拘束だけではない。このフロアに充満する『諦めの毒』に侵され、あの鋭かった金色の瞳は虚ろに濁り、動くことすら放棄しているようだ。", () => {
+        showMessageDialog("主人公は『断ち切りの銀鋏』を構え、黒猫を救出しようと踏み出した。\n\n――その時。部屋の奥の暗闇から、主人公と【全く同じ姿をした男】が嘲笑を浮かべて歩み出てきた。", () => {
+            playVideo("assets/images/demon/6f-doppelganger.mp4", () => {
+                showConversationDialog("assets/images/demon/6f-doppelganger.png", "【ドッペルゲンガー】\n「……何を必死になっている？ 銃を握らされ、誰かのために戦うフリをして、自分に価値があると思い込みたいだけだろう？」\n\n「お前はずっと、何者にもなりたくなかったはずだ。選択する痛みを恐れ、責任を恐れ、ただ眠っていたかった。……あの子を助ける？ 傲慢だな。お前はただ、自分の空っぽな人生から目を背ける口実が欲しかっただけだ」", () => {
+                    showMessageDialog("影の言葉が、鋭く胸をえぐる。\n（……その通りだ。俺には崇高な目的もない。立派な志望動機も持てなかった。神父が俺にスマホを託したのだって、きっとただの偶然だ）\n\n主人公の足元に蜘蛛の糸が返り咲き、身体が鉛のように重くなる。銃を構える腕が下がりかけた――", () => {
+                        showConversationDialog("assets/images/catpinchi.jpg", "【黒猫】\n「……ニャァアアッ！！」\n\nその瞬間。完全に心を折られていたはずの黒猫が、主人公の危機に反応して力を振り絞り、自分を縛る蜘蛛の糸に鋭く噛みついた！\n\n金色の瞳が、主人公への絶対的な『信頼』を込めて見つめてくる。", () => {
+                            showMessageDialog("（……！）\n主人公の中で、何かが弾けた。\n\n（神父が俺を選んだ理由なんて、ただの偶然でいい。）\n（俺の人生に価値があるかどうかも、今すぐ分からなくていい！）\n\n「――だが、今俺を信じて鳴いているこいつを見捨てるような……最低の逃げ方は、もうごめんだッ！！」", () => {
+                                showMessageDialog("主人公は力任せに足元の糸を引きちぎり、銀鋏で黒猫の繭を一気に切り裂いた！\n自由を取り戻した黒猫がしなやかに着地した。大きく深呼吸すると、覇気を取り戻したようだ。\n\n主人公「……行けるか？」\n\n黒猫は『当たり前だろ』とでも言うように軽く目配せし、低く唸って敵を睨みつける）", () => {
+                                    
+                                    gameState.flags.isCocoonCut = true;
+                                    gameState.flags.hasCat = true;
+                                    gameState.flags.isCatTrapped = false;
+                                    
+                                    if (gameState.saveGame) gameState.saveGame();
+                                    
+                                    startDoppelgangerPuzzle(gameState, context, onComplete);
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+}
+
+function startDoppelgangerPuzzle(gameState, context, onComplete) {
+    const puzzleConfig = {
+        title: "【魔方陣術式】怠惰と停滞の影（ドッペルゲンガー）",
+        subTitle: "6マスの合計値を『25』にし、トラウマを粉砕せよ",
+        bossName: "影",
+        slots: [
+            { id: "slot-tl", label: "①甘美な忘却", gridPos: "grid-area: 1 / 1;" },
+            { id: "slot-top", label: "②思考の停止", gridPos: "grid-area: 1 / 2;" },
+            { id: "slot-left", label: "③魂の空洞", gridPos: "grid-area: 2 / 1;" },
+            { id: "slot-right", label: "④存在の倦怠", gridPos: "grid-area: 2 / 3;" },
+            { id: "slot-bottom", label: "⑤泥濘の足枷", gridPos: "grid-area: 3 / 2;" },
+            { id: "slot-br", label: "⑥静かなる死", gridPos: "grid-area: 3 / 3;" }
         ]
     };
 
-    openCombatUI(enemy, gameState, (res) => {
-        if (onComplete) onComplete();
-    }, context);
+    openBossPuzzleUI(puzzleConfig, gameState, (slots) => {
+        const getCardNum = (id) => typeof slots[id] === 'number' ? slots[id] : 0;
+        const sum = [getCardNum("slot-tl"), getCardNum("slot-top"), getCardNum("slot-left"), getCardNum("slot-right"), getCardNum("slot-bottom"), getCardNum("slot-br")].reduce((a,b)=>a+b,0);
+        const isUnique = new Set([getCardNum("slot-tl"), getCardNum("slot-top"), getCardNum("slot-left"), getCardNum("slot-right"), getCardNum("slot-bottom"), getCardNum("slot-br")]).size === 6;
+
+        let isPerfect = (getCardNum("slot-top") === 7 && getCardNum("slot-bottom") === 2 && getCardNum("slot-left") === 4 && sum === 25 && isUnique);
+
+        const floor = 6;
+        const targetLevel = (floor - 1) * 5; // Lv.25
+        const playerLevel = gameState.player.level || 1;
+        const baseHp = 1000;
+
+        let hpRatio = 1.0;
+        let resultMsg = "";
+
+        if (isPerfect) {
+            if (playerLevel >= targetLevel) {
+                hpRatio = 0.2; 
+                resultMsg = `【完全正解！】適正レベル(Lv.${targetLevel})到達！\n魔方陣が激しく共鳴！ 過去の迷いと停滞を打ち砕き、影の体力を 8割削減 した！`;
+            } else {
+                hpRatio = 0.5; 
+                resultMsg = `【完全正解！】魔方陣の解読に成功！\n聖なる光が吹き荒れ、影の体力を 半減 させた！`;
+            }
+        } else {
+            hpRatio = 1.0;
+            resultMsg = `【術式解呪失敗……（合計: ${sum}）】\n迷いを断ち切れず、完全体となったドッペルゲンガーが襲いかかってくる！`;
+        }
+
+        const startHp = Math.max(1, Math.floor(baseHp * hpRatio));
+
+        const doppelEnemy = {
+            name: "ドッペルゲンガー", image: "assets/images/demon/6f-doppelganger.png", 
+            hp: startHp, maxHp: baseHp, 
+            atk: isPerfect ? 50 : 70, 
+            def: isPerfect ? 10 : 20, 
+            weakness: [4, 7], agi: 15,
+            rewardExp: 12000, rewardMoney: 3500, isBoss: true
+        };
+
+        const startBossBattle = () => {
+            openCombatUI(doppelEnemy, gameState, (res) => {
+                if (res === "win" || res === "combat_win") {
+                    gameState.flags.cleared6F = true;
+                    gameState.flags.hasCat = true;
+                    gameState.flags.isCatTrapped = false;
+                    if (gameState.saveGame) gameState.saveGame();
+                    
+                    showMessageDialog("【ドッペルゲンガー討滅】\n砕け散った自らの影が、粒子となってフロアの闇へ溶けていく……。\n\n『……ふん。選んだんだな、痛みを引き受ける道を……』\n\n消えゆく影が残した呟きとともに、全身を縛っていた鉛のような倦怠感が霧散した。激しい呼吸の中、胸の奥に確かな熱が宿っている。", () => {
+                        showMessageDialog("（ゴホッ、ゴホッ…ハァ…ハァ…息が、上がる……本当に俺が、あいつを倒したのか……？）\n\n何者にもなれず、選択から逃げ続けてきた過去の自分。\nその弱さが消えたわけじゃない。それでも――目の前で懸命に生きようとした小さな命を見捨てなかったことだけは、胸を張れる。", () => {
+                            playVideo("assets/videos/blackcat2.mp4", () => {
+                                showMessageDialog("主人公「……痛かったよな。よく耐えてくれた。」\n\n屈んでその頭を撫でると、温かい体温が掌に伝わってきた。\n神父から託されたただの「使い魔」ではない。絶望の中で背中を預け合える、たった一人の仲間だ。\n\n主人公「行こう……相棒。8Fの元凶（御堂）を止めて、全部終わらせるぞ」", () => {
+                                    showConversationDialog(
+                                        "assets/images/ketui.png",
+                                        "【不退転の決意】\n瞳に宿る迷いは完全に消え去った。\n\n自分を信じてくれた黒猫と共に、主人公は前を見据える。\n目指すは最上階――全ての元凶を断ち切るために。\\n\n（※黒猫が真の相棒として合流！ 7階への非常階段が開通した！）",
+                                        onComplete
+                                    );
+                                });
+                            });
+                        });
+                    });
+                } else { onComplete(); }
+            }, context);
+        };
+
+        if (isPerfect) {
+            showMessageDialog(resultMsg, () => {
+                playVideo("assets/videos/magic-circle.mp4", startBossBattle);
+            });
+        } else {
+            showMessageDialog(resultMsg, startBossBattle);
+        }
+    });
 }

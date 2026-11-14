@@ -1,5 +1,5 @@
 // maps/map8F.js - 8F「最上階：悪魔王の祭壇」完全版
-// セリフ演出・黒猫お休みギミック・階段動線同期・ステータス強化・Sinマルチエンディング対応
+// セリフ演出・黒猫お休みギミック・階段動線同期・8F統一経験値カーブ・悪魔手記記録・Sinマルチエンディング対応
 
 import { 
     showMessageDialog, showConversationDialog, 
@@ -75,6 +75,9 @@ function handleCerberusRoom(gameState, context, onComplete) {
                 atk: 90,
                 def: 10,
                 weakness: [1, 6],
+                rewardExp: 16000,
+                rewardMoney: 0,
+                isBoss: true,
                 actions: [
                     "の２つの顎が同時に噛みついてきた！",
                     "は口から猛烈な『業火ブレス』を吐き散らした！",
@@ -92,14 +95,21 @@ function handleCerberusRoom(gameState, context, onComplete) {
                     gameState.flags.clearedCerberus = true;
                     gameState.player.money += 3000;
 
+                    // ★ 悪魔手記にも記録
+                    if (!gameState.bossHints) gameState.bossHints = [];
+                    const hint8F_1 = "【8F 父親の手帳・前編】中央の座に『Ⅵ 聖炎』、右の座に『Ⅸ 銀杭』を置け。";
+                    if (!gameState.bossHints.includes(hint8F_1)) {
+                        gameState.bossHints.push(hint8F_1);
+                    }
+
                     // ★ チェックポイントセーブ（ケルベロス討伐を保存）
                     if (gameState.saveGame) gameState.saveGame();
 
                     showMessageDialog(
-                        "【ケルベロス 討滅！】\n２つの首を討ち果たし、巨獣は黒煙を上げて崩れ落ちた！\n\n主人公「大丈夫か、いけるか、相棒」\n黒猫はすまなそうに主人公を見上げると、（ニヤッ）と短く鳴き、強い瞳で前を向きなおした。\n\n部屋の隅に、踏みにじられた父親のペンとノートの切れ端が落ちている……！",
+                        "【ケルベロス 討滅！】\n２つの首を討ち果たし、巨獣は黒煙を上げて崩れ落ちた！\n（💰3,000 を獲得！）\n\n主人公「大丈夫か、いけるか、相棒」\n黒猫はすまなそうに主人公を見上げると、（ニヤッ）と短く鳴き、強い瞳で前を向きなおした。\n\n部屋の隅に、踏みにじられた父親のペンとノートの切れ端が落ちている……！",
                         () => {
                             showMessageDialog(
-                                "【父親の取材手帳・前編】\n『……御堂が隠し持っていたオカルト古文書の写しだ。\n悪魔王の不死の核を貫くには、神聖なる三つの印を魔方陣に捧げねばならぬ。\n\n◆ 中央の座：罪を清め、闇を焼き尽くす【Ⅵ 聖炎】を据えよ。\n◆ 右の座：悪魔を貫き逃走を阻む【Ⅸ 銀杭】を置け。』\n\n（※魔方陣パズルの手がかりを手に入れた！）",
+                                "【父親の取材手帳・前編】\n『……御堂が隠し持っていたオカルト古文書の写しだ。\n悪魔王の不死の核を貫くには、神聖なる三つの印を魔方陣に捧げねばならぬ。\n\n◆ 中央の座：罪を清め、闇を焼き尽くす【Ⅵ 聖炎】を据えよ。\n◆ 右の座：悪魔を貫き逃走を阻む【Ⅸ 銀杭】を置け。』\n\n（※魔方陣パズルの手がかりを手に入れ、悪魔手記に記録した！）",
                                 onComplete
                             );
                         }
@@ -132,6 +142,9 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
                 atk: 95,
                 def: 12,
                 weakness: [2, 7],
+                rewardExp: 18000,
+                rewardMoney: 0,
+                isBoss: true,
                 actions: [
                     "の牛頭が巨大な金棒を狂乱しながら振り下ろした！",
                     "の馬頭が血に飢えた槍で電光石火の突きを放つ！",
@@ -144,14 +157,21 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
                     gameState.flags.clearedGozuMezu = true;
                     gameState.player.money += 3500;
 
+                    // ★ 悪魔手記にも記録
+                    if (!gameState.bossHints) gameState.bossHints = [];
+                    const hint8F_2 = "【8F 父親の手帳・後編】左に『Ⅱ 鏡』、中央に『Ⅵ 聖炎』、右に『Ⅸ 銀杭』を配置せよ！";
+                    if (!gameState.bossHints.includes(hint8F_2)) {
+                        gameState.bossHints.push(hint8F_2);
+                    }
+
                     // ★ チェックポイントセーブ（牛頭馬頭討伐を保存）
                     if (gameState.saveGame) gameState.saveGame();
 
                     showMessageDialog(
-                        "【牛頭＆馬頭 討滅！】\n二体の獄卒を撃破した！ 鉄格子が砕け散り、二体は泥となって溶け去った！\n\nその足元に、千切れた父親の取材メモの続きが落ちている……！",
+                        "【牛頭＆馬頭 討滅！】\n二体の獄卒を撃破した！ 鉄格子が砕け散り、二体は泥となって溶け去った！\n（💰3,500 を獲得！）\n\nその足元に、千切れた父親の取材メモの続きが落ちている……！",
                         () => {
                             showMessageDialog(
-                                "【父親の取材手帳・後編】\n『……ボロボロで血に汚れているが、読めるぞ！\n\n◆ 左の座：悪しき波長を反射し真理を映す【Ⅱ 鏡】を据えよ。\n\n左に【Ⅱ 鏡】、中央に【Ⅵ 聖炎】、右に【Ⅸ 銀杭】……\nこの三位一体の神聖陣が揃った瞬間、神の裁き【Vox Sacra】が発動し、悪魔の核を撃ち抜くだろう！』\n\n（※魔方陣パズルの配置法則を完全に特定した！）",
+                                "【父親の取材手帳・後編】\n『……ボロボロで血に汚れているが、読めるぞ！\n\n◆ 左の座：悪しき波長を反射し真理を映す【Ⅱ 鏡】を据えよ。\n\n左に【Ⅱ 鏡】、中央に【Ⅵ 聖炎】、右に【Ⅸ 銀杭】……\nこの三位一体の神聖陣が揃った瞬間、神の裁き【Vox Sacra】が発動し、悪魔の核を撃ち抜くだろう！』\\n\n（※魔方陣パズルの配置法則を完全に特定し、悪魔手記に記録した！）",
                                 onComplete
                             );
                         }
@@ -196,11 +216,11 @@ function handleMidoChamber(gameState, context, onComplete) {
         "【御堂の演説（街の市民への生放送）】\n「おい、聞こえてるな市民諸君！ 男・御堂だ！\nよくも……よくもあの選挙で、この俺を落選させてくれたなぁッ！？\n誰が一番この街を愛してた！？ 誰が泥をかぶって街のために動いてたと思ってんだ！\n老人ホーム建設の募金の着服？ ふざけんじゃねえぞ！ あんなもん俺が市長になって、もっとデカい予算で倍にして建て替えてやるつもりだったんだよ！ 俺の男気と大義を何一つ理解できねえで、あのマスゴミのデマを鵜呑みにしやがって！\n恩知らずの愚民どもがぁぁッ！！」",
         () => {
             showConversationDialog(
-                "assets/images/demon/midou.png",
+                "assets/images/demon/midou.png", 
                 "【御堂の演説（街の市民への放送）】\n「……だがな、俺は器のデカい男だ！ 貴様らを見捨てたりはせん！\n民主主義がダメなら、この悪魔の力で街を一つにまとめてやる！\n喜べ！ 今日から俺が貴様らの絶対のリーダー、『悪魔王』だ！ 俺の敷いたレールの上を、泣いて感謝しながら這いつくばって歩けぇぇッ！！」",
                 () => {
                     showConversationDialog(
-                        "assets/images/demon/midou.png",
+                        "assets/images/demon/midou.png", 
                         "【御堂（主人公を睨みつけ）】\n「……あぁん！？ なんだテメェは！\nどこの小僧だか何だか知らねえが、大人の神聖な大義名分に、ガキが土足で踏み込んでんじゃねえぞ！\nテメェの名前なんぞ知るか！ 覚える価値もねえ！\nこっちはこれからこの街の百万人を背負って立つんだ！ てめえみたいな名もねえ雑魚に構ってる暇はねえんだよ！\n邪魔すんなら容赦しねえぞ、俺の偉大なる戴冠式の生贄にしてミンチにしてやるわッ！！」",
                         () => {
                             playVideo("assets/images/demon/midou.mp4", () => {
@@ -266,7 +286,7 @@ function startMidoPuzzleAndBattle(gameState, context, onComplete) {
                     atk: isCorrect ? 95 : 120,
                     def: isCorrect ? 10 : 18,
                     weakness: [4, 9],
-                    rewardExp: 1500,
+                    rewardExp: 35000,
                     rewardMoney: 10000,
                     isBoss: true,
                     actions: [
@@ -348,14 +368,14 @@ function triggerEndingSequence(gameState, onComplete) {
             showMessageDialog(
                 "【新・悪魔王の誕生】\n御堂が絶叫とともに爆散した瞬間――その体から吹き出した大量の黒煙と怨念が、浄化されることなく主人公の全身へと吸い込まれていく。\n罪に染まりきった主人公の肉体は、悪魔の瘴気を拒絶するどころか、極上の苗床として貪り食ったのだ。\n\n窓の外の黒雲は晴れず、むしろマンションを中心に赤黒い雷光が渦を巻き始める。\nスマホが鳴り、就活の通知が届くが――主人公はそれを床に叩き落とし、踵で無残に踏み砕いた。\n\n主人公\n「ハハ……ハハハッ！\nなんだこれは……全身に力が漲る……！ 就職活動？ 面接？ 馬鹿馬鹿しい……！」\n\n瞳が禍々しい紅蓮に染まり、背中から黒い魔気の翼が広がっていく。\n足元の黒猫は毛を逆立て、主人公を「新たな怪物」として激しく威嚇したあと、闇の中へと逃げ去っていった。\n\n主人公\n「御堂の言ってたことも、あながち間違いじゃなかったな。\n愚民どもめ……今日からこの俺が、貴様らの新しい『悪魔王』だ。」\n\nマンション・インフェルノに、新たな絶望の支配者が君臨した――。",
                 () => {
-                    showMessageDialog("【 BAD END : 新・悪魔王誕生 】\n\nゲームオーバー……。\n（※人間を撃ちすぎです。1階の無人レジでお金を払って罪を浄化してください）", returnToTitle);
+                    showMessageDialog("【 BAD END : 新・悪魔王誕生 】\n\nゲームオーバー……。\\n（※人間を撃ちすぎです。1階の無人レジでお金を払って罪を浄化してください）", returnToTitle);
                 }
             );
         });
     }
 }
 
-// 8F 通常ランダムエンカウント
+// 8F 通常ランダムエンカウント（★ 8F統一報酬カーブ：14,000 EXP）
 export function check8FRandomEncounter(gameState, context, onComplete) {
     const roll = Math.random();
     if (roll > 0.15) {
@@ -370,6 +390,8 @@ export function check8FRandomEncounter(gameState, context, onComplete) {
         atk: 75,
         def: 5,
         weakness: [3, 5],
+        rewardExp: 14000,
+        rewardMoney: 2200,
         actions: [
             "は『御堂先生こそ真の市長だ！』と叫び襲いかかってきた！",
             "は血塗られた選挙ビラを投げつけて目を眩ませてきた！",

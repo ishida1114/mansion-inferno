@@ -1,4 +1,4 @@
-// maps/map5F.js - エレベーター順序・報酬適正化・悪魔手記連携・5Fクリアフラグ・父親スキップ＆80%削減対応 完全版
+// maps/map5F.js - エレベーター順序・5F統一報酬カーブ・悪魔手記連携・5Fクリアフラグ・父親スキップ＆80%削減対応 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -36,11 +36,11 @@ export function check5FRandomEncounter(gameState, onEncounter) {
     syncMapState(gameState);
     
     if (Math.random() < 0.15) {
-        // ★ 5F基準の適正報酬（120〜140 EXP / 420〜500 円）を設定
+        // ★ 5F統一報酬カーブ（2200〜2600 EXP / 450〜550 円）
         const demonTypes = [
-            { id: 'DEVIL10_5F', name: '徘徊するキメラ', image: 'assets/images/demon/demon10.png', hp: 200, atk: 32, def: 5, weakness: [4, 7], agi: 12, rewardExp: 120, rewardMoney: 420 },
-            { id: 'DEVIL11_5F', name: '失敗作の肉塊', image: 'assets/images/demon/demon11.png', hp: 240, atk: 35, def: 8, weakness: [1, 6], agi: 10, rewardExp: 130, rewardMoney: 450 },
-            { id: 'DEVIL12_5F', name: '狂気の実験体', image: 'assets/images/demon/demon12.png', hp: 170, atk: 42, def: 4, weakness: [9], agi: 16, rewardExp: 140, rewardMoney: 500 }
+            { id: 'DEVIL10_5F', name: '徘徊するキメラ', image: 'assets/images/demon/demon10.png', hp: 200, atk: 32, def: 5, weakness: [4, 7], agi: 12, rewardExp: 2200, rewardMoney: 450 },
+            { id: 'DEVIL11_5F', name: '失敗作の肉塊', image: 'assets/images/demon/demon11.png', hp: 240, atk: 35, def: 8, weakness: [1, 6], agi: 10, rewardExp: 2400, rewardMoney: 500 },
+            { id: 'DEVIL12_5F', name: '狂気の実験体', image: 'assets/images/demon/demon12.png', hp: 170, atk: 42, def: 4, weakness: [9], agi: 16, rewardExp: 2600, rewardMoney: 550 }
         ];
         const chosenEnemy = demonTypes[Math.floor(Math.random() * demonTypes.length)];
         onEncounter({ ...chosenEnemy });
@@ -220,7 +220,7 @@ function handleRoom502(gameState, context, onComplete) {
         const experimentEnemy = { 
             name: '暴走したキメラ', image: 'assets/images/demon/demon11.png', 
             hp: 280, atk: 35, def: 5, weakness: [1, 6], agi: 12,
-            rewardExp: 150, rewardMoney: 550
+            rewardExp: 2800, rewardMoney: 650
         };
         openCombatUI(experimentEnemy, gameState, (res) => {
             if (res === 'win' || res === 'combat_win') {
@@ -272,7 +272,7 @@ function handleTrumpChimera(gameState, context, onComplete) {
                 const trumpEnemy = { 
                     name: 'トランプキメラ', image: 'assets/images/demon/trump.png', 
                     hp: 400, atk: 42, def: 15, weakness: [4], agi: 10,
-                    rewardExp: 180, rewardMoney: 650
+                    rewardExp: 3200, rewardMoney: 750
                 };
                 openCombatUI(trumpEnemy, gameState, (res) => {
                     if (res === 'win' || res === 'combat_win') {
@@ -304,7 +304,7 @@ function handleAliceGranny(gameState, context, onComplete) {
                 const aliceEnemy = { 
                     name: 'アリス服の老婆悪魔', image: 'assets/images/demon/alice.png', 
                     hp: 450, atk: 48, def: 12, weakness: [7], agi: 12,
-                    rewardExp: 220, rewardMoney: 750
+                    rewardExp: 3500, rewardMoney: 850
                 };
                 openCombatUI(aliceEnemy, gameState, (res) => {
                     if (res === 'win' || res === 'combat_win') {
@@ -336,7 +336,7 @@ function handleRabbitBoss(gameState, context, onComplete) {
                 const rabbitEnemy = { 
                     name: 'キメラ化した助手', image: 'assets/images/demon/5f-kimera.png', 
                     hp: 420, atk: 55, def: 5, weakness: [2, 9], agi: 18,
-                    rewardExp: 260, rewardMoney: 900
+                    rewardExp: 3800, rewardMoney: 1000
                 };
                 openCombatUI(rabbitEnemy, gameState, (res) => {
                     if (res === 'win' || res === 'combat_win') {
@@ -444,7 +444,7 @@ function handleBossLab5F(gameState, context, onComplete) {
                             atk: isPerfectSuccess ? 45 : 70, 
                             def: isPerfectSuccess ? 12 : 25, 
                             weakness: [5, 9], agi: 15,
-                            rewardExp: 600, rewardMoney: 2500, isBoss: true
+                            rewardExp: 6500, rewardMoney: 3000, isBoss: true
                         };
 
                         const startBossBattle = () => {
@@ -500,7 +500,7 @@ function handleBossLab5F(gameState, context, onComplete) {
                 const fatherEnemy = { 
                     name: 'キメラ化した父親', image: 'assets/images/demon/5f-father.png', 
                     hp: 480, atk: 50, def: 15, weakness: [3], agi: 14,
-                    rewardExp: 300, rewardMoney: 1100
+                    rewardExp: 4500, rewardMoney: 1200
                 };
                 openCombatUI(fatherEnemy, gameState, (res) => {
                     if (res === 'win' || res === 'combat_win') {
