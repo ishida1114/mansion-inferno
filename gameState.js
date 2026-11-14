@@ -1,4 +1,4 @@
-// gameState.js - ソフトキャップ(余裕+3＆段階減衰)・メタ警告撤廃・経験値表示完全一致・悪魔辞典対応 完全版
+// gameState.js - 経験値キャップ完全廃止・必要経験値カーブ最適化・悪魔手記＆悪魔弱点辞典 完全版
 
 export const gameState = {
   player: {
@@ -85,10 +85,10 @@ export const gameState = {
     this._armorUnlockStage = val;
   },
 
-  // ★ 次のレベルに必要な経験値を計算する統一関数
+  // ★ 次のレベルに必要な経験値を計算する統一関数（キャップ不要の自然な加速カーブ）
   calcRequiredExp(level = this.player.level) {
     if (level <= 1) return 100;
-    return Math.floor(100 + (level - 1) * 80 + Math.pow(level, 1.5) * 15);
+    return Math.floor(80 + Math.pow(level, 2.1) * 20);
   },
 
   // ★ 次のレベルまでの残り必要経験値を取得（appUI表示と完全一致）
@@ -97,38 +97,18 @@ export const gameState = {
     return Math.max(0, req - (this.player.exp || 0));
   },
 
-  // ★ 適正レベル＋3の安全マージン（1F・8Fは上限なし）
-  getFloorLevelCap(floor = this.currentFloor) {
-    if (floor <= 1 || floor === 8) return 999;
-    return ((floor - 1) * 5) + 3;
+  // 互換維持用（上限撤廃のため常に999）
+  getFloorLevelCap() {
+    return 999;
   },
 
-  // ★ ソフトキャップ方式：適正Lv+3までは100%獲得、以降は段階的になだらかに減衰（メタ警告文も非表示）
-  calculateRewards(baseExp, baseMoney, floor = this.currentFloor) {
-    if (floor <= 1 || floor === 8) {
-      return { exp: baseExp, money: baseMoney, isCapped: false };
-    }
-
-    const softCap = this.getFloorLevelCap(floor);
-    const over = this.player.level - softCap;
-
-    if (over <= 0) {
-      return { exp: baseExp, money: baseMoney, isCapped: false };
-    }
-
-    let expRate = 0.25;
-    let moneyRate = 0.70;
-    if (over === 1) {
-      expRate = 0.75;
-      moneyRate = 0.90;
-    } else if (over === 2) {
-      expRate = 0.50;
-      moneyRate = 0.80;
-    }
-
-    const scaledExp = Math.max(1, Math.floor(baseExp * expRate));
-    const scaledMoney = Math.max(1, Math.floor(baseMoney * moneyRate));
-    return { exp: scaledExp, money: scaledMoney, isCapped: false };
+  // ★ 獲得EXP・お金の減衰キャップを完全廃止（いつでも100%満額獲得）
+  calculateRewards(baseExp, baseMoney) {
+    return {
+      exp: Math.max(0, Math.floor(Number(baseExp) || 0)),
+      money: Math.max(0, Math.floor(Number(baseMoney) || 0)),
+      isCapped: false
+    };
   },
 
   // ★ 悪魔弱点の自動記録ヘルパー
@@ -396,9 +376,7 @@ export const gameState = {
         if (!this.inventory) this.inventory = { items: [] };
         if (!this.inventory.items) this.inventory.items = [];
         if (this.player) {
-          if (!this.player.maxExp || this.player.maxExp <= 0) {
-            this.player.maxExp = this.calcRequiredExp(this.player.level || 1);
-          }
+          this.player.maxExp = this.calcRequiredExp(this.player.level || 1);
           while (this.player.exp >= this.player.maxExp) {
             this.player.exp -= this.player.maxExp;
             this.levelUp(1);

@@ -1,4 +1,4 @@
-// maps/map2F.js - 教え子セリフ(御堂伏線)＆2Fボス完全ヒント取得対応版
+// maps/map2F.js - 教え子セリフ(御堂伏線)＆2Fボス完全ヒント取得＆EXP統一対応版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -134,7 +134,9 @@ export function handleEvent2F(targetCell, gameState, context) {
                                         name: "覗き魔・影山", 
                                         image: "assets/images/demon/2f-kageyama2.jpg", 
                                         hp: 120, atk: 12, def: 2,
-                                        rewardExp: 200, rewardMoney: 500, isBoss: true
+                                        rewardExp: ENEMIES.KAGEYAMA_2F.rewardExp || 250,
+                                        rewardMoney: ENEMIES.KAGEYAMA_2F.rewardMoney || 500,
+                                        isBoss: true
                                     };
 
                                     const applyDamageAndCombat = () => {
@@ -228,9 +230,9 @@ export function handleEvent2F(targetCell, gameState, context) {
                 const randFace = humanImages[Math.floor(Math.random() * humanImages.length)];
 
                 const demonList = [
-                    { name: ENEMIES.DEVIL1_2F.name, realImage: ENEMIES.DEVIL1_2F.image, weakness: ENEMIES.DEVIL1_2F.weaknessCard },
-                    { name: ENEMIES.DEVIL2_2F.name, realImage: ENEMIES.DEVIL2_2F.image, weakness: ENEMIES.DEVIL2_2F.weaknessCard },
-                    { name: ENEMIES.DEVIL3_2F.name, realImage: ENEMIES.DEVIL3_2F.image, weakness: ENEMIES.DEVIL3_2F.weaknessCard }
+                    { name: ENEMIES.DEVIL1_2F.name, realImage: ENEMIES.DEVIL1_2F.image, weakness: ENEMIES.DEVIL1_2F.weaknessCard, exp: ENEMIES.DEVIL1_2F.rewardExp },
+                    { name: ENEMIES.DEVIL2_2F.name, realImage: ENEMIES.DEVIL2_2F.image, weakness: ENEMIES.DEVIL2_2F.weaknessCard, exp: ENEMIES.DEVIL2_2F.rewardExp },
+                    { name: ENEMIES.DEVIL3_2F.name, realImage: ENEMIES.DEVIL3_2F.image, weakness: ENEMIES.DEVIL3_2F.weaknessCard, exp: ENEMIES.DEVIL3_2F.rewardExp }
                 ];
                 const randDemon = demonList[Math.floor(Math.random() * demonList.length)];
 
@@ -245,7 +247,7 @@ export function handleEvent2F(targetCell, gameState, context) {
                     realImage: randDemon.realImage,
                     image: randDemon.realImage,
                     weakness: randDemon.weakness,
-                    rewardExp: 50,
+                    rewardExp: randDemon.exp || 75,
                     rewardMoney: 150,
                     dialogue: "「ヒィッ……！ あ、あの魔方陣のメモ……置いていくから助けて……！」"
                 } : {
@@ -271,7 +273,8 @@ export function handleEvent2F(targetCell, gameState, context) {
                                 image: entity.realImage,
                                 hp: 30, atk: 10, def: 1,
                                 weakness: [entity.weakness],
-                                rewardExp: 50, rewardMoney: 150
+                                rewardExp: entity.rewardExp || 75,
+                                rewardMoney: 150
                             };
                             openCombatUI(demonEnemy, gameState, (res) => {
                                 if (res === "win") {

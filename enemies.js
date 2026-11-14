@@ -1,4 +1,4 @@
-// enemies.js - 敵ステータス・階層別適正経験値(rewardExp)・個別技メッセージ・ボス＆パズル統合完全版
+// enemies.js - 敵ステータス・キャップ廃止対応EXPカーブ・個別技メッセージ・ボス＆パズル統合完全版
 
 export const ENEMIES = {
   // ==========================================
@@ -21,7 +21,7 @@ export const ENEMIES = {
   },
 
   // ==========================================
-  // 2F 雑魚（適正Lv.5帯：1戦あたり 110〜135 EXP）
+  // 2F 雑魚（適正Lv.5帯：65〜85 EXP）
   // ==========================================
   DEVIL1_2F: {
     name: '徘徊する小鬼',
@@ -31,7 +31,7 @@ export const ENEMIES = {
     satk: 4,
     def: 1,
     agi: 4,
-    rewardExp: 120,
+    rewardExp: 75,
     rewardMoney: 80,
     weaknessCard: 1,
     actions: [
@@ -47,7 +47,7 @@ export const ENEMIES = {
     satk: 3,
     def: 1,
     agi: 6,
-    rewardExp: 110,
+    rewardExp: 65,
     rewardMoney: 70,
     weaknessCard: 3,
     actions: [
@@ -63,7 +63,7 @@ export const ENEMIES = {
     satk: 5,
     def: 2,
     agi: 5,
-    rewardExp: 135,
+    rewardExp: 85,
     rewardMoney: 100,
     weaknessCard: 2,
     actions: [
@@ -73,7 +73,7 @@ export const ENEMIES = {
   },
 
   // ==========================================
-  // 3F 雑魚（適正Lv.10帯：1戦あたり 340〜400 EXP）
+  // 3F 雑魚（適正Lv.10帯：340〜420 EXP）
   // ==========================================
   DEVIL4_3F: {
     name: '悪魔の食卓',
@@ -83,7 +83,7 @@ export const ENEMIES = {
     satk: 7,
     def: 2,
     agi: 6,
-    rewardExp: 360,
+    rewardExp: 380,
     rewardMoney: 160,
     weaknessCard: 8,
     actions: [
@@ -99,7 +99,7 @@ export const ENEMIES = {
     satk: 7,
     def: 3,
     agi: 5,
-    rewardExp: 400,
+    rewardExp: 420,
     rewardMoney: 200,
     weaknessCard: 6,
     actions: [
@@ -125,7 +125,7 @@ export const ENEMIES = {
   },
 
   // ==========================================
-  // 4F 雑魚 ＆ 中ボス（適正Lv.15帯：1戦あたり 620〜700 EXP / 親衛隊 1100〜1200 EXP）
+  // 4F 雑魚 ＆ 中ボス（適正Lv.15帯：950〜1150 EXP / 親衛隊 1800〜2000 EXP）
   // ==========================================
   DEVIL7_4F: {
     name: 'リナちゃんのスマホ',
@@ -135,7 +135,7 @@ export const ENEMIES = {
     satk: 16,
     def: 3,
     agi: 9,
-    rewardExp: 650,
+    rewardExp: 1050,
     rewardMoney: 300,
     weaknessCard: 2,
     actions: [
@@ -151,7 +151,7 @@ export const ENEMIES = {
     satk: 18,
     def: 4,
     agi: 8,
-    rewardExp: 700,
+    rewardExp: 1150,
     rewardMoney: 330,
     weaknessCard: 5,
     actions: [
@@ -167,7 +167,7 @@ export const ENEMIES = {
     satk: 20,
     def: 2,
     agi: 10,
-    rewardExp: 620,
+    rewardExp: 950,
     rewardMoney: 310,
     weaknessCard: 1,
     actions: [
@@ -182,7 +182,7 @@ export const ENEMIES = {
     atk: 38,
     def: 4,
     agi: 7,
-    rewardExp: 1100,
+    rewardExp: 1800,
     rewardMoney: 600,
     weaknessCard: 2,
     actions: [
@@ -197,7 +197,7 @@ export const ENEMIES = {
     atk: 42,
     def: 5,
     agi: 8,
-    rewardExp: 1200,
+    rewardExp: 2000,
     rewardMoney: 700,
     weaknessCard: 5,
     actions: [
@@ -207,7 +207,7 @@ export const ENEMIES = {
   },
 
   // ==========================================
-  // 5F 雑魚エネミー（適正Lv.20帯：1戦あたり 950〜1100 EXP）
+  // 5F 雑魚エネミー（適正Lv.20帯：2200〜2600 EXP）
   // ==========================================
   DEVIL10_5F: {
     name: '融解したキメラ',
@@ -217,7 +217,7 @@ export const ENEMIES = {
     satk: 24,
     def: 5,
     agi: 9,
-    rewardExp: 950,
+    rewardExp: 2200,
     rewardMoney: 450,
     weaknessCard: 1,
     actions: [
@@ -233,7 +233,7 @@ export const ENEMIES = {
     satk: 20,
     def: 4,
     agi: 13,
-    rewardExp: 1020,
+    rewardExp: 2400,
     rewardMoney: 500,
     weaknessCard: 3,
     actions: [
@@ -249,7 +249,7 @@ export const ENEMIES = {
     satk: 22,
     def: 8,
     agi: 7,
-    rewardExp: 1100,
+    rewardExp: 2600,
     rewardMoney: 550,
     weaknessCard: 9,
     actions: [
@@ -268,7 +268,7 @@ export const ENEMIES = {
     atk: 55,
     def: 7,
     agi: 9,
-    rewardExp: 1800,
+    rewardExp: 3800,
     rewardMoney: 900,
     weaknessCard: 4,
     actions: [
@@ -287,7 +287,7 @@ export const ENEMIES = {
     atk: 60,
     def: 8,
     agi: 11,
-    rewardExp: 2200,
+    rewardExp: 4500,
     rewardMoney: 1200,
     weaknessCard: 5,
     actions: [
@@ -310,7 +310,7 @@ export const ENEMIES = {
     satk: 6,
     def: 2,
     agi: 6,
-    rewardExp: 350,
+    rewardExp: 250,
     rewardMoney: 500,
     baseLevel: 5,
     weakness: [2, 3],
@@ -335,7 +335,7 @@ export const ENEMIES = {
     satk: 12,
     def: 3,
     agi: 6,
-    rewardExp: 850,
+    rewardExp: 950,
     rewardMoney: 800,
     baseLevel: 10,
     weakness: [8, 6],
@@ -360,7 +360,7 @@ export const ENEMIES = {
     satk: 32,
     def: 7,
     agi: 10,
-    rewardExp: 1800,
+    rewardExp: 3200,
     rewardMoney: 2000,
     baseLevel: 15,
     weakness: [2, 5],
@@ -385,7 +385,7 @@ export const ENEMIES = {
     satk: 38,
     def: 9,
     agi: 13,
-    rewardExp: 3000,
+    rewardExp: 6500,
     rewardMoney: 3000,
     baseLevel: 20,
     weakness: [5, 4, 9, 2],
