@@ -326,7 +326,11 @@ function drawActionHint(ctx, canvas, player, currentMap) {
         } else if (target === 9 && gameState.currentFloor === 3) {
             label = "[ SPACE ] 冷蔵庫を調べる";
         } else if (target === 2 && gameState.currentFloor === 1) {
-            label = "[ SPACE ] コンビニに入る";
+            if (frontX === 11 && frontY === 0) {
+                label = "[ SPACE ] 管理人室に入る";
+            } else {
+                label = "[ SPACE ] コンビニに入る";
+            }
         }
 
         const boxX = 140, boxY = 10, boxW = 230, boxH = 30;

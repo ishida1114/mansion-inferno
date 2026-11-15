@@ -1,4 +1,4 @@
-// maps/map1F.js - エレベーター(7Fボタン追加)・中庭扉・段階的防具ポスト投函対応 完全版
+// maps/map1F.js - エレベーター(7Fボタン追加)・中庭扉・段階的防具ポスト投函・管理人室(孫娘休憩所)対応 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -8,10 +8,10 @@ import {
 export const playerStart1F = { x: 7, y: 1, dir: 0 };
 
 // 1: 壁 / 0: 通路 
-// 3: エレベーター(x:6, y:0) / 4: 非常階段(x:7, y:0) 
+// 3: エレベーター(x:6, y:0) / 4: 非常階段(x:7, y:0) / 2: 管理人室(x:11, y:0)
 // 2: コンビニ(x:3, y:2) / 8: 中庭への扉・血の池(x:7, y:2) / 9: 集合ポスト(x:11, y:2) / 6: 出口(x:7, y:6)
 export const map1F = [
-    [1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 1, 1, 1], 
+    [1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 2, 1, 1, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
     [1, 0, 1, 2, 1, 0, 1, 8, 1, 0, 1, 9, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
@@ -104,8 +104,19 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // 2: コンビニ
+    // 2: 管理人室(x:11, y:0) または コンビニ(x:3, y:2)
     if (targetCell === 2) {
+        const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
+        const vec = dirVectors[gameState.player.dir];
+        const frontX = gameState.player.x + vec.x;
+        const frontY = gameState.player.y + vec.y;
+
+        // ★ (x:11, y:0) は管理人室
+        if (frontX === 11 && frontY === 0) {
+            return { run: (onComplete) => startCaretakerRoomEvent(gameState, onComplete) };
+        }
+
+        // それ以外はコンビニ
         if (!gameState.hasMetGrandma) {
             return { run: (onComplete) => startGrandmaEvent(gameState, onComplete) };
         } else if (gameState.hasModelGun && !gameState.hasTalkedStudentInCVS) {
@@ -139,6 +150,79 @@ export function handleEvent1F(targetCell, gameState, context) {
     }
 
     return null;
+}
+
+// ==========================================
+// ★ 1F 管理人室（管理人の孫娘による休憩・回復イベント）
+// ==========================================
+function startCaretakerRoomEvent(gameState, onComplete) {
+    if (!gameState.flags) gameState.flags = {};
+    const imgPath = "assets/images/kanrinin-musume.jpg";
+    const isRescued = !!gameState.flags.rescuedManager;
+    const maxHp = gameState.player.maxHp || 20;
+    const curHp = gameState.player.hp || 0;
+
+    // パターンB：3Fで管理人を救出した後（HP 100%全快解禁）
+    if (isRescued) {
+        let cheerLine = "「おじいちゃんを助けてくださって、本当にありがとうございました！ おかげですっかり元気になりましたよ。\nここはおじいちゃんと私の大切な場所ですから、疲れたらいつでも休んでいってくださいね！」";
+        if (gameState.flags.cleared7F) {
+            cheerLine = "「いよいよ最上階ですね……！ 無茶だけはしないで、必ず無事に帰ってきてくださいね。私とおじいちゃんで、温かいご飯を用意して待っていますから！」";
+        } else if (gameState.flags.cleared5F) {
+            cheerLine = "「上の階はどんどん空気が重くなっているみたい……。無理をなさらないで、傷ついたらすぐここへ戻ってきてくださいね！」";
+        }
+
+        if (!gameState.flags.seenCaretakerFullUnlock) {
+            gameState.flags.seenCaretakerFullUnlock = true;
+            showConversationDialog(
+                imgPath,
+                "【管理人の孫】\n「あっ、先生！ おじいちゃんから全部聞きました！ 3階の冷蔵庫に閉じ込められていたところを助けてくださったんですね……！\n本当に、本当にありがとうございます……！\n\nこれからは奥のベッドも自由に使ってくださいね。私がしっかり看病しますから、いつでも全快まで休んでいってください！」",
+                () => {
+                    gameState.player.hp = maxHp;
+                    if (gameState.saveGame) gameState.saveGame();
+                    showMessageDialog(`【管理人室で休憩】\n清潔なシーツが敷かれたベッドでぐっすり眠った。\n（主人公のHPが完全に回復した！ HP: ${gameState.player.hp}/${maxHp}）`, onComplete);
+                }
+            );
+        } else {
+            showConversationDialog(
+                imgPath,
+                `【管理人の孫】\n${cheerLine}`,
+                () => {
+                    const needsHeal = curHp < maxHp;
+                    gameState.player.hp = maxHp;
+                    if (gameState.saveGame) gameState.saveGame();
+                    const resultText = needsHeal
+                        ? `【管理人室で休憩】\n孫娘が淹れてくれた温かいお茶を飲み、ベッドでゆっくり身体を休めた。\n（主人公のHPが完全に回復した！ HP: ${gameState.player.hp}/${maxHp}）`
+                        : `【管理人室で小休止】\n孫娘と少し言葉を交わし、温かいお茶でほっと一息ついた。\n（HPはすでに満タンだ！ HP: ${gameState.player.hp}/${maxHp}）`;
+                    showMessageDialog(resultText, onComplete);
+                }
+            );
+        }
+        return;
+    }
+
+    // パターンA：3Fで管理人を救出する前（最大HPの50%まで回復）
+    const halfHp = Math.max(1, Math.floor(maxHp * 0.5));
+    const introDialogue = !gameState.flags.visitedCaretakerRoom
+        ? "【管理人の孫】\n「ひっ……！ ……あ、なんだ、怪しい人じゃないんですね。驚かせないでくださいよ……！\n私はここの管理人の孫です。おじいちゃんが『3階の異臭の様子を見てくる』って言ったきり戻らなくて、ずっとここで待ってるんです……。\\n\nあの、すごく疲れてるみたいですね。今は奥の部屋が散らかっていてソファしか使えませんが、少し休んでいきますか？」"
+        : "【管理人の孫】\n「おかえりなさい！ まだおじいちゃんは戻ってきていないんです……。\n3階の大きな冷蔵庫のあたりから変な音がしたって住人さんが言っていたのが気になって……。\nよかったら、ソファで少し身体を休めていってくださいね！」";
+
+    gameState.flags.visitedCaretakerRoom = true;
+
+    showConversationDialog(imgPath, introDialogue, () => {
+        if (curHp < halfHp) {
+            gameState.player.hp = halfHp;
+            if (gameState.saveGame) gameState.saveGame();
+            showMessageDialog(
+                `【管理人室で仮眠】\n古いソファに横になり、束の間の休息をとった。\n（体力が最大値の50%まで回復した！ HP: ${gameState.player.hp}/${maxHp}）\n※さらに深く休むには、3階へ行った管理人を探し出す必要がありそうだ。`,
+                onComplete
+            );
+        } else {
+            showMessageDialog(
+                `【管理人室で小休止】\n孫娘が温かいお茶を淹れてくれた。\n（現在の体力が最大値の50%以上あるため、ソファでの仮眠ではこれ以上回復しないようだ。 HP: ${curHp}/${maxHp}）`,
+                onComplete
+            );
+        }
+    });
 }
 
 // 段階的防具解放ポストイベント
@@ -184,7 +268,6 @@ function startPostEvent(gameState, onComplete) {
             if (stage >= 3) {
                 showMessageDialog("【1階 集合ポスト】\n全ての防具要請書は投函済みだ。これ以上の装備は存在しない。\n残るは8階……最上階の決戦のみだ。", onComplete);
             } else {
-                // ★ 修正：おばあさんと遭遇しているかどうかでセリフを分岐
                 if (gameState.hasMetGrandma) {
                     showMessageDialog(
                         "【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。\n（※各階のフロアボスを撃破すると、防具支給要請書を投函できます）",
