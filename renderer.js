@@ -1,4 +1,4 @@
-// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示＆4F/7F専用テクスチャ＆3Fゴミ山表示修正 完全版
+// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示＆4F/7F専用テクスチャ＆3Fゴミ山・1F管理人室表示対応 完全版
 
 import { gameState } from './gameState.js';
 
