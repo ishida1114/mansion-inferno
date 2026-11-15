@@ -1,4 +1,4 @@
-// maps/map6F.js - 一家心中事件の裏設定・ホラー演出・6F統一経験値カーブ・6F黒猫捕縛状態連動 完全版
+// maps/map6F.js - 一家心中事件の裏設定・ホラー演出・6F統一経験値カーブ・6F黒猫捕縛状態連動・改行修正 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 

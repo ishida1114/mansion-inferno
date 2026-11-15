@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・6F黒猫捕縛判定対応・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・6F黒猫捕縛判定＆6Fクリア後「真の相棒」覚醒強化対応・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -403,7 +403,7 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（弱点看破・常時表示・6F黒猫捕縛判定対応・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・文字送り1.2秒＆クリック送り(案A) 完全版）
+// 戦闘UI制御（弱点看破・常時表示・6F黒猫捕縛判定＆6Fクリア後「真の相棒」覚醒強化対応・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
     ensureCombatStyles();
@@ -425,13 +425,14 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     let isEnemyCharging = false;
     let enemyStunTurns = 0;
 
-    // ★ 黒猫（使い魔）が現在同行しているかどうかの統一判定（6Fで繭から救出する前は同行していない）
+    // ★ 黒猫（使い魔）同行＆6Fクリア後の「真の相棒」覚醒判定
     const isCatAccompanying = () => {
         if (!gameState.flags || !gameState.flags.hasCat) return false;
         if (gameState.flags.isCatTrapped) return false;
         if (gameState.currentFloor === 6 && !(gameState.flags.isCocoonCut || gameState.flags.cleared6F)) return false;
         return true;
     };
+    const isCatAwakened = !!(gameState.flags && gameState.flags.cleared6F);
 
     // ★ クリック／SPACEキーで次の戦闘ステップへ進むための待機制御
     let activeAdvanceHandler = null;
@@ -561,7 +562,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         escapeBtn.disabled = disabled;
     };
 
-    // ★ 使い魔（黒猫）同行時：初見の敵の弱点を看破する演出（6F未救出時は発動しない）
+    // ★ 使い魔（黒猫）同行時：初見の敵の弱点を看破する演出（6F未救出時は発動しない／覚醒後は専用演出）
     const isAlreadyDiscovered = gameState.isDemonDiscovered ? gameState.isDemonDiscovered(enemy.name) : false;
 
     if (isCatAccompanying() && !isAlreadyDiscovered) {
@@ -570,7 +571,11 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         setTimeout(() => {
             sound.playSE("assets/audio/se/cat.mp3");
             const wNames = enemyWeakness.map(num => CARD_NAMES[num] || num).join(", ");
-            log.innerHTML = `<span style="color:#E0B0FF; font-weight:bold;">【使い魔の看破】\n黒猫が喉を鳴らして敵の核を凝視した！\n「……フシューッ！（弱点は【${wNames}】だ！ 悪魔辞典に記録した！）」</span>`;
+            if (isCatAwakened) {
+                log.innerHTML = `<span style="color:#FFD700; font-weight:bold;">【真の相棒・黒猫の看破】\n黒猫が金色の瞳を輝かせて敵の核を瞬時に見抜いた！\n「……ニャッ！（弱点は【${wNames}】だ！ 悪魔辞典に記録した！）」</span>`;
+            } else {
+                log.innerHTML = `<span style="color:#E0B0FF; font-weight:bold;">【使い魔の看破】\n黒猫が喉を鳴らして敵の核を凝視した！\n「……フシューッ！（弱点は【${wNames}】だ！ 悪魔辞典に記録した！）」</span>`;
+            }
             if (gameState.recordDemon) gameState.recordDemon(enemy);
             if (weaknessBadge) weaknessBadge.innerHTML = getWeaknessBadgeText();
 
@@ -757,8 +762,10 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             umbrellaApplied = true;
         }
 
+        // ★ 覚醒後は援護発動率が 20% -> 35% にアップ
+        const catSupportRate = isCatAwakened ? 0.35 : 0.20;
         let catAction = null;
-        if (isCatAccompanying() && Math.random() < 0.20) {
+        if (isCatAccompanying() && Math.random() < catSupportRate) {
             catAction = Math.random() < 0.5 ? "shield" : "claw";
         }
 
@@ -767,7 +774,11 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         if (catAction === "shield") {
             sound.playSE("assets/audio/se/cat.mp3");
             baseDamage = Math.max(1, Math.floor(baseDamage * 0.5));
-            enemyTurnLines.push(`<span style="color: #E0B0FF; font-weight: bold;">【使い魔の身代わり】黒猫が前に割り込み、主人公を庇った！（ダメージ半減！）</span>`);
+            if (isCatAwakened) {
+                enemyTurnLines.push(`<span style="color: #FFD700; font-weight: bold;">【真の相棒・黒猫の守護】黒猫が鋭く咆哮して前に躍り出て、主人公を庇った！（ダメージ半減！）</span>`);
+            } else {
+                enemyTurnLines.push(`<span style="color: #E0B0FF; font-weight: bold;">【使い魔の身代わり】黒猫が前に割り込み、主人公を庇った！（ダメージ半減！）</span>`);
+            }
         }
 
         const randFactor = 0.85 + Math.random() * 0.3;
@@ -781,11 +792,17 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
         if (catAction === "claw") {
             sound.playSE("assets/audio/se/cat.mp3");
-            const catDmg = Math.max(8, Math.floor((gameState.player.level || 1) * 3.5));
+            // ★ 覚醒後は爪攻撃の倍率が Lv×3.5 -> Lv×5.5 に強化
+            const catMult = isCatAwakened ? 5.5 : 3.5;
+            const catDmg = Math.max(8, Math.floor((gameState.player.level || 1) * catMult));
             enemyHp = Math.max(0, enemyHp - catDmg);
             enemyHpText.innerText = `敵HP: ${enemyHp}`;
             showEnemyDamagePopup(catDmg, false, "🐾 -");
-            enemyTurnLines.push(`<span style="color: #E0B0FF; font-weight: bold;">【使い魔の爪攻撃】黒猫が影から飛び出し、敵の顔面を切り裂いた！ 敵に ${catDmg} ダメージ！</span>`);
+            if (isCatAwakened) {
+                enemyTurnLines.push(`<span style="color: #FFD700; font-weight: bold;">【真の相棒・黒猫の烈爪】黒猫が閃光のように跳躍し、悪魔の急所を深く切り裂いた！ 敵に ${catDmg} ダメージ！</span>`);
+            } else {
+                enemyTurnLines.push(`<span style="color: #E0B0FF; font-weight: bold;">【使い魔の爪攻撃】黒猫が影から飛び出し、敵の顔面を切り裂いた！ 敵に ${catDmg} ダメージ！</span>`);
+            }
         }
 
         updateHpDisplay();
