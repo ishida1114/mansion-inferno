@@ -1365,7 +1365,7 @@ export function openBossPuzzleUI(puzzleConfig, gameState, onSubmit) {
 }
 
 // ==========================================
-// エンディング用スタッフロール演出
+// エンディング用スタッフロール演出（キャラクター＆名場面スライド付き・3エンディング対応版）
 // ==========================================
 export function playEndingCredits(endingType, durationSeconds, onComplete) {
     // 既存のモーダル等があれば消去
@@ -1376,12 +1376,12 @@ export function playEndingCredits(endingType, durationSeconds, onComplete) {
     overlay.id = "ending-credits-overlay";
     overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 5000; color: #fff; font-family: ${HORROR_FONT}; display: flex; flex-direction: column; align-items: center; overflow: hidden;`;
 
-    // アニメーション用のCSSを動的生成
+    // アニメーション用のCSSを動的生成（translateY(-100%)で画像5枚分の高さがあっても最後まで綺麗に流れ切る）
     const style = document.createElement("style");
     style.textContent = `
         @keyframes creditRoll {
             0% { transform: translateY(100vh); }
-            100% { transform: translateY(-150vh); }
+            100% { transform: translateY(-100%); }
         }
         @keyframes fadeInBtn {
             0% { opacity: 0; pointer-events: none; transform: translateY(20px); }
@@ -1390,49 +1390,80 @@ export function playEndingCredits(endingType, durationSeconds, onComplete) {
     `;
     overlay.appendChild(style);
 
-    const titleText = endingType === "TRUE" ? "TRUE END - 罪なき生還" : "NORMAL END - 業を背負う者";
-    const titleColor = endingType === "TRUE" ? "#ffdd66" : "#ff3333";
+    let titleText = "NORMAL END - 贖罪の執行人";
+    let titleColor = "#ffaa44";
+    if (endingType === "TRUE") {
+        titleText = "TRUE END - プロのエクソシスト";
+        titleColor = "#ffdd66";
+    } else if (endingType === "BAD") {
+        titleText = "BAD END - 新・悪魔王誕生";
+        titleColor = "#ff3333";
+    }
 
-    // クレジットの中身（自由にお名前や役職を書き換えてください）
+    const imgCardStyle = "max-width: 82%; max-height: 240px; object-fit: contain; border-radius: 8px; border: 1px solid #551111; box-shadow: 0 0 25px rgba(180, 0, 0, 0.45); background: rgba(15, 5, 5, 0.7); padding: 6px;";
+
     const creditsContainer = document.createElement("div");
-    creditsContainer.style.cssText = `width: 100%; max-width: 600px; text-align: center; animation: creditRoll ${durationSeconds}s linear forwards;`;
+    creditsContainer.style.cssText = `width: 100%; max-width: 620px; padding: 0 20px 120px 20px; box-sizing: border-box; text-align: center; animation: creditRoll ${durationSeconds}s linear forwards;`;
     creditsContainer.innerHTML = `
-        <h1 style="color: ${titleColor}; font-size: 2.5em; margin-bottom: 120px; text-shadow: 0 0 20px ${titleColor}; letter-spacing: 0.1em;">${titleText}</h1>
+        <h1 style="color: ${titleColor}; font-size: 2.2em; margin-bottom: 100px; text-shadow: 0 0 20px ${titleColor}; letter-spacing: 0.08em;">${titleText}</h1>
 
-        <div style="margin-bottom: 70px;">
+        <div style="margin-bottom: 45px;">
             <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">企画・プログラム</h3>
             <p style="font-size: 1.4em; margin: 0; font-weight: bold;">hiroyuki ishida</p>
         </div>
 
-        <div style="margin-bottom: 70px;">
+        <div style="margin-bottom: 85px;">
+            <img src="assets/images/grandma.jpg" style="${imgCardStyle}" onerror="this.style.display='none'">
+        </div>
+
+        <div style="margin-bottom: 45px;">
             <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">シナリオ・演出</h3>
             <p style="font-size: 1.4em; margin: 0; font-weight: bold;">hiroyuki ishida</p>
         </div>
 
-        <div style="margin-bottom: 70px;">
+        <div style="margin-bottom: 85px;">
+            <img src="assets/images/human5.jpg" style="${imgCardStyle}" onerror="this.style.display='none'">
+        </div>
+
+        <div style="margin-bottom: 45px;">
             <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">グラフィック</h3>
             <p style="font-size: 1.4em; margin: 0; font-weight: bold;">AI ＆ hiroyuki ishida</p>
         </div>
 
-        <div style="margin-bottom: 70px;">
-            <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">音楽・効果音</h3>
-            <p style="font-size: 1.4em; margin: 0; font-weight: bold;">フリー素材各社様</p>
+        <div style="margin-bottom: 85px;">
+            <img src="assets/images/human1.png" style="${imgCardStyle}" onerror="this.style.display='none'">
         </div>
 
-        <div style="margin-bottom: 250px;">
+        <div style="margin-bottom: 45px;">
+            <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">音楽・効果音</h3>
+            <p style="font-size: 1.4em; margin: 0; font-weight: bold;">フリー素材各社様 & hiroyuki ishida</p>
+        </div>
+
+        <div style="margin-bottom: 85px;">
+            <img src="assets/images/shinpu.jpg" style="${imgCardStyle}" onerror="this.style.display='none'">
+        </div>
+
+        <div style="margin-bottom: 45px;">
             <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">スペシャルサンクス</h3>
             <p style="font-size: 1.4em; margin: 0; font-weight: bold;">プレイしてくれたあなた</p>
         </div>
 
-        <h2 style="font-size: 2.2em; letter-spacing: 0.3em; margin: 0;">THANK YOU FOR PLAYING</h2>
+        <div style="margin-bottom: 140px;">
+            <img src="assets/images/ketui.png" style="${imgCardStyle}" onerror="this.style.display='none'">
+        </div>
+
+        <h2 style="font-size: 2.1em; letter-spacing: 0.28em; margin: 0; color: #ffdd66; text-shadow: 0 0 15px rgba(255,0,0,0.6);">THANK YOU FOR PLAYING</h2>
     `;
     overlay.appendChild(creditsContainer);
-    
+
+    // クロマキー透過が必要な画像にも対応
+    creditsContainer.querySelectorAll("img").forEach(img => applyChromaKey(img));
+
     // タイトルへ戻るボタン（初期は非表示）
     const endBtn = document.createElement("button");
     endBtn.innerText = "タイトル画面へ戻る";
-    endBtn.style.cssText = `position: absolute; bottom: 12%; padding: 18px 40px; font-size: 1.2em; font-family: inherit; font-weight: bold; color: #fff; background: rgba(20,0,0,0.8); border: 1px solid #555; border-radius: 8px; cursor: pointer; opacity: 0; pointer-events: none;`;
-    
+    endBtn.style.cssText = `position: absolute; bottom: 10%; padding: 16px 38px; font-size: 1.15em; font-family: inherit; font-weight: bold; color: #fff; background: rgba(20,0,0,0.88); border: 1px solid #770000; border-radius: 8px; cursor: pointer; opacity: 0; pointer-events: none; box-shadow: 0 0 20px rgba(255,0,0,0.4);`;
+
     endBtn.onclick = () => {
         overlay.remove();
         if (onComplete) onComplete();
@@ -1442,6 +1473,6 @@ export function playEndingCredits(endingType, durationSeconds, onComplete) {
 
     // スタッフロールが流れ終わる頃（設定時間の約9割経過時）にボタンをフワッと表示
     setTimeout(() => {
-        endBtn.style.animation = "fadeInBtn 3s ease-out forwards";
+        endBtn.style.animation = "fadeInBtn 2.5s ease-out forwards";
     }, (durationSeconds * 1000) * 0.9);
 }
