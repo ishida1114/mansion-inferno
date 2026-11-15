@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・6F黒猫捕縛判定＆6Fクリア後「真の相棒」覚醒強化対応・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・6F黒猫捕縛判定＆6Fクリア後「真の相棒」覚醒強化対応・戦闘敵大型化＆装填ボタン削除(3ボタン整理)・ボス逃走不可・黄色い傘2本制限・白化防止・査問カード大型表示＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A)・ラミナカード枠エンドロール 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -403,7 +403,7 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（弱点看破・常時表示・6F黒猫捕縛判定＆6Fクリア後「真の相棒」覚醒強化対応・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版）
+// 戦闘UI制御（弱点看破・常時表示・6F黒猫捕縛判定＆6Fクリア後「真の相棒」覚醒強化対応・戦闘敵大型化＆装填ボタン削除(3ボタン整理)・ボス逃走不可・文字送り1.2秒＆クリック送り(案A) 完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
     ensureCombatStyles();
@@ -412,7 +412,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     sound.playBGM("assets/audio/bgm/battle.mp3");
 
     const ui = document.createElement("div");
-    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
+    ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.92); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
 
     let enemyHp = enemy.hp || 30;
     const enemyAtk = enemy.atk || 8;
@@ -464,29 +464,30 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }
     };
 
+    // ★ 敵立ち絵を大迫力サイズに拡大（出現演出に負けない存在感）
     const visualHTML = `
-        <div style="position: relative; display: inline-block; margin-bottom: 8px;">
-            <img id="combat-enemy-img" src="${enemy.image}" style="max-height: 190px; border-radius: 8px; object-fit: contain; transition: transform 0.1s ease;">
+        <div style="position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 6px; width: 100%; max-width: 560px;">
+            <img id="combat-enemy-img" src="${enemy.image}" style="height: clamp(235px, 36vh, 320px); max-width: 90vw; border-radius: 8px; object-fit: contain; transition: transform 0.1s ease;">
             <div id="damage-popup-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible;"></div>
         </div>
     `;
 
     ui.innerHTML = `
-        <h2 style="color: #ff3333; margin: 0 0 8px 0; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>
+        <h2 style="color: #ff3333; margin: 0 0 4px 0; font-size: 1.25em; text-shadow: 0 0 10px red;">【戦闘】${enemy.name}</h2>
         ${visualHTML}
-        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
-            <span style="color: #ffdd66; font-size: 1.15em; font-weight: bold;">${enemy.name}</span>
+        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 3px;">
+            <span style="color: #ffdd66; font-size: 1.1em; font-weight: bold;">${enemy.name}</span>
             <span id="enemy-weakness-badge">${getWeaknessBadgeText()}</span>
         </div>
 
-        <div style="color: #aaa; font-size: 0.85em; margin-bottom: 6px;">装填中: <span id="current-loaded-cards" style="color:#ffdd66; font-weight:bold;">${(gameState.equippedCards || []).map(n => CARD_NAMES[n] || n).join(' / ') || 'なし'}</span></div>
+        <div style="color: #aaa; font-size: 0.82em; margin-bottom: 4px;">装填中: <span id="current-loaded-cards" style="color:#ffdd66; font-weight:bold;">${(gameState.equippedCards || []).map(n => CARD_NAMES[n] || n).join(' / ') || 'なし'}</span></div>
         
-        <div style="display: flex; gap: 20px; font-size: 1.05em; margin: 4px 0 10px 0; background: rgba(0,0,0,0.6); padding: 5px 16px; border-radius: 6px; border: 1px solid #333;">
+        <div style="display: flex; gap: 20px; font-size: 1.02em; margin: 2px 0 8px 0; background: rgba(0,0,0,0.65); padding: 4px 16px; border-radius: 6px; border: 1px solid #333;">
             <span id="player-hp-text" style="color: #00ff66; font-weight: bold;">主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}</span>
             <span id="enemy-hp-text" style="color: #ff4444; font-weight: bold;">敵HP: ${enemyHp}</span>
         </div>
 
-        <div id="combat-log" style="width: 100%; max-width: 480px; height: 112px; background: rgba(0,0,0,0.88); border: 1px solid #550000; padding: 10px 12px; margin-bottom: 12px; color: #ddd; font-size: 0.9em; line-height: 1.55; white-space: pre-wrap; overflow-y: auto; box-sizing: border-box;">悪魔が目の前に立ち塞がった！ どうする？</div>
+        <div id="combat-log" style="width: 100%; max-width: 480px; height: 105px; background: rgba(0,0,0,0.88); border: 1px solid #550000; padding: 9px 12px; margin-bottom: 10px; color: #ddd; font-size: 0.9em; line-height: 1.5; white-space: pre-wrap; overflow-y: auto; box-sizing: border-box;">悪魔が目の前に立ち塞がった！ どうする？</div>
 
         <div style="display: flex; gap: 10px; width: 100%; max-width: 480px;">
             <button id="btn-attack" style="flex: 1.4; background: #440000; color: #fff; border: 1px solid #ff3333; padding: 11px 6px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.98em;">Vox Sacra (射撃)</button>
@@ -1031,7 +1032,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 }
 
 // ==========================================
-// 査問UI制御（擬態名と本来の悪魔名の完全分離＆見破り銃撃SE対応版）
+// 査問UI制御（ラミナカード大型表示・画像＆名称対応・擬態名と本来の悪魔名の完全分離・見破り銃撃SE対応版）
 // ==========================================
 export function openInquisitionUI(entity, gameState, onResult, context) {
     // ★ 査問中は必ず住民として偽装表示し、正体がバレた後のみ本来の悪魔名(trueName)を使う
@@ -1053,28 +1054,28 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
 
     const initUI = () => {
         const ui = document.createElement("div");
-        ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.95); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
+        ui.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,0,0.96); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 12px; font-family: ${HORROR_FONT}; box-sizing: border-box; overflow-y: auto;`;
         
-        let visualHTML = `<img id="inq-entity-img" src="${entity.faceImage || entity.image}" style="max-height: 180px; border-radius: 8px;" onerror="this.style.display='none'">`;
+        let visualHTML = `<img id="inq-entity-img" src="${entity.faceImage || entity.image}" style="max-height: 150px; border-radius: 8px;" onerror="this.style.display='none'">`;
 
         ui.innerHTML = `
-            <h2 style="color: #ff3333; margin: 0 0 10px 0; text-shadow: 0 0 8px red;">【査問】住人との対面</h2>
+            <h2 style="color: #ff3333; margin: 0 0 6px 0; font-size: 1.25em; text-shadow: 0 0 8px red;">【査問】住人との対面</h2>
             ${visualHTML}
-            <div style="color: #ddd; font-size: 1.1em; margin-top: 5px; font-weight: bold;">${displayName}</div>
+            <div style="color: #ddd; font-size: 1.05em; margin-top: 4px; font-weight: bold;">${displayName}</div>
             
-            <div id="inq-log" style="width: 100%; max-width: 500px; height: 110px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin: 12px 0; color: #ccc; font-size: 0.9em; line-height: 1.5; overflow-y: auto; white-space: pre-wrap;">（住人と対面した。ラミナカードを提示して相手の表情や仕草を伺おう……）</div>
+            <div id="inq-log" style="width: 100%; max-width: 540px; min-height: 88px; max-height: 115px; background: rgba(0,0,0,0.88); border: 1px solid #550000; padding: 10px 12px; margin: 8px 0; color: #ddd; font-size: 0.92em; line-height: 1.5; overflow-y: auto; white-space: pre-wrap; box-sizing: border-box;">（住人と対面した。ラミナカードを提示して相手の表情や仕草を伺おう……）</div>
 
-            <div style="display: flex; gap: 15px; margin-bottom: 10px;">
-                <div id="slot1" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #888; font-size: 0.75em; background: #111;">1枚目</div>
-                <div id="slot2" style="width: 60px; height: 80px; border: 2px dashed #666; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #888; font-size: 0.75em; background: #111;">2枚目</div>
+            <div style="display: flex; gap: 18px; margin-bottom: 10px;">
+                <div id="slot1" style="width: 84px; height: 108px; border: 2px dashed #aa6600; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #888; font-size: 0.85em; background: #140808; padding: 4px; box-sizing: border-box; text-align: center;">1枚目</div>
+                <div id="slot2" style="width: 84px; height: 108px; border: 2px dashed #aa6600; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #888; font-size: 0.85em; background: #140808; padding: 4px; box-sizing: border-box; text-align: center;">2枚目</div>
             </div>
 
-            <div style="width: 100%; max-width: 500px; display: flex; gap: 5px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid #333;" id="inq-cards"></div>
+            <div style="width: 100%; max-width: 540px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px; background: rgba(15,5,5,0.92); border: 1px solid #551111; border-radius: 10px; box-sizing: border-box;" id="inq-cards"></div>
 
-            <div style="display: flex; gap: 10px; margin-top: 12px; width: 100%; max-width: 500px;">
-                <button id="btn-show" style="flex: 1; background: #220000; color: #ffdd66; border: 1px solid #ff3333; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">1枚目を提示する</button>
-                <button id="btn-shoot" style="display: none; flex: 1; background: #440000; color: #fff; border: 1px solid #ff0000; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">【銃で撃つ】</button>
-                <button id="btn-protect" style="display: none; flex: 1; background: #004400; color: #00ff66; border: 1px solid #00ff66; padding: 10px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight:bold;">【保護する】</button>
+            <div style="display: flex; gap: 10px; margin-top: 12px; margin-bottom: 12px; width: 100%; max-width: 540px;">
+                <button id="btn-show" style="flex: 1; background: linear-gradient(180deg, #440000, #1a0000); color: #ffdd66; border: 1px solid #ff3333; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight:bold; font-size: 1.02em;">1枚目を提示する</button>
+                <button id="btn-shoot" style="display: none; flex: 1; background: linear-gradient(180deg, #660000, #220000); color: #fff; border: 1px solid #ff0000; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight:bold; font-size: 1.02em;">【銃で撃つ】</button>
+                <button id="btn-protect" style="display: none; flex: 1; background: linear-gradient(180deg, #005500, #002200); color: #00ff66; border: 1px solid #00ff66; padding: 12px; font-family: inherit; cursor: pointer; border-radius: 6px; font-weight:bold; font-size: 1.02em;">【保護する】</button>
             </div>
         `;
         document.body.appendChild(ui);
@@ -1087,31 +1088,56 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         const cardsDiv = document.getElementById("inq-cards");
         const cardsList = gameState.cards || ["1Card.png"];
         
-        cardsList.forEach(card => {
-            const numMatch = card.match(/\d+/);
-            const num = numMatch ? numMatch[0] : "1";
-            const cDiv = document.createElement("div");
-            cDiv.style.cssText = "min-width: 45px; height: 60px; border: 1px solid #555; background: #000; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #fff; font-weight: bold;";
-            cDiv.innerHTML = `<img src="assets/images/cards/${num}card.png" style="max-width:100%; max-height:100%;" onerror="this.src='assets/images/cards/${num}Card.png';"><div style="display:none; font-size:1.2em;">${num}</div>`;
-            
-            cDiv.onclick = () => {
-                if (step === 1) {
-                    selected = [num];
-                    updateSlots();
-                } else if (step === 2) {
-                    if (selected.length < 2 && selected[0] !== num) {
-                        selected[1] = num;
+        const renderInqCards = () => {
+            cardsDiv.innerHTML = "";
+            cardsList.forEach(card => {
+                const numMatch = String(card).match(/\d+/);
+                const num = numMatch ? numMatch[0] : "1";
+                const numInt = parseInt(num, 10);
+                const isSelected = selected.includes(num);
+
+                const cDiv = document.createElement("div");
+                cDiv.style.cssText = `height: 108px; border: 2px solid ${isSelected ? '#00ff66' : '#771111'}; background: ${isSelected ? '#0a2612' : '#160808'}; box-shadow: ${isSelected ? '0 0 12px rgba(0,255,102,0.5)' : 'none'}; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #ffdd66; font-weight: bold; border-radius: 8px; padding: 5px; box-sizing: border-box; transition: all 0.12s ease;`;
+                cDiv.innerHTML = `
+                    <img src="assets/images/cards/${num}card.png" style="max-height: 68px; max-width: 68px; object-fit: contain; margin-bottom: 4px;" onerror="this.src='assets/images/cards/${num}Card.png'; this.onerror=function(){ this.style.display='none'; };">
+                    <div style="font-size: 0.9em; color: ${isSelected ? '#00ff66' : '#ffdd66'}; white-space: nowrap;">${CARD_NAMES[numInt] || num}</div>
+                `;
+                
+                cDiv.onclick = () => {
+                    if (step === 1) {
+                        selected = [num];
                         updateSlots();
+                        renderInqCards();
+                    } else if (step === 2) {
+                        if (selected[0] !== num) {
+                            selected[1] = num;
+                            updateSlots();
+                            renderInqCards();
+                        }
                     }
-                }
-            };
-            cardsDiv.appendChild(cDiv);
-        });
+                };
+                cardsDiv.appendChild(cDiv);
+            });
+        };
 
         function updateSlots() {
-            document.getElementById("slot1").innerHTML = selected[0] ? `<div style="font-size:1.6em; color:#ffdd66;">${selected[0]}</div>` : "1枚目";
-            document.getElementById("slot2").innerHTML = selected[1] ? `<div style="font-size:1.6em; color:#ffdd66;">${selected[1]}</div>` : "2枚目";
+            const renderSlotHTML = (cardNumStr, placeholder) => {
+                if (!cardNumStr) return placeholder;
+                const nInt = parseInt(cardNumStr, 10);
+                return `
+                    <img src="assets/images/cards/${cardNumStr}card.png" style="max-height: 66px; max-width: 66px; object-fit: contain; margin-bottom: 3px;" onerror="this.src='assets/images/cards/${cardNumStr}Card.png'; this.onerror=function(){ this.style.display='none'; };">
+                    <div style="font-size: 0.85em; font-weight: bold; color: #ffdd66; white-space: nowrap;">${CARD_NAMES[nInt] || cardNumStr}</div>
+                `;
+            };
+            const s1 = document.getElementById("slot1");
+            const s2 = document.getElementById("slot2");
+            s1.innerHTML = renderSlotHTML(selected[0], "1枚目");
+            s1.style.border = selected[0] ? "2px solid #00cc55" : "2px dashed #aa6600";
+            s2.innerHTML = renderSlotHTML(selected[1], "2枚目");
+            s2.style.border = selected[1] ? "2px solid #00cc55" : "2px dashed #aa6600";
         }
+
+        renderInqCards();
 
         const showBtn = document.getElementById("btn-show");
         const shootBtn = document.getElementById("btn-shoot");
@@ -1154,12 +1180,14 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
         showBtn.onclick = () => {
             if (step === 1) {
                 if (!selected[0]) { alert("1枚目のカードを選択してください。"); return; }
-                log.innerText = `【1枚目: カード${selected[0]}を提示】\n【${displayName}】\n` + getReactionMessage(selected[0], entity);
+                const cName1 = CARD_NAMES[parseInt(selected[0], 10)] || selected[0];
+                log.innerText = `【1枚目: ${cName1} を提示】\n【${displayName}】\n` + getReactionMessage(selected[0], entity);
                 step = 2;
                 showBtn.innerText = "2枚目を提示する";
             } else if (step === 2) {
                 if (!selected[1]) { alert("2枚目のカードを選択してください。"); return; }
-                log.innerText = `【2枚目: カード${selected[1]}を提示】\n【${displayName}】\n` + getReactionMessage(selected[1], entity);
+                const cName2 = CARD_NAMES[parseInt(selected[1], 10)] || selected[1];
+                log.innerText = `【2枚目: ${cName2} を提示】\n【${displayName}】\n` + getReactionMessage(selected[1], entity);
                 step = 3;
                 showBtn.style.display = "none";
                 shootBtn.style.display = "block";
@@ -1192,7 +1220,8 @@ export function openInquisitionUI(entity, gameState, onResult, context) {
                     }
                     
                     const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-                    showMessageDialog(`【完全見破り成功！】\n人間に擬態していた『${actualDemonName}』の真の弱点（カード${entity.weakness}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
+                    const weakName = CARD_NAMES[entity.weakness] || entity.weakness;
+                    showMessageDialog(`【完全見破り成功！】\n人間に擬態していた『${actualDemonName}』の真の弱点（${weakName}）を見抜き、聖なる弾丸で核を撃ち抜いた！\n戦闘を経ることなく一撃で討滅した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
                         onResult("combat_win");
                     });
                 } else {
@@ -1365,10 +1394,9 @@ export function openBossPuzzleUI(puzzleConfig, gameState, onSubmit) {
 }
 
 // ==========================================
-// エンディング用スタッフロール演出（キャラクター＆名場面スライド付き・3エンディング対応版）
+// エンディング用スタッフロール演出（ラミナカード風アンティーク銀箔＆羊皮紙額装・3エンディング対応版）
 // ==========================================
 export function playEndingCredits(endingType, durationSeconds, onComplete) {
-    // 既存のモーダル等があれば消去
     const oldOverlay = document.getElementById("ending-credits-overlay");
     if (oldOverlay) oldOverlay.remove();
 
@@ -1376,7 +1404,6 @@ export function playEndingCredits(endingType, durationSeconds, onComplete) {
     overlay.id = "ending-credits-overlay";
     overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 5000; color: #fff; font-family: ${HORROR_FONT}; display: flex; flex-direction: column; align-items: center; overflow: hidden;`;
 
-    // アニメーション用のCSSを動的生成（translateY(-100%)で画像5枚分の高さがあっても最後まで綺麗に流れ切る）
     const style = document.createElement("style");
     style.textContent = `
         @keyframes creditRoll {
@@ -1386,6 +1413,59 @@ export function playEndingCredits(endingType, durationSeconds, onComplete) {
         @keyframes fadeInBtn {
             0% { opacity: 0; pointer-events: none; transform: translateY(20px); }
             100% { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        }
+        .lamina-credit-card {
+            position: relative;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 220px;
+            padding: 14px 14px 18px 14px;
+            background:
+                radial-gradient(circle at 50% 35%, rgba(65, 52, 38, 0.45), rgba(14, 11, 9, 0.96) 80%),
+                linear-gradient(145deg, #2e261f 0%, #14100d 50%, #261f19 100%);
+            border: 3px solid #9e8a6b;
+            border-radius: 12px;
+            box-shadow:
+                0 0 0 2px #1a1410,
+                0 0 0 4px #6b5b43,
+                0 12px 32px rgba(0, 0, 0, 0.95),
+                0 0 22px rgba(212, 175, 55, 0.25);
+            box-sizing: border-box;
+        }
+        .lamina-credit-card::before {
+            content: "";
+            position: absolute;
+            top: 6px; left: 6px; right: 6px; bottom: 6px;
+            border: 1px solid rgba(212, 185, 130, 0.55);
+            border-radius: 8px;
+            pointer-events: none;
+        }
+        .lamina-credit-card-inner {
+            width: 100%;
+            height: 230px;
+            background: #090808;
+            border: 1px solid #4a3d2c;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.9);
+        }
+        .lamina-credit-card-inner img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .lamina-credit-seal {
+            margin-top: 10px;
+            font-size: 0.78em;
+            letter-spacing: 0.22em;
+            color: #c8b288;
+            text-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+            font-weight: bold;
         }
     `;
     overlay.appendChild(style);
@@ -1400,7 +1480,16 @@ export function playEndingCredits(endingType, durationSeconds, onComplete) {
         titleColor = "#ff3333";
     }
 
-    const imgCardStyle = "max-width: 82%; max-height: 240px; object-fit: contain; border-radius: 8px; border: 1px solid #551111; box-shadow: 0 0 25px rgba(180, 0, 0, 0.45); background: rgba(15, 5, 5, 0.7); padding: 6px;";
+    const renderLaminaFrame = (imgSrc, romanLabel) => `
+        <div style="margin-bottom: 95px; display: flex; justify-content: center;">
+            <div class="lamina-credit-card">
+                <div class="lamina-credit-card-inner">
+                    <img src="${imgSrc}" onerror="this.style.display='none'">
+                </div>
+                <div class="lamina-credit-seal">${romanLabel}</div>
+            </div>
+        </div>
+    `;
 
     const creditsContainer = document.createElement("div");
     creditsContainer.style.cssText = `width: 100%; max-width: 620px; padding: 0 20px 120px 20px; box-sizing: border-box; text-align: center; animation: creditRoll ${durationSeconds}s linear forwards;`;
@@ -1412,54 +1501,42 @@ export function playEndingCredits(endingType, durationSeconds, onComplete) {
             <p style="font-size: 1.4em; margin: 0; font-weight: bold;">hiroyuki ishida</p>
         </div>
 
-        <div style="margin-bottom: 85px;">
-            <img src="assets/images/grandma.jpg" style="${imgCardStyle}" onerror="this.style.display='none'">
-        </div>
+        ${renderLaminaFrame("assets/images/grandma.jpg", "Ⅰ ― LAMINA MEMORIAE")}
 
         <div style="margin-bottom: 45px;">
             <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">シナリオ・演出</h3>
             <p style="font-size: 1.4em; margin: 0; font-weight: bold;">hiroyuki ishida</p>
         </div>
 
-        <div style="margin-bottom: 85px;">
-            <img src="assets/images/human5.jpg" style="${imgCardStyle}" onerror="this.style.display='none'">
-        </div>
+        ${renderLaminaFrame("assets/images/human5.jpg", "Ⅱ ― LAMINA MEMORIAE")}
 
         <div style="margin-bottom: 45px;">
             <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">グラフィック</h3>
             <p style="font-size: 1.4em; margin: 0; font-weight: bold;">AI ＆ hiroyuki ishida</p>
         </div>
 
-        <div style="margin-bottom: 85px;">
-            <img src="assets/images/human1.png" style="${imgCardStyle}" onerror="this.style.display='none'">
-        </div>
+        ${renderLaminaFrame("assets/images/human1.png", "Ⅲ ― LAMINA MEMORIAE")}
 
         <div style="margin-bottom: 45px;">
             <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">音楽・効果音</h3>
-            <p style="font-size: 1.4em; margin: 0; font-weight: bold;">フリー素材各社様 & hiroyuki ishida</p>
+            <p style="font-size: 1.4em; margin: 0; font-weight: bold;">フリー素材各社様 ＆ hiroyuki ishida</p>
         </div>
 
-        <div style="margin-bottom: 85px;">
-            <img src="assets/images/shinpu.jpg" style="${imgCardStyle}" onerror="this.style.display='none'">
-        </div>
+        ${renderLaminaFrame("assets/images/shinpu.jpg", "Ⅳ ― LAMINA MEMORIAE")}
 
         <div style="margin-bottom: 45px;">
             <h3 style="color: #888; margin-bottom: 10px; font-weight: normal; font-size: 0.9em;">スペシャルサンクス</h3>
             <p style="font-size: 1.4em; margin: 0; font-weight: bold;">プレイしてくれたあなた</p>
         </div>
 
-        <div style="margin-bottom: 140px;">
-            <img src="assets/images/ketui.png" style="${imgCardStyle}" onerror="this.style.display='none'">
-        </div>
+        ${renderLaminaFrame("assets/images/ketui.png", "Ⅴ ― LAMINA MEMORIAE")}
 
-        <h2 style="font-size: 2.1em; letter-spacing: 0.28em; margin: 0; color: #ffdd66; text-shadow: 0 0 15px rgba(255,0,0,0.6);">THANK YOU FOR PLAYING</h2>
+        <h2 style="font-size: 2.1em; letter-spacing: 0.28em; margin: 40px 0 0 0; color: #ffdd66; text-shadow: 0 0 15px rgba(255,0,0,0.6);">THANK YOU FOR PLAYING</h2>
     `;
     overlay.appendChild(creditsContainer);
 
-    // クロマキー透過が必要な画像にも対応
     creditsContainer.querySelectorAll("img").forEach(img => applyChromaKey(img));
 
-    // タイトルへ戻るボタン（初期は非表示）
     const endBtn = document.createElement("button");
     endBtn.innerText = "タイトル画面へ戻る";
     endBtn.style.cssText = `position: absolute; bottom: 10%; padding: 16px 38px; font-size: 1.15em; font-family: inherit; font-weight: bold; color: #fff; background: rgba(20,0,0,0.88); border: 1px solid #770000; border-radius: 8px; cursor: pointer; opacity: 0; pointer-events: none; box-shadow: 0 0 20px rgba(255,0,0,0.4);`;
@@ -1471,7 +1548,6 @@ export function playEndingCredits(endingType, durationSeconds, onComplete) {
     overlay.appendChild(endBtn);
     document.body.appendChild(overlay);
 
-    // スタッフロールが流れ終わる頃（設定時間の約9割経過時）にボタンをフワッと表示
     setTimeout(() => {
         endBtn.style.animation = "fadeInBtn 2.5s ease-out forwards";
     }, (durationSeconds * 1000) * 0.9);
