@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・6F黒猫捕縛判定対応・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -403,7 +403,7 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（弱点看破・常時表示・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・文字送り1.2秒＆クリック送り(案A) 完全版）
+// 戦闘UI制御（弱点看破・常時表示・6F黒猫捕縛判定対応・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・文字送り1.2秒＆クリック送り(案A) 完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
     ensureCombatStyles();
@@ -424,6 +424,14 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     let extraAgi = 0;
     let isEnemyCharging = false;
     let enemyStunTurns = 0;
+
+    // ★ 黒猫（使い魔）が現在同行しているかどうかの統一判定（6Fで繭から救出する前は同行していない）
+    const isCatAccompanying = () => {
+        if (!gameState.flags || !gameState.flags.hasCat) return false;
+        if (gameState.flags.isCatTrapped) return false;
+        if (gameState.currentFloor === 6 && !(gameState.flags.isCocoonCut || gameState.flags.cleared6F)) return false;
+        return true;
+    };
 
     // ★ クリック／SPACEキーで次の戦闘ステップへ進むための待機制御
     let activeAdvanceHandler = null;
@@ -540,7 +548,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             if (advanced) return;
             window.addEventListener("keydown", advance, true);
             ui.onclick = (e) => {
-                // 無効化中のボタン以外、画面のどこをタップしても進行可能
+                // 有効なボタン以外のどこをタップしても進行可能
                 if (e.target && e.target.tagName === "BUTTON" && !e.target.disabled) return;
                 advance(e);
             };
@@ -553,11 +561,10 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         escapeBtn.disabled = disabled;
     };
 
-    // ★ 使い魔（黒猫）同行時：初見の敵の弱点を看破する演出（1.2秒後に表示 → クリック待ち）
-    const hasCatAccompany = gameState.flags && gameState.flags.hasCat && !gameState.flags.isCatTrapped;
+    // ★ 使い魔（黒猫）同行時：初見の敵の弱点を看破する演出（6F未救出時は発動しない）
     const isAlreadyDiscovered = gameState.isDemonDiscovered ? gameState.isDemonDiscovered(enemy.name) : false;
 
-    if (hasCatAccompany && !isAlreadyDiscovered) {
+    if (isCatAccompanying() && !isAlreadyDiscovered) {
         setControlsDisabled(true);
         log.innerText = "悪魔が目の前に立ち塞がった！";
         setTimeout(() => {
@@ -751,7 +758,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         }
 
         let catAction = null;
-        if (gameState.flags && gameState.flags.hasCat && !gameState.flags.isCatTrapped && Math.random() < 0.20) {
+        if (isCatAccompanying() && Math.random() < 0.20) {
             catAction = Math.random() < 0.5 ? "shield" : "claw";
         }
 

@@ -1,4 +1,4 @@
-// maps/map6F.js - 一家心中事件の裏設定・ホラー演出・6F統一経験値カーブ統合版
+// maps/map6F.js - 一家心中事件の裏設定・ホラー演出・6F統一経験値カーブ・6F黒猫捕縛状態連動 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -25,9 +25,14 @@ export const map6F = [
 // ランダムエンカウント ＆ 進入時イベント ＆ 通路の怨霊ギミック
 export function check6FRandomEncounter(gameState, onEncounter, context) {
     if (gameState.currentFloor !== 6) return;
+    if (!gameState.flags) gameState.flags = {};
+
+    // ★ 6Fでは繭を切り裂いて救出するまで黒猫は捕らわれているため同行しない
+    if (!gameState.flags.isCocoonCut && !gameState.flags.cleared6F) {
+        gameState.flags.isCatTrapped = true;
+    }
     
     // ① 進入時の環境演出（主人公の心境「最近一家心中があったから絶対行きたくない」を追加）
-    if (!gameState.flags) gameState.flags = {};
     if (!gameState.flags.seen6FIntro) {
         gameState.flags.seen6FIntro = true;
         showMessageDialog("【6階：濃密な蜘蛛の巣】\n5階から駆け上がっていった黒猫を追い、6階へ足を踏み入れた。\nフロア全体に、異常なほど白く粘つく蜘蛛の糸が張り巡らされている……。\n（うわ、なんだこれ？蜘蛛？マジか、あらゆる生き物で蜘蛛が一番苦手なんだよなぁ）", () => {
@@ -70,6 +75,11 @@ export function check6FRandomEncounter(gameState, onEncounter, context) {
 
 export function handleEvent6F(targetCell, gameState, context) {
     if (!gameState.flags) gameState.flags = {};
+
+    // ★ 6Fイベント時も未救出なら捕縛状態を維持
+    if (!gameState.flags.isCocoonCut && !gameState.flags.cleared6F) {
+        gameState.flags.isCatTrapped = true;
+    }
 
     if (targetCell === 4) {
         return {
@@ -395,6 +405,7 @@ function handleCocoonBossRoom(gameState, context, onComplete) {
                             showMessageDialog("（……！）\n主人公の中で、何かが弾けた。\n\n（神父が俺を選んだ理由なんて、ただの偶然でいい。）\n（俺の人生に価値があるかどうかも、今すぐ分からなくていい！）\n\n「――だが、今俺を信じて鳴いているこいつを見捨てるような……最低の逃げ方は、もうごめんだッ！！」", () => {
                                 showMessageDialog("主人公は力任せに足元の糸を引きちぎり、銀鋏で黒猫の繭を一気に切り裂いた！\n自由を取り戻した黒猫がしなやかに着地した。大きく深呼吸すると、覇気を取り戻したようだ。\n\n主人公「……行けるか？」\n\n黒猫は『当たり前だろ』とでも言うように軽く目配せし、低く唸って敵を睨みつける）", () => {
                                     
+                                    // ★ ここで繭を切り裂いて黒猫を救出 → 再び同行状態へ復帰
                                     gameState.flags.isCocoonCut = true;
                                     gameState.flags.hasCat = true;
                                     gameState.flags.isCatTrapped = false;
@@ -480,7 +491,7 @@ function startDoppelgangerPuzzle(gameState, context, onComplete) {
                                 showMessageDialog("主人公「……痛かったよな。よく耐えてくれた。」\n\n屈んでその頭を撫でると、温かい体温が掌に伝わってきた。\n神父から託されたただの「使い魔」ではない。絶望の中で背中を預け合える、たった一人の仲間だ。\n\n主人公「行こう……相棒。8Fの元凶（御堂）を止めて、全部終わらせるぞ」", () => {
                                     showConversationDialog(
                                         "assets/images/ketui.png",
-                                        "【不退転の決意】\n瞳に宿る迷いは完全に消え去った。\n\n自分を信じてくれた黒猫と共に、主人公は前を見据える。\n目指すは最上階――全ての元凶を断ち切るために。\\n\n（※黒猫が真の相棒として合流！ 7階への非常階段が開通した！）",
+                                        "【不退転の決意】\n瞳に宿る迷いは完全に消え去った。\n\n自分を信じてくれた黒猫と共に、主人公は前を見据える。\n目指すは最上階――全ての元凶を断ち切るために。\n\n（※黒猫が真の相棒として合流！ 7階への非常階段が開通した！）",
                                         onComplete
                                     );
                                 });
