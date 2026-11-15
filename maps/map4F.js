@@ -389,7 +389,7 @@ function startRinaBossSequence(gameState, context, onComplete) {
                                                                     showMessageDialog(`${resultMsg}\nリナとの決戦に入る！`, () => {
                                                                         const rinaEnemy = {
                                                                             name: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.name : "色欲のパパ活女子・リナ",
-                                                                            image: "assets/images/demon/4f-rina-b.jpg",
+                                                                            image: "assets/images/demon/4f-rina.jpg",
                                                                             hp: startHp, maxHp: baseHp,
                                                                             atk: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.atk : 60,
                                                                             def: ENEMIES.RINA_4F ? ENEMIES.RINA_4F.def : 8,
