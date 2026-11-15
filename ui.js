@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -403,7 +403,7 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（弱点看破・常時表示・戦闘中リロード・ボス逃走不可・文字送り1.2秒＆クリック送り(案A) 完全版）
+// 戦闘UI制御（弱点看破・常時表示・戦闘中装填ボタン削除(3ボタン整理)・ボス逃走不可・文字送り1.2秒＆クリック送り(案A) 完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
     ensureCombatStyles();
@@ -479,11 +479,10 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
         <div id="combat-log" style="width: 100%; max-width: 480px; height: 112px; background: rgba(0,0,0,0.88); border: 1px solid #550000; padding: 10px 12px; margin-bottom: 12px; color: #ddd; font-size: 0.9em; line-height: 1.55; white-space: pre-wrap; overflow-y: auto; box-sizing: border-box;">悪魔が目の前に立ち塞がった！ どうする？</div>
 
-        <div style="display: flex; gap: 8px; width: 100%; max-width: 480px;">
-            <button id="btn-attack" style="flex: 1.2; background: #440000; color: #fff; border: 1px solid #ff3333; padding: 10px 4px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.95em;">Vox Sacra (射撃)</button>
-            <button id="btn-reload" style="flex: 0.9; background: #332200; color: #ffdd66; border: 1px solid #aa8800; padding: 10px 4px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.9em;">装填変更</button>
-            <button id="btn-item" style="flex: 0.8; background: #002244; color: #66ccff; border: 1px solid #3388ff; padding: 10px 4px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.9em;">道具</button>
-            <button id="btn-escape" style="flex: 0.7; background: #111; color: #aaa; border: 1px solid #555; padding: 10px 4px; font-family: inherit; cursor: pointer; border-radius: 4px; font-size: 0.9em;">逃げる</button>
+        <div style="display: flex; gap: 10px; width: 100%; max-width: 480px;">
+            <button id="btn-attack" style="flex: 1.4; background: #440000; color: #fff; border: 1px solid #ff3333; padding: 11px 6px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.98em;">Vox Sacra (射撃)</button>
+            <button id="btn-item" style="flex: 0.9; background: #002244; color: #66ccff; border: 1px solid #3388ff; padding: 11px 6px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.95em;">道具</button>
+            <button id="btn-escape" style="flex: 0.8; background: #111; color: #aaa; border: 1px solid #555; padding: 11px 6px; font-family: inherit; cursor: pointer; border-radius: 4px; font-size: 0.95em;">逃げる</button>
         </div>
     `;
     document.body.appendChild(ui);
@@ -496,10 +495,8 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     const playerHpText = document.getElementById("player-hp-text");
     const enemyHpText = document.getElementById("enemy-hp-text");
     const attackBtn = document.getElementById("btn-attack");
-    const reloadBtn = document.getElementById("btn-reload");
     const itemBtn = document.getElementById("btn-item");
     const escapeBtn = document.getElementById("btn-escape");
-    const loadedCardsText = document.getElementById("current-loaded-cards");
     const weaknessBadge = document.getElementById("enemy-weakness-badge");
 
     // ★ ボス戦時は逃げるボタンをあらかじめ暗転
@@ -552,7 +549,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
 
     const setControlsDisabled = (disabled) => {
         attackBtn.disabled = disabled;
-        reloadBtn.disabled = disabled;
         itemBtn.disabled = disabled;
         escapeBtn.disabled = disabled;
     };
@@ -870,99 +866,6 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 executeEnemyTurn();
             });
         }, 1200);
-    };
-
-    // ★ 戦闘中リロード（装填変更）：1ターン消費して敵の反撃へ（クリック待ち対応）
-    reloadBtn.onclick = () => {
-        if (Date.now() - window.lastDialogCloseTime < 300) return;
-
-        const maxSlots = gameState.player.level >= 15 ? 3 : (gameState.player.level >= 5 ? 2 : 1);
-        const cardSource = (gameState.cards && gameState.cards.length > 0) ? gameState.cards : gameState.ownedCards;
-        const availableNums = cardSource.map(c => typeof c === 'number' ? c : parseInt(String(c).match(/\d+/)?.[0] || '0', 10))
-                                        .filter(n => n > 0 && n <= gameState.player.level);
-        const uniqueNums = Array.from(new Set(availableNums)).sort((a, b) => a - b);
-
-        if (uniqueNums.length === 0) {
-            log.innerText = "【装填不可】装填できるラミナカードを所持していない！";
-            return;
-        }
-
-        let tempSelected = [...(gameState.equippedCards || [])];
-
-        const reloadModal = document.createElement("div");
-        reloadModal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); z-index: 3200; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; font-family: ${HORROR_FONT}; box-sizing: border-box;`;
-
-        const renderModalContent = () => {
-            let cardsGridHTML = "";
-            uniqueNums.forEach(num => {
-                const isSelected = tempSelected.includes(num);
-                cardsGridHTML += `
-                    <div class="reload-card-btn" data-num="${num}" style="height: 60px; border: 2px solid ${isSelected ? '#00ff66' : '#555'}; background: ${isSelected ? '#003311' : '#111'}; color: ${isSelected ? '#00ff66' : '#ffdd66'}; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 0.85em;">
-                        <div>${CARD_NAMES[num]}</div>
-                        <div style="font-size: 0.75em; color: ${isSelected ? '#aaffaa' : '#888'};">${isSelected ? '【装填中】' : '選択'}</div>
-                    </div>
-                `;
-            });
-
-            reloadModal.innerHTML = `
-                <div style="width: 100%; max-width: 420px; background: rgba(15,10,10,0.95); border: 2px solid #aa8800; border-radius: 8px; padding: 16px; box-sizing: border-box;">
-                    <div style="color: #ffdd66; font-size: 1.15em; font-weight: bold; text-align: center; margin-bottom: 6px;">【ラミナカード再装填】</div>
-                    <div style="color: #ff8888; font-size: 0.8em; text-align: center; margin-bottom: 12px;">※装填を実行すると【1ターンを消費】し、敵から攻撃を受けます！</div>
-
-                    <div style="color: #ccc; font-size: 0.85em; margin-bottom: 8px;">選択枠 (最大 ${maxSlots} 枚): <span style="color:#00ff66; font-weight:bold;">${tempSelected.map(n => CARD_NAMES[n]).join(', ') || 'なし'}</span></div>
-
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 200px; overflow-y: auto; padding: 4px; margin-bottom: 14px;">
-                        ${cardsGridHTML}
-                    </div>
-
-                    <div style="display: flex; gap: 10px;">
-                        <button id="btn-confirm-reload" style="flex: 1; background: linear-gradient(180deg, #664400, #221100); color: #ffdd66; border: 1px solid #ffaa00; padding: 10px; cursor: pointer; border-radius: 4px; font-weight: bold; font-family: inherit;">装填してターン消費</button>
-                        <button id="btn-cancel-reload" style="flex: 0.8; background: #222; color: #aaa; border: 1px solid #555; padding: 10px; cursor: pointer; border-radius: 4px; font-family: inherit;">キャンセル</button>
-                    </div>
-                </div>
-            `;
-
-            reloadModal.querySelectorAll(".reload-card-btn").forEach(btn => {
-                btn.onclick = () => {
-                    const n = parseInt(btn.getAttribute("data-num"), 10);
-                    if (tempSelected.includes(n)) {
-                        tempSelected = tempSelected.filter(x => x !== n);
-                    } else {
-                        if (tempSelected.length >= maxSlots) {
-                            tempSelected.shift();
-                        }
-                        tempSelected.push(n);
-                    }
-                    renderModalContent();
-                };
-            });
-
-            document.getElementById("btn-cancel-reload").onclick = () => reloadModal.remove();
-
-            document.getElementById("btn-confirm-reload").onclick = () => {
-                if (tempSelected.length === 0) {
-                    alert("カードを最低1枚は装填してください！");
-                    return;
-                }
-                gameState.equippedCards = [...tempSelected];
-                if (loadedCardsText) {
-                    loadedCardsText.innerText = gameState.equippedCards.map(n => CARD_NAMES[n] || n).join(' / ');
-                }
-                reloadModal.remove();
-
-                setControlsDisabled(true);
-                sound.playSE("assets/audio/se/gun.mp3");
-
-                const reloadedNames = gameState.equippedCards.map(n => CARD_NAMES[n]).join(' / ');
-                log.innerText = `【装填変更】銃の弾倉を開き、カードを差し替えた！\n[装填完了: ${reloadedNames}]\nしかしカード交換の隙を突かれ、敵の反撃が迫る！`;
-                waitForPlayerClick(() => {
-                    executeEnemyTurn();
-                });
-            };
-        };
-
-        renderModalContent();
-        document.body.appendChild(reloadModal);
     };
 
     // ★ 道具ボタン（クリック待ち対応）
