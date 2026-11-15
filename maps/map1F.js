@@ -1,4 +1,4 @@
-// maps/map1F.js - エレベーター(7Fボタン追加)・中庭扉・段階的防具ポスト投函・管理人室(孫娘休憩所)対応 完全版
+// maps/map1F.js - エレベーター(7Fボタン追加)・中庭扉・段階的防具ポスト投函・管理人室(セル10・玄関横配置) 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -8,16 +8,17 @@ import {
 export const playerStart1F = { x: 7, y: 1, dir: 0 };
 
 // 1: 壁 / 0: 通路 
-// 3: エレベーター(x:6, y:0) / 4: 非常階段(x:7, y:0) / 2: 管理人室(x:11, y:0)
-// 2: コンビニ(x:3, y:2) / 8: 中庭への扉・血の池(x:7, y:2) / 9: 集合ポスト(x:11, y:2) / 6: 出口(x:7, y:6)
+// 3: エレベーター(x:6, y:0) / 4: 非常階段(x:7, y:0)
+// 2: コンビニ(x:3, y:2) / 8: 中庭への扉・血の池(x:7, y:2) / 9: 集合ポスト(x:11, y:2)
+// 10: 管理人室(x:6, y:6) / 6: 出口(x:7, y:6)
 export const map1F = [
-    [1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 2, 1, 1, 1], 
+    [1, 1, 1, 1, 1, 1, 3, 4, 1, 1, 1, 1, 1, 1, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
     [1, 0, 1, 2, 1, 0, 1, 8, 1, 0, 1, 9, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1], 
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-    [1, 1, 1, 1, 1, 1, 1, 6, 1, 1, 1, 1, 1, 1, 1]  
+    [1, 1, 1, 1, 1, 1, 10, 6, 1, 1, 1, 1, 1, 1, 1]  
 ];
 
 export function handleEvent1F(targetCell, gameState, context) {
@@ -33,7 +34,6 @@ export function handleEvent1F(targetCell, gameState, context) {
                     const evModal = document.createElement("div");
                     evModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; font-family: monospace;";
                     
-                    // 7F解禁条件の判定
                     const canGo7F = gameState.flags && (
                         gameState.flags.cleared6F || 
                         gameState.flags.cleared7F || 
@@ -104,19 +104,8 @@ export function handleEvent1F(targetCell, gameState, context) {
         }
     }
 
-    // 2: 管理人室(x:11, y:0) または コンビニ(x:3, y:2)
+    // 2: コンビニ
     if (targetCell === 2) {
-        const dirVectors = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
-        const vec = dirVectors[gameState.player.dir];
-        const frontX = gameState.player.x + vec.x;
-        const frontY = gameState.player.y + vec.y;
-
-        // ★ (x:11, y:0) は管理人室
-        if (frontX === 11 && frontY === 0) {
-            return { run: (onComplete) => startCaretakerRoomEvent(gameState, onComplete) };
-        }
-
-        // それ以外はコンビニ
         if (!gameState.hasMetGrandma) {
             return { run: (onComplete) => startGrandmaEvent(gameState, onComplete) };
         } else if (gameState.hasModelGun && !gameState.hasTalkedStudentInCVS) {
@@ -124,6 +113,11 @@ export function handleEvent1F(targetCell, gameState, context) {
         } else {
             return { run: (onComplete) => openShopUI(onComplete) };
         }
+    }
+
+    // 10: 管理人室（玄関6のすぐ横）
+    if (targetCell === 10) {
+        return { run: (onComplete) => startCaretakerRoomEvent(gameState, onComplete) };
     }
 
     // 8: 中庭への扉（血の池）
@@ -203,7 +197,7 @@ function startCaretakerRoomEvent(gameState, onComplete) {
     // パターンA：3Fで管理人を救出する前（最大HPの50%まで回復）
     const halfHp = Math.max(1, Math.floor(maxHp * 0.5));
     const introDialogue = !gameState.flags.visitedCaretakerRoom
-        ? "【管理人の孫】\n「ひっ……！ ……あ、なんだ、怪しい人じゃないんですね。驚かせないでくださいよ……！\n私はここの管理人の孫です。おじいちゃんが『3階の異臭の様子を見てくる』って言ったきり戻らなくて、ずっとここで待ってるんです……。\\n\nあの、すごく疲れてるみたいですね。今は奥の部屋が散らかっていてソファしか使えませんが、少し休んでいきますか？」"
+        ? "【管理人の孫】\n「ひっ……！ ……あ、なんだ、怪しい人じゃないんですね。驚かせないでくださいよ……！\n私はここの管理人の孫です。おじいちゃんが『3階の異臭の様子を見てくる』って言ったきり戻らなくて、ずっとここで待ってるんです……。\n\nあの、すごく疲れてるみたいですね。今は奥の部屋が散らかっていてソファしか使えませんが、少し休んでいきますか？」"
         : "【管理人の孫】\n「おかえりなさい！ まだおじいちゃんは戻ってきていないんです……。\n3階の大きな冷蔵庫のあたりから変な音がしたって住人さんが言っていたのが気になって……。\nよかったら、ソファで少し身体を休めていってくださいね！」";
 
     gameState.flags.visitedCaretakerRoom = true;
@@ -255,7 +249,7 @@ function startPostEvent(gameState, onComplete) {
         } else if (canPost5F) {
             gameState.armorUnlockStage = 2;
             showMessageDialog(
-                "【1階 集合ポスト】\n中層の悪魔を退けた報告と共に、『上位退魔スーツの支給要請書』を投函口へ差し入れた。\n\nポストの奥からカチャリと重厚な鍵の開く音がした……。\n\n【防具解放】\nコンビニに『聖遺物のレザースーツ』が入荷しました！",
+                "【1階 集合ポスト】\n中層の悪魔を退けた報告と共に、『上位退魔スーツの支給要請書』を投函口へ差し入れた。\n\nポストの奥からカチャリと重厚な鍵の開く音がした……。\\n\n【防具解放】\nコンビニに『聖遺物のレザースーツ』が入荷しました！",
                 onComplete
             );
         } else if (canPost7F) {
@@ -270,7 +264,7 @@ function startPostEvent(gameState, onComplete) {
             } else {
                 if (gameState.hasMetGrandma) {
                     showMessageDialog(
-                        "【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。\n（※各階のフロアボスを撃破すると、防具支給要請書を投函できます）",
+                        "【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。\\n（※各階のフロアボスを撃破すると、防具支給要請書を投函できます）",
                         onComplete
                     );
                 } else {
