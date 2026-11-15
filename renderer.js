@@ -1,4 +1,4 @@
-// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示＆4F/7F専用テクスチャ＆3Fゴミ山・1F管理人室表示対応 完全版
+// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示＆4F/7F専用テクスチャ＆3Fゴミ山・1F管理人室(セル10)対応 完全版
 
 import { gameState } from './gameState.js';
 
@@ -232,7 +232,7 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     targetImg = images.elevator;
                 } else if ((cellType === 7 || cellType === 9) && isImageReady(images.reizouko)) {
                     targetImg = images.reizouko;
-                } else if ([2, 8].includes(cellType) && isImageReady(images.door)) {
+                } else if ([2, 8, 10].includes(cellType) && isImageReady(images.door)) {
                     targetImg = images.door;
                 }
 
@@ -291,7 +291,7 @@ function drawActionHint(ctx, canvas, player, currentMap) {
     const frontX = player.x + dx[player.dir], frontY = player.y + dy[player.dir];
     const target = currentMap[frontY] ? currentMap[frontY][frontX] : 1;
     
-    if ([2, 3, 4, 5, 6, 7, 8, 9].includes(target)) {
+    if ([2, 3, 4, 5, 6, 7, 8, 9, 10].includes(target)) {
         let label = "[ SPACE ] 調べる";
         
         if (target === 4) {
@@ -326,11 +326,9 @@ function drawActionHint(ctx, canvas, player, currentMap) {
         } else if (target === 9 && gameState.currentFloor === 3) {
             label = "[ SPACE ] 冷蔵庫を調べる";
         } else if (target === 2 && gameState.currentFloor === 1) {
-            if (frontX === 11 && frontY === 0) {
-                label = "[ SPACE ] 管理人室に入る";
-            } else {
-                label = "[ SPACE ] コンビニに入る";
-            }
+            label = "[ SPACE ] コンビニに入る";
+        } else if (target === 10 && gameState.currentFloor === 1) {
+            label = "[ SPACE ] 管理人室に入る";
         }
 
         const boxX = 140, boxY = 10, boxW = 230, boxH = 30;
