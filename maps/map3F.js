@@ -1,4 +1,4 @@
-// maps/map3F.js - エレベーター(3)統一(7F連携対応)・真田部屋(8)・ゴミ山(7)・冷蔵庫(9)・構文＆EXP完全修正版
+// maps/map3F.js - エレベーター(3)統一(7F連携対応)・真田部屋(8)・ゴミ山(7)・冷蔵庫(9)・真田ヒント整合修正 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -277,7 +277,7 @@ function startRefrigeratorEvent(gameState, context, onComplete) {
                         id: 'mystery_supplement', name: '謎のサプリメント', type: 'consumable', healAmount: 100, description: 'HPを 100 回復する。怪しいが効果は絶大。'
                     });
 
-                    showItemAcquiredModal("assets/images/present.png", "謎のサプリメント", "【管理人からのお礼】\n「これ、拾い物ですが……よかったら使ってください。私はいったん管理人室に戻ります」\n\nHPを100回復する『謎のサプリメント』を手に入れた！", () => {
+                    showItemAcquiredModal("assets/images/present.png", "謎のサプリメント", "【管理人からのお礼】\n「これ、拾い物ですが……よかったら使ってください。私は1階のコンビニに逃げ込みます！」\n\nHPを100回復する『謎のサプリメント』を手に入れた！", () => {
                         onComplete();
                     });
                 });
@@ -309,12 +309,14 @@ function start3FRoomInquisition(gameState, context, onComplete) {
 
         if (!gameState.flags.hasSanadaRoomKey) {
             gameState.flags.hasSanadaRoomKey = true;
-            gameState.bossHints.push("【3Fメモ①】真田の魔方陣は4マスの合計を「18」にする。");
+            const hint1 = "【3Fメモ①】真田の魔方陣は4マスの合計を「18」にする。";
+            if (!gameState.bossHints.includes(hint1)) gameState.bossHints.push(hint1);
             showMessageDialog(`${messageTitle}\n『鉄のバール』と『真田攻略メモ①』を手に入れた！\n（※真田の魔方陣は4マスの合計を「18」にする！）\nこれで真田の部屋を塞ぐ粗大ゴミを撤去できる！`, callback);
         } else if (!gameState.flags.hasSanadaHint2) {
             gameState.flags.hasSanadaHint2 = true;
-            gameState.bossHints.push("【3Fメモ②】真田の腕は左から小さい順に配置する。毒気の口には聖炎(6)や聖香(8)が有効。");
-            showMessageDialog(`${messageTitle}\n『真田攻略メモ②』を手に入れた！\n（※左右の腕には小さい数字から順にカードを配置する！ 口の弱点は【聖炎(6)】と【聖香(8)】だ！）`, callback);
+            const hint2 = "【3Fメモ②】上（毒ガス口）に『聖香(8)』、下（腐敗ゴミ）に『聖炎(6)』を置け。左右の腕は左から小さい順に配置する。";
+            if (!gameState.bossHints.includes(hint2)) gameState.bossHints.push(hint2);
+            showMessageDialog(`${messageTitle}\n『真田攻略メモ②』を手に入れた！\n（※上（毒ガス口）に【聖香(8)】、下（腐敗ゴミ）に【聖炎(6)】を配置しろ！ 左右の腕は左から小さい順に並べるんだ！）`, callback);
         } else {
             callback();
         }
