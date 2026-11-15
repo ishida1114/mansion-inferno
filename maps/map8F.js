@@ -1,9 +1,9 @@
 // maps/map8F.js - 8F「最上階：悪魔王の祭壇」完全版
-// セリフ演出・黒猫お休みギミック・階段動線同期・8F統一経験値カーブ・悪魔手記記録・Sinマルチエンディング対応
+// セリフ演出・黒猫お休みギミック・階段動線同期・8F統一経験値カーブ・悪魔手記記録・Sinマルチエンディング＆スタッフロール演出対応
 
 import { 
     showMessageDialog, showConversationDialog, 
-    playVideo, openCombatUI, openBossPuzzleUI, playFloorTransition 
+    playVideo, openCombatUI, openBossPuzzleUI, playFloorTransition, playEndingCredits 
 } from '../ui.js';
 import { sound } from '../sound.js';
 
@@ -171,7 +171,7 @@ function handleGozuMezuRoom(gameState, context, onComplete) {
                         "【牛頭＆馬頭 討滅！】\n二体の獄卒を撃破した！ 鉄格子が砕け散り、二体は泥となって溶け去った！\n（💰3,500 を獲得！）\n\nその足元に、千切れた父親の取材メモの続きが落ちている……！",
                         () => {
                             showMessageDialog(
-                                "【父親の取材手帳・後編】\n『……ボロボロで血に汚れているが、読めるぞ！\n\n◆ 左の座：悪しき波長を反射し真理を映す【Ⅱ 鏡】を据えよ。\n\n左に【Ⅱ 鏡】、中央に【Ⅵ 聖炎】、右に【Ⅸ 銀杭】……\nこの三位一体の神聖陣が揃った瞬間、神の裁き【Vox Sacra】が発動し、悪魔の核を撃ち抜くだろう！』\\n\n（※魔方陣パズルの配置法則を完全に特定し、悪魔手記に記録した！）",
+                                "【父親の取材手帳・後編】\n『……ボロボロで血に汚れているが、読めるぞ！\n\n◆ 左の座：悪しき波長を反射し真理を映す【Ⅱ 鏡】を据えよ。\n\n左に【Ⅱ 鏡】、中央に【Ⅵ 聖炎】、右に【Ⅸ 銀杭】……\nこの三位一体の神聖陣が揃った瞬間、神の裁き【Vox Sacra】が発動し、悪魔の核を撃ち抜くだろう！』\n\n（※魔方陣パズルの配置法則を完全に特定し、悪魔手記に記録した！）",
                                 onComplete
                             );
                         }
@@ -329,9 +329,11 @@ function startMidoPuzzleAndBattle(gameState, context, onComplete) {
     );
 }
 
-// 罪(Sin)によるマルチエンディング分岐
+// 罪(Sin)によるマルチエンディング分岐 ＆ スタッフロール演出
 function triggerEndingSequence(gameState, onComplete) {
     const currentSin = gameState.player.sin || 0;
+    // ★ エンディング曲（ending.mp3）の長さ（秒数）に合わせて調整可能
+    const CREDITS_DURATION_SEC = 60;
 
     const returnToTitle = () => {
         const overlay = document.createElement("div");
@@ -339,7 +341,7 @@ function triggerEndingSequence(gameState, onComplete) {
         document.body.appendChild(overlay);
         
         setTimeout(() => { overlay.style.opacity = "1"; }, 10);
-        setTimeout(() => { location.reload(); }, 3000);
+        setTimeout(() => { location.reload(); }, 2500);
     };
 
     // ① TRUE END: Sin = 0
@@ -348,7 +350,9 @@ function triggerEndingSequence(gameState, onComplete) {
             "assets/images/ending.png",
             "【マンションの解放・夜明け】\n眩い神聖光が御堂の核を貫き、悪魔の巨躯は光の塵となって霧散していった。\nマンションを覆っていた禍々しい黒雲が裂け、窓から眩しい朝陽が街全体を照らし出す。\n\n静まり返ったフロアで、ポケットのスマホがピロンと鳴った。\n画面には就活サイトからの事務的な通知。『〇〇株式会社：二次面接の日程調整について』\n\n主人公はふっと苦笑し、スマホをポケットに突っ込んだ。\n足元にすっと寄り添い、優雅にしっぽを揺らす黒猫。朝陽に照らされた街の遠くを見つめながら、どこか誇らしげに目を細めている。\n\n主人公\n「さてと……これからどうする、相棒？ 就職活動でもするか？」\n\n（澄み渡る街を見渡して、手の中の銃を見つめる）\n\n主人公\n「…………いっそ、プロのエクソシスト（悪魔祓い）になるか。」\n\n黒猫は楽しそうに喉を鳴らし、「ニャー」と短く鳴いた。\n二人の影が、朝陽に長く伸びていく――。",
             () => {
-                showMessageDialog("【 TRUE END : プロのエクソシスト 】\n\nマンション・インフェルノ クリア！\n完全な潔白証明、おめでとうございます！", returnToTitle);
+                showMessageDialog("【 TRUE END : プロのエクソシスト 】\n\nマンション・インフェルノ クリア！\n完全な潔白証明、おめでとうございます！", () => {
+                    playEndingCredits("TRUE", CREDITS_DURATION_SEC, returnToTitle);
+                });
             }
         );
     } 
@@ -358,7 +362,9 @@ function triggerEndingSequence(gameState, onComplete) {
             "assets/images/knife.jpg",
             "【終わらない贖罪】\n御堂は滅び、黒雲の裂け目から朝陽が差し込む。\nしかし、主人公の胸の奥に残る「人間を撃ってしまった罪悪感」は消えない。\n\nスマホが鳴り、就活の面接通知が表示されるが、主人公は画面を見つめたまま立ち尽くす。\n\n主人公\n「……俺の手は、もう綺麗じゃないな。\nこんな血で汚れた手で、普通の生活に戻れるわけがない……。」\n\n黒猫はじゃれつくことなく、少し離れた瓦礫の上から、試すような冷たい瞳でじっと主人公を見つめている。\n主人公は血に濡れた武器を強く握りしめ、影を落とした瞳で前を向いた。\n\n主人公\n「就活は辞退だ。\n……背負った罪は消えない。なら、街に残った悪魔をすべて狩り尽くすまで、俺は戦うのをやめない。……付き合ってくれるか、相棒。」\n\n黒猫は小さく頷くように目を細め、静かに主人公の影の中へと溶けていった――。",
             () => {
-                showMessageDialog("【 NORMAL END : 贖罪の執行人 】\n\nマンション・インフェルノ クリア。\n（※1階の無人レジで罪を全て浄化していれば、別の結末が……？）", returnToTitle);
+                showMessageDialog("【 NORMAL END : 贖罪の執行人 】\n\nマンション・インフェルノ クリア。\n（※1階の無人レジで罪を全て浄化していれば、別の結末が……？）", () => {
+                    playEndingCredits("NORMAL", CREDITS_DURATION_SEC, returnToTitle);
+                });
             }
         );
     } 
@@ -368,7 +374,9 @@ function triggerEndingSequence(gameState, onComplete) {
             showMessageDialog(
                 "【新・悪魔王の誕生】\n御堂が絶叫とともに爆散した瞬間――その体から吹き出した大量の黒煙と怨念が、浄化されることなく主人公の全身へと吸い込まれていく。\n罪に染まりきった主人公の肉体は、悪魔の瘴気を拒絶するどころか、極上の苗床として貪り食ったのだ。\n\n窓の外の黒雲は晴れず、むしろマンションを中心に赤黒い雷光が渦を巻き始める。\nスマホが鳴り、就活の通知が届くが――主人公はそれを床に叩き落とし、踵で無残に踏み砕いた。\n\n主人公\n「ハハ……ハハハッ！\nなんだこれは……全身に力が漲る……！ 就職活動？ 面接？ 馬鹿馬鹿しい……！」\n\n瞳が禍々しい紅蓮に染まり、背中から黒い魔気の翼が広がっていく。\n足元の黒猫は毛を逆立て、主人公を「新たな怪物」として激しく威嚇したあと、闇の中へと逃げ去っていった。\n\n主人公\n「御堂の言ってたことも、あながち間違いじゃなかったな。\n愚民どもめ……今日からこの俺が、貴様らの新しい『悪魔王』だ。」\n\nマンション・インフェルノに、新たな絶望の支配者が君臨した――。",
                 () => {
-                    showMessageDialog("【 BAD END : 新・悪魔王誕生 】\n\nゲームオーバー……。\\n（※人間を撃ちすぎです。1階の無人レジでお金を払って罪を浄化してください）", returnToTitle);
+                    showMessageDialog("【 BAD END : 新・悪魔王誕生 】\n\nゲームオーバー……。\n（※人間を撃ちすぎです。1階の無人レジでお金を払って罪を浄化してください）", () => {
+                        playEndingCredits("BAD", CREDITS_DURATION_SEC, returnToTitle);
+                    });
                 }
             );
         });

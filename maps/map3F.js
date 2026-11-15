@@ -277,7 +277,7 @@ function startRefrigeratorEvent(gameState, context, onComplete) {
                         id: 'mystery_supplement', name: '謎のサプリメント', type: 'consumable', healAmount: 100, description: 'HPを 100 回復する。怪しいが効果は絶大。'
                     });
 
-                    showItemAcquiredModal("assets/images/present.png", "謎のサプリメント", "【管理人からのお礼】\n「これ、拾い物ですが……よかったら使ってください。私は1階のコンビニに逃げ込みます！」\n\nHPを100回復する『謎のサプリメント』を手に入れた！", () => {
+                    showItemAcquiredModal("assets/images/mystery-supplement.jpg", "謎のサプリメント", "【管理人からのお礼】\n「これ、拾い物ですが……よかったら使ってください。私は1階のコンビニに逃げ込みます！」\n\nHPを100回復する『謎のサプリメント』を手に入れた！", () => {
                         onComplete();
                     });
                 });

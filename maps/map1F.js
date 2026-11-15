@@ -1,4 +1,4 @@
-// maps/map1F.js - エレベーター(7Fボタン追加)・中庭扉・段階的防具ポスト投函・管理人室(セル10・玄関横配置)・改行修正 完全版
+// maps/map1F.js - エレベーター(7Fボタン追加)・中庭扉・段階的防具ポスト投函・管理人室(セル10・玄関横配置)・継承アイテム3連続モーダル・改行修正 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -305,18 +305,25 @@ function startExorcistSequence(gameState, redraw, onComplete) {
     showMessageDialog("【血の池】\nマンションの中庭に血の池が湧き、底から無数の人ならざる者がこの世に出ようともがいている……", () => {
         playVideo("assets/videos/BloodPond.mp4", () => playVideo("assets/videos/exorcist.mp4", () => {
             showConversationDialog("assets/images/exorcist.png", "【瀕死のエクソシスト】\n「そ、そこのひと…」\n「悪魔にやられました、ワタシはもう……長くありません……」\n\n「ワタシのスマホ……『悪魔辞典アプリ』と、退魔の札『LAMINA EXORCISMI（ラミナ）』……そして使い魔と2階非常階段の鍵を……あなたに託します……」", () => {
-                showItemAcquiredModal("assets/images/cards/1Card.png", "退魔の札『ラミナ』一式", "『悪魔辞典アプリ』『使い魔（Lv.15から）』『2F非常階段の鍵』\nそして『1〜9番のラミナ全9枚』を受け継いだ！", () => {
-                    showMessageDialog("【瀕死のエクソシスト】\n「8Fの御堂、あれは私の想像を超えて凶悪だった……あれはこの街の脅威になる……」", () => {
-                        showMessageDialog("【衝撃の光景】\n話し終えた直後、無数の黒い腕が池から伸び、神父が引きずり込まれた……。あまりに驚いて、手を差し伸べることもできず見ているしかなかった。", () => {
-                            gameState.hasExorcistInherited = true; 
-                            gameState.hasKey2F = true; 
-                            gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
-                            if (redraw) redraw(); 
+                // ★ 1つ目：悪魔辞典アプリ（エクソシストのスマホ）
+                showItemAcquiredModal("assets/images/demon-app.jpg", "悪魔辞典アプリ（エクソシストのスマホ）", "400年にわたる悪魔との戦いの知見を集約した『悪魔辞典アプリ』と、\n影に潜む『使い魔（Lv.15から）』を受け継いだ！", () => {
+                    // ★ 2つ目：退魔の札『ラミナ』一式
+                    showItemAcquiredModal("assets/images/lamina-set.jpg", "退魔の札『ラミナ』一式", "モデルガンに装填して神聖な言葉を弾丸に変える\n『1〜9番のラミナ全9枚』を受け継いだ！", () => {
+                        // ★ 3つ目：2F非常階段の鍵
+                        showItemAcquiredModal("assets/images/key-2f.jpg", "2F非常階段の鍵", "1階北側の非常階段の錠前を開ける重厚な古鍵\n『2F非常階段の鍵』を受け継いだ！", () => {
+                            showMessageDialog("【瀕死のエクソシスト】\n「8Fの御堂、あれは私の想像を超えて凶悪だった……あれはこの街の脅威になる……」", () => {
+                                showMessageDialog("【衝撃の光景】\n話し終えた直後、無数の黒い腕が池から伸び、神父が引きずり込まれた……。あまりに驚いて、手を差し伸べることもできず見ているしかなかった。", () => {
+                                    gameState.hasExorcistInherited = true; 
+                                    gameState.hasKey2F = true; 
+                                    gameState.cards = ["1Card.png","2Card.png","3Card.png","4Card.png","5Card.png","6Card.png","7Card.png","8Card.png","9Card.png"];
+                                    if (redraw) redraw(); 
 
-                            showMessageDialog(
-                                "【悪魔辞典アプリ】\n悪魔辞典を使えるようになった。\n400年にわたる悪魔との戦いの知見を、何十冊もの辞典にまとめた『悪魔辞典』。\nこのアプリはとても持ち運びできない膨大な辞典をアプリに集約したもののようだ。\\n\n右下の『悪魔辞典（ESC）』をクリックすると開く。\n進捗の保存もここから出来る。",
-                                onComplete
-                            );
+                                    showMessageDialog(
+                                        "【悪魔辞典アプリ】\n悪魔辞典を使えるようになった。\n400年にわたる悪魔との戦いの知見を、何十冊もの辞典にまとめた『悪魔辞典』。\nこのアプリはとても持ち運びできない膨大な辞典をアプリに集約したもののようだ。\n\n右下の『悪魔辞典（ESC）』をクリックすると開く。\n進捗の保存もここから出来る。",
+                                        onComplete
+                                    );
+                                });
+                            });
                         });
                     });
                 });
