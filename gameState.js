@@ -1,4 +1,4 @@
-// gameState.js - 経験値キャップ完全廃止・必要経験値カーブ最適化・悪魔手記＆悪魔弱点辞典 完全版
+// gameState.js - 経験値キャップ完全廃止・必要経験値カーブ最適化・悪魔手記＆悪魔弱点辞典・死亡時Sin+1対応 完全版
 
 export const gameState = {
   player: {
@@ -238,6 +238,7 @@ export const gameState = {
     this.player.money -= lostMoney;
     this.lastLostMoney = lostMoney;
     this.player.hp = this.player.maxHp;
+    this.player.sin = (this.player.sin || 0) + 1;
 
     let respawnMsg = "";
     let respawnCoord = { x: 7, y: 1 };
@@ -255,6 +256,8 @@ export const gameState = {
     } else {
       respawnMsg += `\n\n（奇跡的に所持金は失わずに済んだ！）`;
     }
+
+    respawnMsg += `\n（死の淵を彷徨った代償として、Sin（罪）が 1 増加した…… 現在Sin: ${this.player.sin}）`;
 
     this.currentFloor = 1;
     this.player.x = respawnCoord.x;
