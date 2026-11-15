@@ -1,4 +1,4 @@
-// maps/map1F.js - エレベーター(7Fボタン追加)・中庭扉・段階的防具ポスト投函・管理人室(セル10・玄関横配置) 完全版
+// maps/map1F.js - エレベーター(7Fボタン追加)・中庭扉・段階的防具ポスト投函・管理人室(セル10・玄関横配置)・改行修正 完全版
 
 import { 
     showMessageDialog, showConversationDialog, showItemAcquiredModal, 
@@ -249,7 +249,7 @@ function startPostEvent(gameState, onComplete) {
         } else if (canPost5F) {
             gameState.armorUnlockStage = 2;
             showMessageDialog(
-                "【1階 集合ポスト】\n中層の悪魔を退けた報告と共に、『上位退魔スーツの支給要請書』を投函口へ差し入れた。\n\nポストの奥からカチャリと重厚な鍵の開く音がした……。\\n\n【防具解放】\nコンビニに『聖遺物のレザースーツ』が入荷しました！",
+                "【1階 集合ポスト】\n中層の悪魔を退けた報告と共に、『上位退魔スーツの支給要請書』を投函口へ差し入れた。\n\nポストの奥からカチャリと重厚な鍵の開く音がした……。\n\n【防具解放】\nコンビニに『聖遺物のレザースーツ』が入荷しました！",
                 onComplete
             );
         } else if (canPost7F) {
@@ -264,7 +264,7 @@ function startPostEvent(gameState, onComplete) {
             } else {
                 if (gameState.hasMetGrandma) {
                     showMessageDialog(
-                        "【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。\\n（※各階のフロアボスを撃破すると、防具支給要請書を投函できます）",
+                        "【1階 集合ポスト】\n錆びついた住民用の郵便受けが並んでいる。\n\n「外で連絡したいことができたら、このポストに手紙を放り込んでおくれ……」\nおばあさんの言葉が頭をよぎる。\n（※各階のフロアボスを撃破すると、防具支給要請書を投函できます）",
                         onComplete
                     );
                 } else {
@@ -314,7 +314,7 @@ function startExorcistSequence(gameState, redraw, onComplete) {
                             if (redraw) redraw(); 
 
                             showMessageDialog(
-                                "【悪魔辞典アプリ】\n悪魔辞典を使えるようになった。\n400年にわたる悪魔との戦いの知見を、何十冊もの辞典にまとめた『悪魔辞典』。\nこのアプリはとても持ち運びできない膨大な辞典をアプリに集約したもののようだ。\n\n右下の『悪魔辞典（ESC）』をクリックすると開く。\n進捗の保存もここから出来る。",
+                                "【悪魔辞典アプリ】\n悪魔辞典を使えるようになった。\n400年にわたる悪魔との戦いの知見を、何十冊もの辞典にまとめた『悪魔辞典』。\nこのアプリはとても持ち運びできない膨大な辞典をアプリに集約したもののようだ。\\n\n右下の『悪魔辞典（ESC）』をクリックすると開く。\n進捗の保存もここから出来る。",
                                 onComplete
                             );
                         });

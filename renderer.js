@@ -1,4 +1,4 @@
-// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示＆4F/7F専用テクスチャ＆3Fゴミ山・1F管理人室(セル10)対応 完全版
+// renderer.js - 最初からミニマップ常時表示＆ESC/F2文字非表示＆4F/7F専用テクスチャ＆3F限定ゴミ山・1Fポスト＆管理人室表示対応 完全版
 
 import { gameState } from './gameState.js';
 
@@ -230,9 +230,10 @@ export function draw(player, currentMap, currentFloor, customCtx, customCanvas) 
                     targetImg = images.elevator;
                 } else if (cellType === 7 && currentFloor !== 3 && isImageReady(images.elevator)) {
                     targetImg = images.elevator;
-                } else if ((cellType === 7 || cellType === 9) && isImageReady(images.reizouko)) {
+                } else if (currentFloor === 3 && (cellType === 7 || cellType === 9) && isImageReady(images.reizouko)) {
+                    // ★ 3Fのゴミ山(7)・巨大冷蔵庫(9)のみ reizouko.png を描画（1Fのポスト9には出さない）
                     targetImg = images.reizouko;
-                } else if ([2, 8, 10].includes(cellType) && isImageReady(images.door)) {
+                } else if ([2, 8, 9, 10].includes(cellType) && isImageReady(images.door)) {
                     targetImg = images.door;
                 }
 

@@ -1,4 +1,4 @@
-// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズルUI 完全版
+// ui.js - ノベル風レイアウト・音響（BGM/SE）・クロマキー維持＆7F-BGM動的連携・弱点看破＆常時表示・戦闘中リロード(1ターン消費)・ボス逃走不可・黄色い傘2本制限・白化防止・査問正体分離＆銃撃SE・大型魔方陣パズル・戦闘1.2秒＆クリック送り(案A) 完全版
 
 import { gameState } from './gameState.js';
 import { itemDefinitions } from './items.js';
@@ -38,6 +38,10 @@ function ensureCombatStyles() {
         @keyframes yellowUmbrellaFlash {
             0% { opacity: 0.9; }
             100% { opacity: 0; }
+        }
+        @keyframes combatPromptBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
         }
     `;
     document.head.appendChild(style);
@@ -382,7 +386,6 @@ export function openShopUI(onClosed) {
                     if (!gameState.inventory.items) gameState.inventory.items = [];
                     gameState.inventory.items.push({ ...item });
 
-                    // ★ 修正：完了後に赤黒グラデーションへ正しく戻す（白化防止）
                     btn.style.background = "#006600"; 
                     btn.innerText = "完了！"; 
                     setTimeout(() => { 
@@ -400,7 +403,7 @@ export function openShopUI(onClosed) {
 }
 
 // ==========================================
-// 戦闘UI制御（弱点看破・常時表示・戦闘中リロード・ボス逃走不可 完全版）
+// 戦闘UI制御（弱点看破・常時表示・戦闘中リロード・ボス逃走不可・文字送り1.2秒＆クリック送り(案A) 完全版）
 // ==========================================
 export function openCombatUI(enemy, gameState, onResult, context) {
     ensureCombatStyles();
@@ -421,6 +424,25 @@ export function openCombatUI(enemy, gameState, onResult, context) {
     let extraAgi = 0;
     let isEnemyCharging = false;
     let enemyStunTurns = 0;
+
+    // ★ クリック／SPACEキーで次の戦闘ステップへ進むための待機制御
+    let activeAdvanceHandler = null;
+    const clearAdvanceWait = () => {
+        if (activeAdvanceHandler) {
+            window.removeEventListener("keydown", activeAdvanceHandler, true);
+            ui.onclick = null;
+            activeAdvanceHandler = null;
+        }
+    };
+
+    const closeCombatAndReturn = (resultStatus, onAfterClose) => {
+        clearAdvanceWait();
+        ui.remove();
+        window.lastDialogCloseTime = Date.now();
+        sound.playBGM(getFieldBGM(gameState));
+        if (onAfterClose) onAfterClose();
+        else if (onResult) onResult(resultStatus);
+    };
 
     // ★ 弱点バッジ文字列生成ヘルパー
     const getWeaknessBadgeText = () => {
@@ -455,7 +477,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
             <span id="enemy-hp-text" style="color: #ff4444; font-weight: bold;">敵HP: ${enemyHp}</span>
         </div>
 
-        <div id="combat-log" style="width: 100%; max-width: 480px; height: 90px; background: rgba(0,0,0,0.85); border: 1px solid #550000; padding: 10px; margin-bottom: 12px; color: #ccc; font-size: 0.88em; line-height: 1.5; white-space: pre-wrap; overflow-y: auto;">悪魔が目の前に立ち塞がった！ どうする？</div>
+        <div id="combat-log" style="width: 100%; max-width: 480px; height: 112px; background: rgba(0,0,0,0.88); border: 1px solid #550000; padding: 10px 12px; margin-bottom: 12px; color: #ddd; font-size: 0.9em; line-height: 1.55; white-space: pre-wrap; overflow-y: auto; box-sizing: border-box;">悪魔が目の前に立ち塞がった！ どうする？</div>
 
         <div style="display: flex; gap: 8px; width: 100%; max-width: 480px;">
             <button id="btn-attack" style="flex: 1.2; background: #440000; color: #fff; border: 1px solid #ff3333; padding: 10px 4px; font-family: inherit; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 0.95em;">Vox Sacra (射撃)</button>
@@ -492,18 +514,68 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         log.scrollTop = log.scrollHeight;
     };
 
-    // ★ 使い魔（黒猫）同行時：初見の敵の弱点を看破する演出
+    // ★ 案A：クリック／タップ／SPACE／Enter を待つ関数（▼点滅インジケーター付き）
+    const waitForPlayerClick = (onNext) => {
+        clearAdvanceWait();
+        log.style.cursor = "pointer";
+        log.style.borderColor = "#aa4400";
+        appendLog(`<div style="margin-top: 6px; text-align: right; color: #ffdd66; font-size: 0.85em; font-weight: bold; animation: combatPromptBlink 1s infinite;">▼ タップ または [ SPACE / Enter ] で次へ</div>`);
+
+        let advanced = false;
+        const advance = (e) => {
+            if (e && e.type === "keydown") {
+                if (e.key !== " " && e.key !== "Enter" && e.key !== "Spacebar") return;
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            if (advanced) return;
+            advanced = true;
+
+            clearAdvanceWait();
+            log.style.cursor = "default";
+            log.style.borderColor = "#550000";
+            window.lastDialogCloseTime = Date.now();
+            if (onNext) onNext();
+        };
+
+        activeAdvanceHandler = advance;
+        setTimeout(() => {
+            if (advanced) return;
+            window.addEventListener("keydown", advance, true);
+            ui.onclick = (e) => {
+                // 無効化中のボタン以外、画面のどこをタップしても進行可能
+                if (e.target && e.target.tagName === "BUTTON" && !e.target.disabled) return;
+                advance(e);
+            };
+        }, 150);
+    };
+
+    const setControlsDisabled = (disabled) => {
+        attackBtn.disabled = disabled;
+        reloadBtn.disabled = disabled;
+        itemBtn.disabled = disabled;
+        escapeBtn.disabled = disabled;
+    };
+
+    // ★ 使い魔（黒猫）同行時：初見の敵の弱点を看破する演出（1.2秒後に表示 → クリック待ち）
     const hasCatAccompany = gameState.flags && gameState.flags.hasCat && !gameState.flags.isCatTrapped;
     const isAlreadyDiscovered = gameState.isDemonDiscovered ? gameState.isDemonDiscovered(enemy.name) : false;
 
     if (hasCatAccompany && !isAlreadyDiscovered) {
+        setControlsDisabled(true);
+        log.innerText = "悪魔が目の前に立ち塞がった！";
         setTimeout(() => {
             sound.playSE("assets/audio/se/cat.mp3");
             const wNames = enemyWeakness.map(num => CARD_NAMES[num] || num).join(", ");
-            appendLog(`\n<span style="color:#E0B0FF; font-weight:bold;">【使い魔の看破】\n黒猫が喉を鳴らして敵の核を凝視した！\n「……フシューッ！（弱点は【${wNames}】だ！ 悪魔辞典に記録した！）」</span>`);
+            log.innerHTML = `<span style="color:#E0B0FF; font-weight:bold;">【使い魔の看破】\n黒猫が喉を鳴らして敵の核を凝視した！\n「……フシューッ！（弱点は【${wNames}】だ！ 悪魔辞典に記録した！）」</span>`;
             if (gameState.recordDemon) gameState.recordDemon(enemy);
             if (weaknessBadge) weaknessBadge.innerHTML = getWeaknessBadgeText();
-        }, 500);
+
+            waitForPlayerClick(() => {
+                log.innerText = "悪魔が目の前に立ち塞がった！ どうする？";
+                setControlsDisabled(false);
+            });
+        }, 1200);
     }
 
     const showEnemyDamagePopup = (damageValue, isWeakness = false, prefix = "-") => {
@@ -541,33 +613,43 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         playerHpText.innerText = `主人公HP: ${gameState.player.hp} / ${gameState.player.maxHp}`;
     };
 
-    const setControlsDisabled = (disabled) => {
-        attackBtn.disabled = disabled;
-        reloadBtn.disabled = disabled;
-        itemBtn.disabled = disabled;
-        escapeBtn.disabled = disabled;
+    const triggerVictorySequence = () => {
+        closeCombatAndReturn("win", () => {
+            const baseExp = enemy.rewardExp || (enemy.isBoss ? 100 : 50);
+            const baseMoney = enemy.rewardMoney || (enemy.isBoss ? 300 : 150);
+            const reward = gameState.calculateRewards ? gameState.calculateRewards(baseExp, baseMoney) : { exp: baseExp, money: baseMoney };
+            
+            gameState.player.money += reward.money;
+            const isLvUp = gameState.gainExp(reward.exp);
+            
+            if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3");
+
+            const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
+            showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
+                if (onResult) onResult("win");
+            });
+        });
     };
 
     const triggerDeathSequence = () => {
         setControlsDisabled(true);
         playerHpText.innerText = `主人公HP: 0 / ${gameState.player.maxHp}`;
         playerHpText.style.color = "#ff0000";
-        appendLog("\n<span style='color:red; font-weight:bold;'>【敗北】主人公は力尽きて倒れた……！</span>");
+        log.innerHTML = "<span style='color:red; font-weight:bold;'>【敗北】主人公は力尽きて倒れた……！</span>";
 
         sound.playSE("assets/audio/se/zero.mp3");
 
-        setTimeout(() => {
-            ui.remove();
-            sound.playBGM(getFieldBGM(gameState));
-
-            const respawnMsg = gameState.handlePlayerDeath();
-            if (context && context.changeFloor) {
-                context.changeFloor(1);
-            }
-            showMessageDialog(respawnMsg, () => {
-                if (onResult) onResult("defeat");
+        waitForPlayerClick(() => {
+            closeCombatAndReturn("defeat", () => {
+                const respawnMsg = gameState.handlePlayerDeath();
+                if (context && context.changeFloor) {
+                    context.changeFloor(1);
+                }
+                showMessageDialog(respawnMsg, () => {
+                    if (onResult) onResult("defeat");
+                });
             });
-        }, 1800); 
+        });
     };
 
     const getRandomActionMsg = () => {
@@ -577,153 +659,152 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         return "の容赦ない攻撃が襲いかかる！";
     };
 
-    const enemyTurn = (initialMessage) => {
-        log.innerHTML = initialMessage;
-
-        setTimeout(() => {
-            if (enemyStunTurns > 0) {
-                enemyStunTurns--;
-                appendLog(`\n<span style="color:#ffdd66; font-weight:bold;">【行動不能】${enemy.name} は目を押さえて悶絶しており、攻撃できない！（チャンス！）</span>`);
+    // ★ 敵のターン（結果を表示してクリック待ち）
+    const executeEnemyTurn = () => {
+        if (enemyStunTurns > 0) {
+            enemyStunTurns--;
+            log.innerHTML = `<span style="color:#ffdd66; font-weight:bold;">【行動不能】${enemy.name} は目を押さえて悶絶しており、攻撃できない！（チャンス！）</span>`;
+            waitForPlayerClick(() => {
+                log.innerText = "どうする？";
                 setControlsDisabled(false);
-                return;
-            }
+            });
+            return;
+        }
 
-            const currentFloor = gameState.currentFloor || 1;
-            let actionType = "normal";
-            let damageMultiplier = 1.0;
-            let actionText = "";
+        const currentFloor = gameState.currentFloor || 1;
+        let actionType = "normal";
+        let damageMultiplier = 1.0;
+        let actionText = "";
 
-            if (isEnemyCharging) {
-                actionType = "charge_fire";
-                damageMultiplier = 2.5;
-                isEnemyCharging = false;
-                actionText = `【解放撃】${enemy.name} の収束された破滅の一撃が炸裂する！`;
-            } else {
-                const roll = Math.random();
-                const isKageyamaBoss = enemy.id === 'KAGEYAMA_2F' || enemy.name === 'ストーカー影山';
-                const canUseCharge = (currentFloor >= 3) || isKageyamaBoss;
+        if (isEnemyCharging) {
+            actionType = "charge_fire";
+            damageMultiplier = 2.5;
+            isEnemyCharging = false;
+            actionText = `【解放撃】${enemy.name} の収束された破滅の一撃が炸裂する！`;
+        } else {
+            const roll = Math.random();
+            const isKageyamaBoss = enemy.id === 'KAGEYAMA_2F' || enemy.name === 'ストーカー影山';
+            const canUseCharge = (currentFloor >= 3) || isKageyamaBoss;
 
-                if (canUseCharge) {
-                    let chargeRate = 0.20;
-                    let singleRate = 0.20;
+            if (canUseCharge) {
+                let chargeRate = 0.20;
+                let singleRate = 0.20;
 
-                    if (currentFloor >= 6) {
-                        chargeRate = 0.30;
-                        singleRate = 0.25;
-                    } else if (isKageyamaBoss) {
-                        chargeRate = 0.25;
-                        singleRate = 0.25;
-                    }
+                if (currentFloor >= 6) {
+                    chargeRate = 0.30;
+                    singleRate = 0.25;
+                } else if (isKageyamaBoss) {
+                    chargeRate = 0.25;
+                    singleRate = 0.25;
+                }
 
-                    if (roll < chargeRate) {
-                        actionType = "charge_start";
-                        isEnemyCharging = true;
-                    } else if (roll < chargeRate + singleRate) {
-                        actionType = "single";
-                        damageMultiplier = 1.25;
-                        actionText = `【痛恨】${enemy.name} ${getRandomActionMsg()}`;
-                    } else {
-                        actionType = "normal";
-                        damageMultiplier = 1.0;
-                        actionText = `${enemy.name} ${getRandomActionMsg()}`;
-                    }
+                if (roll < chargeRate) {
+                    actionType = "charge_start";
+                    isEnemyCharging = true;
+                } else if (roll < chargeRate + singleRate) {
+                    actionType = "single";
+                    damageMultiplier = 1.25;
+                    actionText = `【痛恨】${enemy.name} ${getRandomActionMsg()}`;
                 } else {
-                    if (roll < 0.75) {
-                        actionType = "normal";
-                        damageMultiplier = 1.0;
-                        actionText = `${enemy.name} ${getRandomActionMsg()}`;
-                    } else {
-                        actionType = "single";
-                        damageMultiplier = 1.25;
-                        actionText = `【痛恨】${enemy.name} ${getRandomActionMsg()}`;
-                    }
+                    actionType = "normal";
+                    damageMultiplier = 1.0;
+                    actionText = `${enemy.name} ${getRandomActionMsg()}`;
+                }
+            } else {
+                if (roll < 0.75) {
+                    actionType = "normal";
+                    damageMultiplier = 1.0;
+                    actionText = `${enemy.name} ${getRandomActionMsg()}`;
+                } else {
+                    actionType = "single";
+                    damageMultiplier = 1.25;
+                    actionText = `【痛恨】${enemy.name} ${getRandomActionMsg()}`;
                 }
             }
+        }
 
-            if (actionType === "charge_start") {
-                appendLog(`\n<span style="color:#ff4444; font-weight:bold;">【予兆】${enemy.name} が禍々しい魔力を収束させている……！\n（※次のターン、威力が2.5倍に激増する！ 青い傘で防げ！）</span>`);
+        if (actionType === "charge_start") {
+            log.innerHTML = `<span style="color:#ff4444; font-weight:bold;">【予兆】${enemy.name} が禍々しい魔力を収束させている……！\n（※次のターン、威力が2.5倍に激増する！ 青い傘で防げ！）</span>`;
+            waitForPlayerClick(() => {
+                log.innerText = "どうする？";
                 setControlsDisabled(false);
-                return;
-            }
+            });
+            return;
+        }
 
-            const rawDodge = ((gameState.player.agi || 5) + extraAgi) * 0.04;
-            const dodgeChance = Math.min(0.30, rawDodge);
+        const rawDodge = ((gameState.player.agi || 5) + extraAgi) * 0.04;
+        const dodgeChance = Math.min(0.30, rawDodge);
 
-            if (Math.random() < dodgeChance) {
-                appendLog(`\n素早い身のこなし！ 主人公は悪魔の攻撃を完全に回避した！`);
+        if (Math.random() < dodgeChance) {
+            log.innerHTML = `素早い身のこなし！ 主人公は悪魔の攻撃を完全に回避した！`;
+            waitForPlayerClick(() => {
+                log.innerText = "どうする？";
                 setControlsDisabled(false);
-                return;
-            }
+            });
+            return;
+        }
 
-            let rawAtk = enemyAtk * damageMultiplier;
-            let baseDamage = Math.max(1, rawAtk - (gameState.player.def || 0));
+        let rawAtk = enemyAtk * damageMultiplier;
+        let baseDamage = Math.max(1, rawAtk - (gameState.player.def || 0));
 
-            let umbrellaApplied = false;
-            if (isGuarding) {
-                baseDamage = Math.max(1, Math.floor(baseDamage * 0.3));
-                isGuarding = false;
-                umbrellaApplied = true;
-            }
+        let umbrellaApplied = false;
+        if (isGuarding) {
+            baseDamage = Math.max(1, Math.floor(baseDamage * 0.3));
+            isGuarding = false;
+            umbrellaApplied = true;
+        }
 
-            let catAction = null;
-            if (gameState.flags && gameState.flags.hasCat && !gameState.flags.isCatTrapped && Math.random() < 0.20) {
-                catAction = Math.random() < 0.5 ? "shield" : "claw";
-            }
+        let catAction = null;
+        if (gameState.flags && gameState.flags.hasCat && !gameState.flags.isCatTrapped && Math.random() < 0.20) {
+            catAction = Math.random() < 0.5 ? "shield" : "claw";
+        }
 
-            if (catAction === "shield") {
-                sound.playSE("assets/audio/se/cat.mp3");
-                baseDamage = Math.max(1, Math.floor(baseDamage * 0.5));
-                appendLog(`\n<span style="color: #E0B0FF; font-weight: bold;">【使い魔の身代わり】黒猫が前に割り込み、主人公を庇った！（ダメージ半減！）</span>`);
-            }
+        let enemyTurnLines = [];
 
-            const randFactor = 0.85 + Math.random() * 0.3;
-            const finalDamage = Math.max(1, Math.floor(baseDamage * randFactor));
+        if (catAction === "shield") {
+            sound.playSE("assets/audio/se/cat.mp3");
+            baseDamage = Math.max(1, Math.floor(baseDamage * 0.5));
+            enemyTurnLines.push(`<span style="color: #E0B0FF; font-weight: bold;">【使い魔の身代わり】黒猫が前に割り込み、主人公を庇った！（ダメージ半減！）</span>`);
+        }
 
-            gameState.player.hp = Math.max(0, gameState.player.hp - finalDamage);
+        const randFactor = 0.85 + Math.random() * 0.3;
+        const finalDamage = Math.max(1, Math.floor(baseDamage * randFactor));
 
-            let dmgNotice = `\n${actionText}\n主人公は ${finalDamage} ダメージを受けた！`;
-            if (umbrellaApplied) dmgNotice += "（ビニール傘で70%カット！）";
-            appendLog(dmgNotice);
+        gameState.player.hp = Math.max(0, gameState.player.hp - finalDamage);
 
-            if (catAction === "claw") {
-                sound.playSE("assets/audio/se/cat.mp3");
-                const catDmg = Math.max(8, Math.floor((gameState.player.level || 1) * 3.5));
-                enemyHp = Math.max(0, enemyHp - catDmg);
-                enemyHpText.innerText = `敵HP: ${enemyHp}`;
-                showEnemyDamagePopup(catDmg, false, "🐾 -");
-                appendLog(`<span style="color: #E0B0FF; font-weight: bold;">【使い魔の爪攻撃】黒猫が影から飛び出し、敵の顔面を切り裂いた！ 敵に ${catDmg} ダメージ！</span>`);
-            }
+        let dmgNotice = `${actionText}\n主人公は ${finalDamage} ダメージを受けた！`;
+        if (umbrellaApplied) dmgNotice += "（ビニール傘で70%カット！）";
+        enemyTurnLines.push(dmgNotice);
 
+        if (catAction === "claw") {
+            sound.playSE("assets/audio/se/cat.mp3");
+            const catDmg = Math.max(8, Math.floor((gameState.player.level || 1) * 3.5));
+            enemyHp = Math.max(0, enemyHp - catDmg);
+            enemyHpText.innerText = `敵HP: ${enemyHp}`;
+            showEnemyDamagePopup(catDmg, false, "🐾 -");
+            enemyTurnLines.push(`<span style="color: #E0B0FF; font-weight: bold;">【使い魔の爪攻撃】黒猫が影から飛び出し、敵の顔面を切り裂いた！ 敵に ${catDmg} ダメージ！</span>`);
+        }
+
+        updateHpDisplay();
+        log.innerHTML = enemyTurnLines.join("\n");
+
+        waitForPlayerClick(() => {
             if (gameState.player.hp <= 0) {
                 triggerDeathSequence();
             } else if (enemyHp <= 0) {
                 enemyHpText.innerText = `敵HP: 0`;
-                appendLog(`\n【討滅】黒猫の追撃が決定打となり、悪魔は霧散した！`);
-                setTimeout(() => {
-                    ui.remove();
-                    sound.playBGM(getFieldBGM(gameState));
-
-                    const baseExp = enemy.rewardExp || (enemy.isBoss ? 100 : 50);
-                    const baseMoney = enemy.rewardMoney || (enemy.isBoss ? 300 : 150);
-                    const reward = gameState.calculateRewards ? gameState.calculateRewards(baseExp, baseMoney) : { exp: baseExp, money: baseMoney };
-                    
-                    gameState.player.money += reward.money;
-                    const isLvUp = gameState.gainExp(reward.exp);
-                    
-                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3");
-
-                    const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-                    showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
-                        if (onResult) onResult("win");
-                    });
-                }, 1400);
+                log.innerHTML = `【討滅】黒猫の追撃が決定打となり、悪魔は霧散した！`;
+                waitForPlayerClick(() => {
+                    triggerVictorySequence();
+                });
             } else {
-                updateHpDisplay();
+                log.innerText = "どうする？";
                 setControlsDisabled(false);
             }
-        }, 1400);
+        });
     };
 
+    // ★ 射撃ボタン（1.2秒の溜め → ダメージ表示＆クリック待ち → 敵ターン）
     attackBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -731,11 +812,11 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         const equippedCards = gameState.equippedCards || [];
 
         if (!hasGun) {
-            appendLog("【攻撃不能！】\n武器を持っていない！ 素手では悪魔にダメージを与えられない！");
+            log.innerText = "【攻撃不能！】\n武器を持っていない！ 素手では悪魔にダメージを与えられない！";
             return;
         } 
         if (equippedCards.length === 0) {
-            appendLog("【装填エラー！】\nモデルガンにラミナ（カード）が装填されていない！ 弾が出ない！");
+            log.innerText = "【装填エラー！】\nモデルガンにラミナ（カード）が装填されていない！ 弾が出ない！";
             return;
         }
 
@@ -777,33 +858,21 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 enemyHpText.innerText = `敵HP: 0`;
                 log.innerText = `${shotMsg}\n\n【討滅】${enemy.name} の体力を削りきった！`;
                 
-                setTimeout(() => {
-                    ui.remove();
-                    sound.playBGM(getFieldBGM(gameState));
-
-                    const baseExp = enemy.rewardExp || (enemy.isBoss ? 100 : 50);
-                    const baseMoney = enemy.rewardMoney || (enemy.isBoss ? 300 : 150);
-                    const reward = gameState.calculateRewards ? gameState.calculateRewards(baseExp, baseMoney) : { exp: baseExp, money: baseMoney };
-                    
-                    gameState.player.money += reward.money;
-                    const isLvUp = gameState.gainExp(reward.exp);
-                    
-                    if (isLvUp) sound.playSE("assets/audio/se/levelup.mp3");
-                    
-                    const capNotice = reward.isCapped ? "\n※レベル上限超過により獲得量減衰" : "";
-                    showMessageDialog(`【勝利！】\n${enemy.name} を撃退した！（💰${reward.money} 獲得 / ${reward.exp} EXP獲得）${isLvUp ? '\n★ レベルアップ！' : ''}${capNotice}`, () => {
-                        if (onResult) onResult("win");
-                    });
-                }, 1400);
+                waitForPlayerClick(() => {
+                    triggerVictorySequence();
+                });
                 return;
             }
 
             enemyHpText.innerText = `敵HP: ${enemyHp}`;
-            enemyTurn(shotMsg);
-        }, 900);
+            log.innerText = shotMsg;
+            waitForPlayerClick(() => {
+                executeEnemyTurn();
+            });
+        }, 1200);
     };
 
-    // ★ 戦闘中リロード（装填変更）：必ず1ターン消費して敵が攻撃してくる
+    // ★ 戦闘中リロード（装填変更）：1ターン消費して敵の反撃へ（クリック待ち対応）
     reloadBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
@@ -814,7 +883,7 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         const uniqueNums = Array.from(new Set(availableNums)).sort((a, b) => a - b);
 
         if (uniqueNums.length === 0) {
-            appendLog("【装填不可】装填できるラミナカードを所持していない！");
+            log.innerText = "【装填不可】装填できるラミナカードを所持していない！";
             return;
         }
 
@@ -885,7 +954,10 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                 sound.playSE("assets/audio/se/gun.mp3");
 
                 const reloadedNames = gameState.equippedCards.map(n => CARD_NAMES[n]).join(' / ');
-                enemyTurn(`【装填変更】銃の弾倉を開き、カードを差し替えた！\n[装填完了: ${reloadedNames}]\nしかしカード交換の隙を突かれ、敵の反撃が迫る！`);
+                log.innerText = `【装填変更】銃の弾倉を開き、カードを差し替えた！\n[装填完了: ${reloadedNames}]\nしかしカード交換の隙を突かれ、敵の反撃が迫る！`;
+                waitForPlayerClick(() => {
+                    executeEnemyTurn();
+                });
             };
         };
 
@@ -893,12 +965,13 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         document.body.appendChild(reloadModal);
     };
 
+    // ★ 道具ボタン（クリック待ち対応）
     itemBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
         const itemsList = (gameState.inventory && gameState.inventory.items) ? gameState.inventory.items : [];
         if (itemsList.length === 0) {
-            appendLog("【道具】使用できる持ち物がない！");
+            log.innerText = "【道具】使用できる持ち物がない！";
             return;
         }
 
@@ -939,15 +1012,24 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     const heal = usedItem.healAmount ? usedItem.healAmount : (itemId === "first_aid" ? 50 : 15);
                     gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + heal);
                     updateHpDisplay();
-                    enemyTurn(`【道具使用】${usedItem.name} を使った！\n主人公のHPが ${heal} 回復した！（現在HP: ${gameState.player.hp}）`);
+                    log.innerText = `【道具使用】${usedItem.name} を使った！\n主人公のHPが ${heal} 回復した！（現在HP: ${gameState.player.hp}）`;
+                    waitForPlayerClick(() => {
+                        executeEnemyTurn();
+                    });
                 } 
                 else if (itemId === "blue_umbrella" || itemId === "umbrella_blue" || usedItem.guardEffect || itemName.includes("青") || itemName.includes("ブルー")) {
                     isGuarding = true;
-                    enemyTurn(`【道具使用】${usedItem.name} を素早く開いた！\n次の敵の攻撃ダメージを 70% 軽減する！`);
+                    log.innerText = `【道具使用】${usedItem.name} を素早く開いた！\n次の敵の攻撃ダメージを 70% 軽減する！`;
+                    waitForPlayerClick(() => {
+                        executeEnemyTurn();
+                    });
                 } 
                 else if (itemId === "red_umbrella" || itemId === "umbrella_red" || itemName.includes("赤") || itemName.includes("レッド")) {
                     isRedUmbrellaActive = true;
-                    enemyTurn(`【道具使用】${usedItem.name} を開いて構えた！\n力を限界まで蓄積した！ 次の銃撃威力が【3倍】に激増する！`);
+                    log.innerText = `【道具使用】${usedItem.name} を開いて構えた！\n力を限界まで蓄積した！ 次の銃撃威力が【3倍】に激増する！`;
+                    waitForPlayerClick(() => {
+                        executeEnemyTurn();
+                    });
                 } 
                 else if (itemId === "yellow_umbrella" || itemId === "umbrella_yellow" || itemName.includes("黄") || itemName.includes("イエロー")) {
                     triggerScreenFlash("rgba(255, 255, 140, 0.85)");
@@ -957,30 +1039,37 @@ export function openCombatUI(enemy, gameState, onResult, context) {
                     }
                     enemyStunTurns = 1;
 
-                    log.innerHTML = `【道具使用】${usedItem.name} を勢いよく開いた！\n強烈な閃光が炸裂し、敵の目を完全に眩ませた！`;
-                    setTimeout(() => {
-                        appendLog(`\n<span style="color:#ffdd66; font-weight:bold;">敵は目を押さえて悶絶している！ 隙だらけだ！（2回連続で攻撃可能！）</span>`);
+                    log.innerHTML = `【道具使用】${usedItem.name} を勢いよく開いた！\n強烈な閃光が炸裂し、敵の目を完全に眩ませた！\n<span style="color:#ffdd66; font-weight:bold;">敵は目を押さえて悶絶している！ 隙だらけだ！（2回連続で攻撃可能！）</span>`;
+                    waitForPlayerClick(() => {
+                        log.innerText = "どうする？";
                         setControlsDisabled(false);
-                    }, 1200);
+                    });
                 } 
                 else if (itemId === "clear_umbrella" || itemId === "umbrella_clear" || itemName.includes("透明") || itemName.includes("クリア")) {
                     extraAgi += 5;
-                    enemyTurn(`【道具使用】${usedItem.name} を纏った！\n身のこなしが軽くなり、回避率と逃走率が上昇した！`);
+                    log.innerText = `【道具使用】${usedItem.name} を纏った！\n身のこなしが軽くなり、回避率と逃走率が上昇した！`;
+                    waitForPlayerClick(() => {
+                        executeEnemyTurn();
+                    });
                 } 
                 else {
-                    enemyTurn(`【道具使用】${usedItem.name} を使ったが、何も起きなかった……。`);
+                    log.innerText = `【道具使用】${usedItem.name} を使ったが、何も起きなかった……。`;
+                    waitForPlayerClick(() => {
+                        executeEnemyTurn();
+                    });
                 }
             };
         });
     };
 
+    // ★ 逃げるボタン（1.2秒演出 → 失敗時はクリック待ち対応）
     escapeBtn.onclick = () => {
         if (Date.now() - window.lastDialogCloseTime < 300) return;
 
         // ★ ボス戦は逃走不可
         if (enemy.isBoss) {
             sound.playSE("assets/audio/se/zero.mp3");
-            appendLog("\n<span style='color:#ff4444; font-weight:bold;'>【逃走不可！】\n強大な威圧感に気圧され、ボスの前から逃げ出すことはできない！</span>");
+            log.innerHTML = "<span style='color:#ff4444; font-weight:bold;'>【逃走不可！】\n強大な威圧感に気圧され、ボスの前から逃げ出すことはできない！</span>";
             return;
         }
 
@@ -990,29 +1079,27 @@ export function openCombatUI(enemy, gameState, onResult, context) {
         setTimeout(() => {
             const escapeRate = 0.55 + (((gameState.player.agi || 5) + extraAgi) * 0.04);
             if (Math.random() < escapeRate) {
-                ui.remove();
-                sound.playBGM(getFieldBGM(gameState));
-
-                showMessageDialog("【逃走成功】\n暗闇の中、なんとか悪魔を振り切った！", () => {
-                    if (onResult) onResult("escape");
+                closeCombatAndReturn("escape", () => {
+                    showMessageDialog("【逃走成功】\n暗闇の中、なんとか悪魔を振り切った！", () => {
+                        if (onResult) onResult("escape");
+                    });
                 });
             } else {
-                appendLog("【逃走失敗！】\nしかし、悪魔に回り込まれた！");
+                const damageTaken = Math.max(1, Math.floor((enemyAtk - (gameState.player.def || 0)) * 1.2));
+                gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
+                if (gameState.player.hp > 0) updateHpDisplay();
 
-                setTimeout(() => {
-                    const damageTaken = Math.max(1, Math.floor((enemyAtk - (gameState.player.def || 0)) * 1.2));
-                    gameState.player.hp = Math.max(0, gameState.player.hp - damageTaken);
-
+                log.innerText = `【逃走失敗！】\nしかし、悪魔に回り込まれた！\n背後から追撃！ 主人公は ${damageTaken} ダメージを受けた！`;
+                waitForPlayerClick(() => {
                     if (gameState.player.hp <= 0) {
                         triggerDeathSequence();
                     } else {
-                        updateHpDisplay();
-                        appendLog(`背後から追撃！ 主人公は ${damageTaken} ダメージを受けた！`);
+                        log.innerText = "どうする？";
                         setControlsDisabled(false);
                     }
-                }, 1200);
+                });
             }
-        }, 1000);
+        }, 1200);
     };
 }
 
