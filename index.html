@@ -4,7 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>怠惰な僕の悪魔辞典～マンション・インフェルノ～</title>
+  <link rel="preload" as="image" href="assets/images/akumanologo.png" fetchpriority="high">
+  <link rel="preload" as="image" href="assets/images/opening.webp" fetchpriority="high">
   <link rel="stylesheet" href="style.css">
+  <style>
+    @keyframes titleLogoFloatAndGlow {
+      0% {
+        transform: translateY(0px) scale(1.0);
+        filter: drop-shadow(0 0 12px rgba(180, 0, 0, 0.55)) brightness(0.96);
+      }
+      50% {
+        transform: translateY(-7px) scale(1.025);
+        filter: drop-shadow(0 0 26px rgba(255, 60, 30, 0.85)) drop-shadow(0 0 10px rgba(255, 200, 90, 0.45)) brightness(1.08);
+      }
+      100% {
+        transform: translateY(0px) scale(1.0);
+        filter: drop-shadow(0 0 12px rgba(180, 0, 0, 0.55)) brightness(0.96);
+      }
+    }
+    #title-logo {
+      animation: titleLogoFloatAndGlow 4.5s ease-in-out infinite;
+      will-change: transform, filter;
+    }
+  </style>
 </head>
 <body>
   <div id="game-container">
@@ -15,7 +37,7 @@
     <!-- タイトル画面 -->
     <div id="title-screen" class="overlay-screen">
       <div class="title-content">
-        <img id="title-logo" src="assets/images/akumanologo.png" alt="怠惰な僕の悪魔辞典" />
+        <img id="title-logo" src="assets/images/akumanologo.png" alt="怠惰な僕の悪魔辞典" fetchpriority="high" decoding="async" />
         <div class="title-menu">
           <button id="btn-start" class="menu-btn">ゲームスタート</button>
           <button id="btn-load" class="menu-btn">つづきから</button>
@@ -70,29 +92,19 @@
 
   </div>
 
-  <!-- 緑背景(RGB:0,255,0)透過SVGフィルター -->
-  <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+  <!-- 緑背景透過SVGフィルター -->
+  <svg style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;" aria-hidden="true">
     <filter id="chroma-green-filter" color-interpolation-filters="sRGB">
+      <!-- 緑色（G）が他の色（R, B）より少しでも強ければ透明にする緩めの設定 -->
       <feColorMatrix type="matrix" values="
-        1 0 0 0 0
-        0 1 0 0 0
-        0 0 1 0 0
-        1 -2 1 1 0" />
+        1.0  0.0  0.0  0.0  0.0
+        0.0  1.0  0.0  0.0  0.0
+        0.0  0.0  1.0  0.0  0.0
+        3.0 -2.2  2.0  1.0  0.0" />
     </filter>
   </svg>
 
   <script type="module" src="main.js"></script>
-
- <svg style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;" aria-hidden="true">
-  <filter id="chroma-green-filter" color-interpolation-filters="sRGB">
-    <!-- 緑色（G）が他の色（R, B）より少しでも強ければ透明にする緩めの設定 -->
-    <feColorMatrix type="matrix" values="
-      1.0  0.0  0.0  0.0  0.0
-      0.0  1.0  0.0  0.0  0.0
-      0.0  0.0  1.0  0.0  0.0
-      3.0 -2.2  2.0  1.0  0.0" />
-  </filter>
-</svg>
 
 </body>
 </html>
